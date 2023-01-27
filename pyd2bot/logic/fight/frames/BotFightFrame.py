@@ -83,8 +83,8 @@ class _Target:
 
 class BotFightFrame(Frame):
     VERBOSE = True
-
     ACTION_TIMEOUT = 7
+    
     _frameFightListRequest: bool
 
     _fightCount: int = 0
@@ -117,7 +117,7 @@ class BotFightFrame(Frame):
         self._turnAction = []
         self._spellw = None
         self._botTurnFrame = BotFightTurnFrame()
-        self.spellId = BotConfig().character["primarySpellId"]
+        self.spellId = BotConfig().primarySpellId
         self._spellCastFails = 0
         self._inFight = False
         super().__init__()

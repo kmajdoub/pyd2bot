@@ -1,6 +1,8 @@
 import collections
 import random
 from typing import Iterator
+
+from pyd2bot.thriftServer.pyd2botService.ttypes import Path
 from pydofus2.com.ankamagames.dofus.datacenter.world.SubArea import SubArea
 from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.astar.AStar import AStar
 from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Transition import Transition
@@ -82,11 +84,8 @@ class RandomSubAreaFarmPath(AbstractFarmPath):
         }
 
     @classmethod
-    def from_json(cls, pathJson: dict) -> "RandomSubAreaFarmPath":
-        startVertex = WorldPathFinder().worldGraph.getVertex(**pathJson["startVertex"])
+    def from_thriftObj(cls, path: Path) -> "RandomSubAreaFarmPath":
+        startVertex = WorldPathFinder().worldGraph.getVertex(path.startVertex.mapId, path.startVertex.zoneId)
         if startVertex is None:
-            raise ValueError("Could not find start vertex from json startVertex : " + str(pathJson["startVertex"]))
-        return cls(
-            pathJson["name"],
-            startVertex,
-        )
+            raise ValueError("Could not find start vertex from startVertex : " + str(path.startVertex))
+        return cls(path.id, startVertex)

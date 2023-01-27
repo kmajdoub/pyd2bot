@@ -134,7 +134,7 @@ class BotPartyFrame(Frame):
 
     @property
     def leaderName(self):
-        return BotConfig().character["name"] if self.isLeader else BotConfig().leader["name"]
+        return BotConfig().character["name"] if self.isLeader else BotConfig().isLeader["name"]
 
     @property
     def priority(self) -> int:
@@ -154,7 +154,7 @@ class BotPartyFrame(Frame):
     
     @property
     def leader(self) -> dict:
-        return BotConfig().leader
+        return BotConfig().isLeader
     
     @property
     def allMembersOnSameMap(self):

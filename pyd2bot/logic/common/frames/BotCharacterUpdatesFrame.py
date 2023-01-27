@@ -25,8 +25,8 @@ logger = Logger()
 
 
 class BotCharacterUpdatesFrame(Frame):
+    
     def __init__(self):
-        self._myTurn = False
         self._statsInitialized = False
         super().__init__()
 
@@ -39,53 +39,38 @@ class BotCharacterUpdatesFrame(Frame):
     @property
     def priority(self) -> int:
         return Priority.VERY_LOW
-
-    @property
-    def boostStat(self, statId: int, points: int):
+    
+    def getStatFloor(self, statId: int):
         breed = Breed.getBreedById(PlayedCharacterManager().infos.breed)
-        if statId == StatIds.STRENGTH:
-            statFloors = breed.statsPointsForStrength
-        elif statId == StatIds.VITALITY:
-            statFloors = breed.statsPointsForVitality
-        elif statId == StatIds.WISDOM:
-            statFloors = breed.statsPointsForWisdom
-        elif statId == StatIds.INTELLIGENCE:
-            statFloors = breed.statsPointsForIntelligence
-        elif statId == StatIds.AGILITY:
-            statFloors = breed.statsPointsForAgility
-        elif statId == StatIds.CHANCE:
-            statFloors = breed.statsPointsForChance
+        statFloors = {
+            StatIds.STRENGTH: breed.statsPointsForStrength,
+            StatIds.VITALITY: breed.statsPointsForVitality,
+            StatIds.WISDOM: breed.statsPointsForWisdom,
+            StatIds.INTELLIGENCE: breed.statsPointsForIntelligence,
+            StatIds.AGILITY: breed.statsPointsForAgility,
+            StatIds.CHANCE: breed.statsPointsForChance
+        }
+        return statFloors[statId]
+        
+    def boostStat(self, statId: int, points: int):
+        stat_floors = self.getStatFloor(statId)
         additional = PlayedCharacterManager().stats.getStatAdditionalValue(statId)
         base = PlayedCharacterManager().stats.getStatBaseValue(statId)
-        logger.debug(f"Have {points} unused stat points")
-        logger.debug(f"Stat {statId} has base {base} and additional {additional} so totoal = {base + additional}")
-        currentStatPoints = base + additional
-        for i in range(len(statFloors) + 1):
-            if i + 1 == len(statFloors):
-                nextFloor = float("inf")
-            else:
-                nextFloor = statFloors[i + 1][0]
-            if statFloors[i][0] <= currentStatPoints < nextFloor:
-                currentFloorCost = statFloors[i][1]
-                break
-        logger.debug(f"Current floor cost is {currentFloorCost}")
+        current_stat_points = base + additional
+        current_floor_cost = next(floor[1] for floor in stat_floors if floor[0] > current_stat_points)
         boost = 0
-        currPoints = points
-        while True:
-            nextFloor = statFloors[i + 1][0] if i + 1 < len(statFloors) else float("inf")
-            ptsToInvest = min(currPoints, nextFloor - currentStatPoints)
-            additionalBoost = ptsToInvest // currentFloorCost
-            if additionalBoost == 0:
+        for i in range(len(stat_floors)):
+            next_floor = stat_floors[i + 1][0] if i + 1 < len(stat_floors) else float("inf")
+            pts_to_invest = min(points, next_floor - current_stat_points)
+            additional_boost = pts_to_invest // current_floor_cost
+            if additional_boost == 0:
                 break
-            boost += additionalBoost
-            currPoints -= additionalBoost * currentFloorCost
-            currentFloorCost = statFloors[i + 1][1] if i + 1 < len(statFloors) else 4
-            i += 1
-        canUse = points - currPoints
+            boost += additional_boost
+            points -= additional_boost * current_floor_cost
+            current_floor_cost = stat_floors[i + 1][1] if i + 1 < len(stat_floors) else 4
         if boost > 0:
-            logger.debug(f"Boosting {statId} by {canUse}")
             sumsg = StatsUpgradeRequestMessage()
-            sumsg.init(False, statId, canUse)
+            sumsg.init(False, statId, boost)
             connh.ConnectionsHandler().conn.send(sumsg)
 
     def process(self, msg: Message) -> bool:
@@ -99,17 +84,17 @@ class BotCharacterUpdatesFrame(Frame):
 
         elif isinstance(msg, CharacterLevelUpMessage):
             clumsg = msg
-            if BotConfig().character["primaryStatId"]:
+            if BotConfig().primaryStatId:
                 previousLevel = PlayedCharacterManager().infos.level
                 PlayedCharacterManager().infos.level = clumsg.newLevel
                 pointsEarned = (clumsg.newLevel - previousLevel) * 5
-                self.boostStat(BotConfig().character["primaryStatId"], pointsEarned)
+                self.boostStat(BotConfig().primaryStatId, pointsEarned)
             return True
 
         elif isinstance(msg, CharacterStatsListMessage):
             if not self._statsInitialized:
                 unusedStatPoints = PlayedCharacterManager().stats.getStatBaseValue(StatIds.STATS_POINTS)
                 if unusedStatPoints > 0:
-                    self.boostStat(BotConfig().character["primaryStatId"], unusedStatPoints)
+                    self.boostStat(BotConfig().primaryStatId, unusedStatPoints)
                 self._statsInitialized = True
             return True

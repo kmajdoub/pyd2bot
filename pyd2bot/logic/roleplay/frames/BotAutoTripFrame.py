@@ -36,6 +36,7 @@ class BotAutoTripFrame(Frame):
         self.changeMapFails = dict()
         self._computed = False
         self._worker = Kernel().worker
+        self._pulled = False
         super().__init__()
 
     @property
@@ -60,10 +61,12 @@ class BotAutoTripFrame(Frame):
     def pulled(self) -> bool:
         self.reset()
         Logger().debug("Auto trip frame pulled")
+        self._pulled = True
         return True
 
     def process(self, msg: Message) -> bool:
-
+        if self._pulled:
+            return
         if isinstance(msg, MapComplementaryInformationsDataMessage):
             if self._computed:
                 self.walkToNextStep()

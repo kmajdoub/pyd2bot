@@ -16,7 +16,7 @@ from pyd2bot.logic.roleplay.frames.BotAutoTripFrame import BotAutoTripFrame
 from pyd2bot.logic.roleplay.messages.AutoTripEndedMessage import AutoTripEndedMessage
 from pyd2bot.misc.Localizer import BankInfos
 from enum import Enum
-logger = Logger()
+
         
 class SellerCollecteStateEnum(Enum):
     WATING_MAP = 0
@@ -42,7 +42,7 @@ class BotSellerCollectFrame(Frame):
         super().__init__()
 
     def pushed(self) -> bool:
-        logger.debug("BotSellerCollectFrame pushed")
+        Logger().debug("BotSellerCollectFrame pushed")
         self.state = SellerCollecteStateEnum.WATING_MAP
         if PlayedCharacterManager().currentMap is not None:
             self.state = SellerCollecteStateEnum.GOING_TO_BANK
@@ -50,7 +50,7 @@ class BotSellerCollectFrame(Frame):
         return True
 
     def pulled(self) -> bool:
-        logger.debug("BotSellerCollectFrame pulled")
+        Logger().debug("BotSellerCollectFrame pulled")
         return True
 
     @property
@@ -69,7 +69,7 @@ class BotSellerCollectFrame(Frame):
     def process(self, msg: Message) -> bool:
     
         if isinstance(msg, AutoTripEndedMessage):
-            logger.debug("AutoTripEndedMessage received")
+            Logger().debug("AutoTripEndedMessage received")
             if self.state == SellerCollecteStateEnum.GOING_TO_BANK:
                 self.state = SellerCollecteStateEnum.INSIDE_BANK
                 Kernel().worker.addFrame(BotExchangeFrame(ExchangeDirectionEnum.RECEIVE, self.guest, self.items))
@@ -78,18 +78,18 @@ class BotSellerCollectFrame(Frame):
 
         elif isinstance(msg, MapComplementaryInformationsDataMessage):
             if self.state == SellerCollecteStateEnum.WATING_MAP:
-                logger.debug("MapComplementaryInformationsDataMessage received")
+                Logger().debug("MapComplementaryInformationsDataMessage received")
                 self.state = SellerCollecteStateEnum.GOING_TO_BANK
                 self.goToBank()
                 
         elif isinstance(msg, ExchangeConcludedMessage):
-            logger.debug("Exchange with guest ended successfully")
+            Logger().debug("Exchange with guest ended successfully")
             self.state = SellerCollecteStateEnum.UNLOADING_IN_BANK
             Kernel().worker.addFrame(BotBankInteractionFrame(self.bankInfos))
         
         elif isinstance(msg, BankInteractionEndedMessage):
-            logger.debug("BankInteractionEndedMessage received")
-            Kernel().worker.processImmediately(SellerCollectedGuestItemsMessage())
+            Logger().debug("BankInteractionEndedMessage received")
             Kernel().worker.removeFrame(self)
+            Kernel().worker.process(SellerCollectedGuestItemsMessage())
 
  

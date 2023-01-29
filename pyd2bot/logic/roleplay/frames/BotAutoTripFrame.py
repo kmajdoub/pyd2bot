@@ -1,3 +1,5 @@
+from pyd2bot.apis.PlayerAPI import PlayerAPI
+from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import KernelEventsManager, KernelEvts
 from pydofus2.com.ankamagames.jerakine.benchmark.BenchmarkTimer import BenchmarkTimer
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import PlayedCharacterManager
 from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Edge import Edge
@@ -22,12 +24,10 @@ if TYPE_CHECKING:
     pass
 from pyd2bot.logic.roleplay.messages.AutoTripEndedMessage import AutoTripEndedMessage
 
-logger = Logger()
+
 
 
 class BotAutoTripFrame(Frame):
-    dstMapId = None
-    path = None
 
     def __init__(self, dstMapId: int, rpZone: int = 1):
         self.dstMapId = dstMapId
@@ -49,7 +49,7 @@ class BotAutoTripFrame(Frame):
         self._computed = False
 
     def pushed(self) -> bool:
-        logger.debug("Auto trip frame pushed")
+        Logger().debug("Auto trip frame pushed")
         self._worker = Kernel().worker
         self._computed = False
         self.changeMapFails.clear()
@@ -59,7 +59,7 @@ class BotAutoTripFrame(Frame):
 
     def pulled(self) -> bool:
         self.reset()
-        logger.debug("Auto trip frame pulled")
+        Logger().debug("Auto trip frame pulled")
         return True
 
     def process(self, msg: Message) -> bool:
@@ -70,7 +70,7 @@ class BotAutoTripFrame(Frame):
             return True
 
         if isinstance(msg, MapChangeFailedMessage):
-            logger.debug(f"Autotrip received map change failed for reason: {msg.reason}")
+            Logger().debug(f"Autotrip received map change failed for reason: {msg.reason}")
             raise Exception(f"Autotrip received map change failed for reason: {msg.reason}")
 
     @property
@@ -85,23 +85,25 @@ class BotAutoTripFrame(Frame):
 
     def walkToNextStep(self):
         if not PlayedCharacterManager().currentMap:
-            BenchmarkTimer(0.5, self.walkToNextStep).start()
+            KernelEventsManager().once(KernelEvts.MAPPROCESSED, self.walkToNextStep)
             return
-        elif self._computed:
+        PlayerAPI().inAutoTrip = True
+        if self._computed:
             currMapId = WorldPathFinder().currPlayerVertex.mapId
             dstMapId = self.path[-1].dst.mapId
-            logger.debug(f"Player current mapId {currMapId} and dst mapId {dstMapId}")
+            Logger().debug(f"Player current mapId {currMapId} and dst mapId {dstMapId}")
             if currMapId == dstMapId:
-                logger.debug(f"Trip reached destination Map : {dstMapId}")
+                PlayerAPI().inAutoTrip = False
+                Logger().debug(f"Trip reached destination Map : {dstMapId}")
                 Kernel().worker.removeFrame(self)
-                Kernel().worker.processImmediately(AutoTripEndedMessage(self.dstMapId))
+                Kernel().worker.process(AutoTripEndedMessage(self.dstMapId))
                 return True
-            logger.debug(f"Current step index: {self.currentEdgeIndex + 1}/{len(self.path)}")
+            Logger().debug(f"Current step index: {self.currentEdgeIndex + 1}/{len(self.path)}")
             e = self.path[self.currentEdgeIndex]
-            logger.debug(f"Moving using next edge :")
-            logger.debug(f"\t|- src {e.src.mapId} -> dst {e.dst.mapId}")
+            Logger().debug(f"Moving using next edge :")
+            Logger().debug(f"\t|- src {e.src.mapId} -> dst {e.dst.mapId}")
             for tr in e.transitions:
-                logger.debug(f"\t\t|- direction : {tr.direction}, skill : {tr.skillId}, cell : {tr.cell}")
+                Logger().debug(f"\t\t|- direction : {tr.direction}, skill : {tr.skillId}, cell : {tr.cell}")
             MoveAPI.followEdge(e)
         else:
             WorldPathFinder().findPath(self.dstMapId, self.onComputeOver, self.dstRpZone)
@@ -121,10 +123,10 @@ class BotAutoTripFrame(Frame):
             Kernel().worker.removeFrame(self)
             Kernel().worker.process(AutoTripEndedMessage(self.dstMapId))
             return True
-        logger.debug(f"\nPath found: ")
+        Logger().debug(f"\nPath found: ")
         for e in path:
             print(f"\t|- src {e.src.mapId} -> dst {e.dst.mapId}")
             for tr in e.transitions:
-                print(f"\t\t|- direction : {tr.direction}, skill : {tr.skillId}, cell : {tr.cell}")
+                print(f"\t\t|- {tr}")
         self.path: list[Edge] = path
         self.walkToNextStep()

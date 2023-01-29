@@ -54,14 +54,10 @@ if TYPE_CHECKING:
     from pydofus2.com.ankamagames.dofus.logic.game.roleplay.frames.RoleplayMovementFrame import RoleplayMovementFrame
     from pydofus2.com.ankamagames.dofus.logic.game.roleplay.frames.RoleplayWorldFrame import RoleplayWorldFrame
 
-logger = Logger()
-
-
-def GetNextMap(path, index):
-    return path[index]
 
 
 class BotFarmPathFrame(Frame):
+    
     def __init__(self, autoStart: bool = False):
         super().__init__()
         self._autoStart = autoStart
@@ -104,14 +100,14 @@ class BotFarmPathFrame(Frame):
         return self._worker.getFrame("RoleplayWorldFrame")
 
     def pushed(self) -> bool:
-        logger.info("BotFarmPathFrame pushed")
+        Logger().info("BotFarmPathFrame pushed")
         self._followinMonsterGroup = None
         if self._autoStart:
             BenchmarkTimer(5, self.doFarm).start()
         return True
 
     def pulled(self) -> bool:
-        logger.info("BotFarmPathFrame pulled")
+        Logger().info("BotFarmPathFrame pulled")
         self._pulled = True
         if BotEventsManager().has_listeners(BotEventsManager.MEMBERS_READY):
             BotEventsManager().remove_listener(BotEventsManager.MEMBERS_READY, self.doFarm)
@@ -149,6 +145,7 @@ class BotFarmPathFrame(Frame):
 
         if isinstance(msg, AutoTripEndedMessage):
             self._inAutoTrip = False
+            Logger().info("[BotFarmFrame] Auto trip ended calling doFarm")
             if msg.mapId is None:
                 raise Exception("Auto trip was Unable to reach destination")
             self.doFarm()
@@ -156,18 +153,12 @@ class BotFarmPathFrame(Frame):
         elif isinstance(msg, InteractiveUseErrorMessage):
             if self._inAutoTrip:
                 return False
-            logger.error(
+            Logger().error(
                 f"[BotFarmFrame] Error unable to use interactive element '{msg.elemId}' with the skill '{msg.skillInstanceUid}'"
             )
-            logger.debug("*" * 80)
-            if msg.elemId == self._followingIe.element.elementId:
-                if self._entities.get(msg.elemId):
-                    del self.interactivesFrame._ie[msg.elemId]
-                    del self.interactivesFrame._collectableIe[msg.elemId]
-                    self.doFarm()
-                else:
-                    self.reset()
-                    self.requestMapData()
+            Logger().debug("*" * 80)
+            self.reset()
+            self.requestMapData()
             return True
 
         elif isinstance(msg, GameMapMovementCancelMessage):
@@ -190,8 +181,8 @@ class BotFarmPathFrame(Frame):
             if self._inAutoTrip:
                 return False
             if PlayedCharacterManager().id == msg.entityId and msg.duration > 0:
-                logger.debug(f"[BotFarmFrame] Inventory weight {InventoryAPI.getWeightPercent():.2f}%")
-                logger.debug(f"[BotFarmFrame] Started using interactive element {msg.elemId} ....")
+                Logger().debug(f"[BotFarmFrame] Inventory weight {InventoryAPI.getWeightPercent():.2f}%")
+                Logger().debug(f"[BotFarmFrame] Started using interactive element {msg.elemId} ....")
                 if msg.duration > 0:
                     self._usingInteractive = True
             self._entities[msg.elemId] = msg.entityId
@@ -203,8 +194,8 @@ class BotFarmPathFrame(Frame):
             if self._entities[msg.elemId] == PlayedCharacterManager().id:
                 self._followingIe = None
                 self._usingInteractive = False
-                logger.debug(f"[BotFarmFrame] Interactive element {msg.elemId} use ended")
-                logger.debug("*" * 100)
+                Logger().debug(f"[BotFarmFrame] Interactive element {msg.elemId} use ended")
+                Logger().debug("*" * 100)
                 self.doFarm()
             del self._entities[msg.elemId]
             return True
@@ -212,7 +203,7 @@ class BotFarmPathFrame(Frame):
         elif isinstance(msg, MapComplementaryInformationsDataMessage):
             if self._inAutoTrip:
                 return False
-            logger.debug("-" * 100)
+            Logger().debug("-" * 100)
             self.reset()
             self.doFarm()
             return True
@@ -220,22 +211,22 @@ class BotFarmPathFrame(Frame):
         elif isinstance(msg, NotificationByServerMessage):
             notification = Notification.getNotificationById(msg.id)
             if notification.titleId == ServerNotificationTitlesEnum.FULL_PODS:
-                logger.debug("[BotFarmFrame] Full pod reached will unload in bank")
+                Logger().debug("[BotFarmFrame] Full pod reached will unload in bank")
                 if not self._worker.contains("UnloadInBankFrame"):
                     raise Exception("Full pods but UnloadInBankFrame not found")
             return True
 
     def moveToNextStep(self):
         self._currTransition = next(self.farmPath)
-        logger.debug(
+        Logger().debug(
             f"[BotFarmFrame] Current Map {PlayedCharacterManager().currentMap.mapId} Moving to {self._currTransition.transitionMapId}"
         )
         MoveAPI.followTransition(self._currTransition,)
-        self.partyFrame.notifyFollowersWithTransition(self._currTransition)
+        if self.partyFrame:
+            self.partyFrame.notifyFollowersWithTransition(self._currTransition)
 
     def attackMonsterGroup(self):
         availableMonsterFights = []
-        # logger.debug(f"[BotFarmFrame] Discarded monsters {self._discardedMonstersIds}")
         currPlayerPos = PlayedCharacterManager().entity.position
         for entityId in self.entitiesFrame._monstersIds:
             if int(entityId) in self._discardedMonstersIds:
@@ -255,10 +246,12 @@ class BotFarmPathFrame(Frame):
             entityId = availableMonsterFights[0]["info"].contextualId
             self._followinMonsterGroup = entityId
             self.movementFrame.attackMonsters(entityId)
+            return
+        Logger().debug("[BotFarmFrame] No monster group found")
 
     def insideCurrentPlayerZoneRp(self, cellId):
         tgtRpZone = MapDisplayManager().dataMap.cells[cellId].linkedZoneRP
-        # logger.debug(f"[BotFarmFrame] Current player zone {PlayedCharacterManager().currentZoneRp}, target zone {tgtRpZone}")
+        # Logger().debug(f"[BotFarmFrame] Current player zone {PlayedCharacterManager().currentZoneRp}, target zone {tgtRpZone}")
         return tgtRpZone == PlayedCharacterManager().currentZoneRp
 
     def doFarm(self, event=None):
@@ -266,42 +259,39 @@ class BotFarmPathFrame(Frame):
             return
         if BotEventsManager().has_listeners(BotEventsManager.MEMBERS_READY):
             BotEventsManager().remove_listener(BotEventsManager.MEMBERS_READY, self.doFarm)
-        if PlayerAPI.status() != "idle":
-            logger.debug(f"[BotFarmFrame] Can't farm coz bot is not idle but '{PlayerAPI.status()}'")
+        if PlayerAPI().status != "idle":
+            Logger().debug(f"[BotFarmFrame] Can't farm, bot is not idle but '{PlayerAPI().status}'")
             BotEventsManager().add_listener(BotEventsManager.MEMBERS_READY, self.doFarm)
             return
-        logger.debug("[BotFarmFrame] doFarm called")
-        if BotConfig().sessionType == "fight" and not BotConfig().isLeader:
-            logger.warning("[BotFarmFrame] In fight mode only the leader can run a farm path")
+        Logger().debug("[BotFarmFrame] doFarm called")
+        if BotConfig().isFightSession and not BotConfig().isLeader:
+            Logger().warning("[BotFarmFrame] In fight mode only the leader can run a farm path")
             Kernel().worker.removeFrame(self)
             return
         if WorldPathFinder().currPlayerVertex is None:
             BotEventsManager().add_listener(BotEventsManager.MEMBERS_READY, self.doFarm)
             return
         if WorldPathFinder().currPlayerVertex not in self.farmPath:
-            logger.debug(
+            Logger().debug(
                 f"[BotFarmFrame] Map {WorldPathFinder().currPlayerVertex.mapId} not in farm path will switch to autotrip"
             )
             self._inAutoTrip = True
             self._worker.addFrame(BotAutoTripFrame(self.farmPath.startVertex.mapId))
             return
         if self.partyFrame:
-            logger.debug(f"[BotFarmFrame] Party members on same map : '{self.partyFrame.allMembersOnSameMap}'")
-            logger.debug(f"[BotFarmFrame] Party members idle : '{self.partyFrame.allMembersIdle}'")
             if not self.partyFrame.allMembersOnSameMap or not self.partyFrame.allMembersIdle:
                 BotEventsManager().add_listener(BotEventsManager.MEMBERS_READY, self.doFarm)
                 return
-        logger.info("[BotFarmFrame] Party found and all members on the same map and are idle.")
+        Logger().info("[BotFarmFrame] Party found and all members on the same map and are idle.")
         if self._followingIe or self._followinMonsterGroup:
             BotEventsManager().add_listener(BotEventsManager.MEMBERS_READY, self.doFarm)
             return 
-        
         self._followinMonsterGroup = None
         self._followingIe = None
         self._lastCellId = PlayedCharacterManager().currentCellId
-        if BotConfig().sessionType == 'fight':
+        if BotConfig().isFightSession:
             self.attackMonsterGroup()
-        elif BotConfig().sessionType == 'farm':
+        elif BotConfig().isFarmSession:
             self.collectResource()
         if self._followingIe is None and self._followinMonsterGroup is None:
             self.moveToNextStep()
@@ -309,7 +299,7 @@ class BotFarmPathFrame(Frame):
     def requestMapData(self):
         mirmsg = MapInformationsRequestMessage()
         mirmsg.init(mapId_=MapDisplayManager().currentMapPoint.mapId)
-        ConnectionsHandler()._conn.send(mirmsg)
+        ConnectionsHandler().conn.send(mirmsg)
 
     def collectResource(self) -> None:
         target = None
@@ -350,4 +340,4 @@ class BotFarmPathFrame(Frame):
                 self.movementFrame.askMoveTo(nearestCell)
             else:
                 self.movementFrame.activateSkill(ie.skillUID, ie.element.elementId, 0)
-            logger.info(f"[BotFarmFrame] Collecting {ie.element.elementId} ... skillId : {ie.skillUID}")
+            Logger().info(f"[BotFarmFrame] Collecting {ie.element.elementId} ... skillId : {ie.skillUID}")

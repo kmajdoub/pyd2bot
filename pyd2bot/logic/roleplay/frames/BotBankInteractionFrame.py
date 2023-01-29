@@ -27,7 +27,7 @@ from pydofus2.com.ankamagames.jerakine.messages.Message import Message
 from pydofus2.com.ankamagames.jerakine.types.enums.Priority import Priority
 from pyd2bot.misc.Localizer import BankInfos
 
-logger = Logger()
+
 
 class BankUnloadStateEnum:
     UNLOAD_REQUEST_SENT = 0
@@ -46,13 +46,13 @@ class BotBankInteractionFrame(Frame):
         self.infos = bankInfos
 
     def pushed(self) -> bool:
-        logger.debug("BotBankInteractionFrame pushed")
+        Logger().debug("BotBankInteractionFrame pushed")
         self.state = BankUnloadStateEnum.IDLE
         self.talkToBankMan()
         return True
 
     def pulled(self) -> bool:
-        logger.debug("BotBankInteractionFrame pulled")
+        Logger().debug("BotBankInteractionFrame pulled")
         return True
 
     @property
@@ -60,7 +60,7 @@ class BotBankInteractionFrame(Frame):
         return Priority.VERY_LOW
 
     def start(self):
-        logger.debug("Bank infos: %s", self.infos.__dict__)
+        Logger().debug("Bank infos: %s", self.infos.__dict__)
         
 
     def process(self, msg: Message) -> bool:
@@ -70,11 +70,11 @@ class BotBankInteractionFrame(Frame):
     
         elif isinstance(msg, NpcDialogQuestionMessage):
             if self.state == BankUnloadStateEnum.WAITING_FOR_BANKMAN_QUESTION:
-                logger.debug("bank man dialog engaged")
+                Logger().debug("bank man dialog engaged")
                 self.openBankExchange()
                 self.requestTimer = BenchmarkTimer(3, self.openBankExchange)
                 self.requestTimer.start()
-                logger.debug("Bank reply to open bank storage sent")
+                Logger().debug("Bank reply to open bank storage sent")
                 return True
 
             
@@ -83,7 +83,7 @@ class BotBankInteractionFrame(Frame):
                 self.requestTimer.cancel()
             rmsg = ExchangeObjectTransfertAllFromInvMessage()
             rmsg.init()
-            ConnectionsHandler()._conn.send(rmsg)
+            ConnectionsHandler().conn.send(rmsg)
             self.state = BankUnloadStateEnum.UNLOAD_REQUEST_SENT
             return True
 
@@ -91,26 +91,26 @@ class BotBankInteractionFrame(Frame):
             if self.state == BankUnloadStateEnum.UNLOAD_REQUEST_SENT:
                 rmsg = LeaveDialogRequestMessage()
                 rmsg.init()
-                ConnectionsHandler()._conn.send(rmsg)
+                ConnectionsHandler().conn.send(rmsg)
                 self.state = BankUnloadStateEnum.LEAVE_BANK_REQUESTED
             return True
 
         elif isinstance(msg, ExchangeLeaveMessage):
             if self.state == BankUnloadStateEnum.LEAVE_BANK_REQUESTED:
                 Kernel().worker.removeFrame(self)
-                Kernel().worker.processImmediately(BankInteractionEndedMessage())
+                Kernel().worker.process(BankInteractionEndedMessage())
                 return True
 
     def talkToBankMan(self):
         rmsg = NpcGenericActionRequestMessage()
         rmsg.init(self.infos.npcId, self.infos.npcActionId, self.infos.npcMapId)
-        ConnectionsHandler()._conn.send(rmsg)
-        logger.debug("Open bank man dialog sent")
+        ConnectionsHandler().conn.send(rmsg)
+        Logger().debug("Open bank man dialog sent")
         self.state = BankUnloadStateEnum.WAITING_FOR_BANKMAN_DIALOG
 
     def openBankExchange(self):
         rmsg = NpcDialogReplyMessage()
-        logger.debug(f"Open bank request sent")
+        Logger().debug(f"Open bank request sent")
         rmsg.init(self.infos.openBankReplyId)
-        ConnectionsHandler()._conn.send(rmsg)
+        ConnectionsHandler().conn.send(rmsg)
         self.state = BankUnloadStateEnum.BANK_OPEN_REQUESTED

@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from pydofus2.com.ankamagames.dofus.logic.game.roleplay.frames.RoleplayEntitiesFrame import RoleplayEntitiesFrame
 
-logger = Logger()
+
 
 class UnloadInSellerStatesEnum(Enum):
     WAITING_FOR_MAP = -1
@@ -44,7 +44,7 @@ class BotUnloadInSellerFrame(Frame):
         self.stopWaitingForSeller = threading.Event()
 
     def pushed(self) -> bool:
-        logger.debug("BotUnloadInSellerFrame pushed")
+        Logger().debug("BotUnloadInSellerFrame pushed")
         self.state = UnloadInSellerStatesEnum.IDLE
         self.stopWaitingForSeller.clear()
         if PlayedCharacterManager().currentMap is not None:
@@ -54,7 +54,7 @@ class BotUnloadInSellerFrame(Frame):
         return True
 
     def pulled(self) -> bool:
-        logger.debug("BotUnloadInSellerFrame pulled")
+        Logger().debug("BotUnloadInSellerFrame pulled")
         transport, client = self.sellerInfos["client"]
         transport.close()
         self.stopWaitingForSeller.set()
@@ -80,14 +80,14 @@ class BotUnloadInSellerFrame(Frame):
         while not self.stopWaitingForSeller.is_set():
             if self.entitiesFrame:
                 if self.entitiesFrame.getEntityInfos(self.sellerInfos["id"]):
-                    logger.debug("Seller found in the bank map")
+                    Logger().debug("Seller found in the bank map")
                     Kernel().worker.addFrame(BotExchangeFrame(ExchangeDirectionEnum.GIVE, target=self.sellerInfos))
                     self.state = UnloadInSellerStatesEnum.IN_EXCHANGE_WITH_SELLER
                     return True        
                 else:
-                    logger.debug("Seller not found in the bank map")
+                    Logger().debug("Seller not found in the bank map")
             else:
-                logger.debug("No entitiesFrame found")
+                Logger().debug("No entitiesFrame found")
             sleep(2)
     
     def waitForSellerIdleStatus(self):
@@ -95,7 +95,7 @@ class BotUnloadInSellerFrame(Frame):
         currentMapId = PlayedCharacterManager().currentMap.mapId
         while not self.stopWaitingForSeller.is_set():
             sellerStatus = client.getStatus()
-            logger.debug("Seller status: %s", sellerStatus)
+            Logger().debug("Seller status: %s", sellerStatus)
             if sellerStatus == "idle":
                 client.comeToBankToCollectResources(json.dumps(self.bankInfos.to_json()), json.dumps(BotConfig().character))
                 if currentMapId != self.bankInfos.npcMapId:
@@ -109,7 +109,7 @@ class BotUnloadInSellerFrame(Frame):
     
     def start(self):
         self.bankInfos = Localizer.getBankInfos()
-        logger.debug("Bank infos: %s", self.bankInfos.__dict__)
+        Logger().debug("Bank infos: %s", self.bankInfos.__dict__)
         currentMapId = PlayedCharacterManager().currentMap.mapId
         self._startMapId = currentMapId
         self._startRpZone = PlayedCharacterManager().currentZoneRp
@@ -118,10 +118,10 @@ class BotUnloadInSellerFrame(Frame):
     def process(self, msg: Message) -> bool:
 
         if isinstance(msg, AutoTripEndedMessage):
-            logger.debug("AutoTripEndedMessage received")
+            Logger().debug("AutoTripEndedMessage received")
             if self.state == UnloadInSellerStatesEnum.RETURNING_TO_START_POINT:
                 Kernel().worker.removeFrame(self)
-                Kernel().worker.processImmediately(SellerCollectedGuestItemsMessage())
+                Kernel().worker.process(SellerCollectedGuestItemsMessage())
             elif self.state == UnloadInSellerStatesEnum.WALKING_TO_BANK:
                 threading.Thread(target=self.waitForSellerToComme, name=threading.current_thread().name).start()
                 self.state = UnloadInSellerStatesEnum.WAITING_FOR_SELLER
@@ -135,7 +135,7 @@ class BotUnloadInSellerFrame(Frame):
         elif isinstance(msg, ExchangeConcludedMessage):
             if not self.return_to_start:
                 Kernel().worker.removeFrame(self)
-                Kernel().worker.processImmediately(SellerCollectedGuestItemsMessage())
+                Kernel().worker.process(SellerCollectedGuestItemsMessage())
             else:
                 self.state = UnloadInSellerStatesEnum.RETURNING_TO_START_POINT
                 Kernel().worker.addFrame(BotAutoTripFrame(self._startMapId, self._startRpZone))

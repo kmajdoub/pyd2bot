@@ -69,7 +69,7 @@ if TYPE_CHECKING:
     from pyd2bot.logic.roleplay.frames.BotPartyFrame import BotPartyFrame
 
 
-logger = Logger()
+
 
 
 class _Target:
@@ -187,13 +187,13 @@ class BotFightFrame(Frame):
         :param targets: positions of the mobs
         :return: cell of the mob, path to the ldv if any else None
         """
-        logger.debug(
+        Logger().debug(
             f"entities positions : {[entity.disposition.cellId for entity in self.entitiesFrame.entities.values()]}"
         )
-        logger.debug(f"entities ids : {[entity.contextualId for entity in self.entitiesFrame.entities.values()]}")
+        Logger().debug(f"entities ids : {[entity.contextualId for entity in self.entitiesFrame.entities.values()]}")
         if not targets:
             if self.VERBOSE:
-                logger.debug("[FightAlgo] Not hittable target found")
+                Logger().debug("[FightAlgo] Not hittable target found")
             return None, None
         for target in targets:
             if target.pos.distanceTo(self.fighterPos) == 1.0:
@@ -216,7 +216,7 @@ class BotFightFrame(Frame):
                     queue.append(path + [cellId])
                     seen.add(cellId)
         if self.VERBOSE:
-            logger.debug(f"[FightAlgo] No valid path to reach a target found")
+            Logger().debug(f"[FightAlgo] No valid path to reach a target found")
         return None, None
 
     def playTurn(self):
@@ -228,18 +228,18 @@ class BotFightFrame(Frame):
                 self.nextTurnAction()
                 return
         if self.VERBOSE:
-            logger.info(f"[FightAlgo] MP : {self.movementPoints}, AP : {self.actionPoints}")
-            logger.info(f"[FightAlgo] Current attack spell : {self.spellw.spell.name}")
+            Logger().info(f"[FightAlgo] MP : {self.movementPoints}, AP : {self.actionPoints}")
+            Logger().info(f"[FightAlgo] Current attack spell : {self.spellw.spell.name}")
         self.updateReachableCells()
         target, path = self.findPathToTarget(self.spellw, targets)
         if target is not None:
             if len(path) == 0:
                 if self.VERBOSE:
-                    logger.debug(f"[FightAlgo] Can hit target {target} from current position")
+                    Logger().debug(f"[FightAlgo] Can hit target {target} from current position")
                 self.addTurnAction(self.castSpell, [self.spellId, target.pos.cellId])
             elif path[-1] in self._reachableCells:
                 if self.VERBOSE:
-                    logger.debug(
+                    Logger().debug(
                         f"[FightAlgo] Last Path cell to target {target} is reachable will move to it before casting the spell"
                     )
                 self.addTurnAction(self.askMove, [path])
@@ -253,11 +253,11 @@ class BotFightFrame(Frame):
                             self.addTurnAction(self.askMove, [path[:i]])
                         break
                 if self.VERBOSE:
-                    logger.debug(f"[FightAlgo] Have enough PM to get closer to the target ? {found}")
+                    Logger().debug(f"[FightAlgo] Have enough PM to get closer to the target ? {found}")
                 self.addTurnAction(self.turnEnd, [])
         else:
             if self.VERBOSE:
-                logger.warn("[FightAlgo] No path to any target found")
+                Logger().warn("[FightAlgo] No path to any target found")
             self.addTurnAction(self.turnEnd, [])
         self.nextTurnAction()
 
@@ -273,10 +273,10 @@ class BotFightFrame(Frame):
         playerStats: EntityStats = CurrentPlayedFighterManager().getStats()
         range: int = spellw["range"]
         minRange: int = spellw["minRange"]
-        logger.debug(f"[FightAlgo] Spell {spellw.spell.name} has range {range}")
+        Logger().debug(f"[FightAlgo] Spell {spellw.spell.name} has range {range}")
         if spellw["rangeCanBeBoosted"]:
             range += playerStats.getStatTotalValue(StatIds.RANGE) - playerStats.getStatAdditionalValue(StatIds.RANGE)
-        logger.debug(f"[FightAlgo] Spell {spellw.spell.name} Range after apply of buffs is {range}")
+        Logger().debug(f"[FightAlgo] Spell {spellw.spell.name} Range after apply of buffs is {range}")
         if range < minRange:
             range = minRange
         range = min(range, AtouinConstants.MAP_WIDTH * AtouinConstants.MAP_HEIGHT)
@@ -319,16 +319,16 @@ class BotFightFrame(Frame):
 
     def nextTurnAction(self) -> None:
         if not self.battleFrame:
-            logger.warning("[FightAlgo] No battle frame found")
+            Logger().warning("[FightAlgo] No battle frame found")
             return
         if self.battleFrame._executingSequence:
             if self.VERBOSE:
-                logger.warn(f"[FightBot] Battle is busy processing sequences")
+                Logger().warn(f"[FightBot] Battle is busy processing sequences")
             BenchmarkTimer(1, self.nextTurnAction).start()
             return
         else:
             if self.VERBOSE:
-                logger.debug(f"[FightBot] Next turn actions, {[a['fct'].__name__ for a in self._turnAction]}")
+                Logger().debug(f"[FightBot] Next turn actions, {[a['fct'].__name__ for a in self._turnAction]}")
             if len(self._turnAction) > 0:
                 action = self._turnAction.pop(0)
                 self._waitingSeqEnd = True
@@ -349,7 +349,7 @@ class BotFightFrame(Frame):
     def process(self, msg: Message) -> bool:
 
         if isinstance(msg, GameFightJoinMessage):
-            logger.debug(f"****************** Joined fight ******************************************")
+            Logger().debug(f"****************** Joined fight ******************************************")
             BotConfig().lastFightTime = perf_counter()
             self._fightCount += 1
             self._spellCastFails = 0
@@ -357,10 +357,10 @@ class BotFightFrame(Frame):
             if BotConfig().isLeader and not self._fightOptionsSent:
                 gfotmsg = GameFightOptionToggleMessage()
                 gfotmsg.init(FightOptionsEnum.FIGHT_OPTION_SET_SECRET)
-                ConnectionsHandler()._conn.send(gfotmsg)
+                ConnectionsHandler().conn.send(gfotmsg)
                 gfotmsg = GameFightOptionToggleMessage()
                 gfotmsg.init(FightOptionsEnum.FIGHT_OPTION_SET_TO_PARTY_ONLY)
-                ConnectionsHandler()._conn.send(gfotmsg)
+                ConnectionsHandler().conn.send(gfotmsg)
                 self._fightOptionsSent = True
             return False
 
@@ -370,7 +370,7 @@ class BotFightFrame(Frame):
 
         elif isinstance(msg, GameActionFightNoSpellCastMessage):
             if self.VERBOSE:
-                logger.debug(f"[FightBot] Failed to cast spell")
+                Logger().debug(f"[FightBot] Failed to cast spell")
             if self._spellCastFails > 2:
                 self.turnEnd()
                 return True
@@ -396,7 +396,7 @@ class BotFightFrame(Frame):
                         return True
             startFightMsg = GameFightReadyMessage()
             startFightMsg.init(True)
-            ConnectionsHandler()._conn.send(startFightMsg)
+            ConnectionsHandler().conn.send(startFightMsg)
             return True
 
         elif isinstance(msg, SequenceEndMessage):
@@ -418,7 +418,7 @@ class BotFightFrame(Frame):
         elif isinstance(msg, (GameFightTurnStartPlayingMessage, GameFightTurnResumeMessage)):
             if self._botTurnFrame._myTurn:
                 if self.VERBOSE:
-                    logger.debug("******************** bot turn to play *********************************")
+                    Logger().debug("******************** bot turn to play *********************************")
                 self._spellCastFails = 0
                 self._seqQueue.clear()
                 self._myTurn = True
@@ -463,7 +463,7 @@ class BotFightFrame(Frame):
         if not FightEntitiesFrame.getCurrentInstance() or not self.battleFrame:
             return []
         if self.VERBOSE:
-            logger.debug(f"Deads list : {self.battleFrame._deadTurnsList}")
+            Logger().debug(f"Deads list : {self.battleFrame._deadTurnsList}")
         if self.fighterInfos is None:
             return []
         for entity in FightEntitiesFrame.getCurrentInstance().entities.values():
@@ -478,25 +478,25 @@ class BotFightFrame(Frame):
                 ):
                     result.append(_Target(entity.contextualId, MapPoint.fromCellId(entity.disposition.cellId)))
         if self.VERBOSE:
-            logger.debug(f"[FightBot] Found targets : {[str(tgt) for tgt in result]}")
+            Logger().debug(f"[FightBot] Found targets : {[str(tgt) for tgt in result]}")
         return result
 
     def castSpell(self, spellId: int, cellId: bool) -> None:
         if self.VERBOSE:
-            logger.debug(f"[FightBot] Casting spell {spellId} on cell {cellId}.")
+            Logger().debug(f"[FightBot] Casting spell {spellId} on cell {cellId}.")
         gafcrmsg: GameActionFightCastRequestMessage = GameActionFightCastRequestMessage()
         gafcrmsg.init(spellId, cellId)
-        ConnectionsHandler()._conn.send(gafcrmsg)
+        ConnectionsHandler().conn.send(gafcrmsg)
 
     def askMove(self, cells: list[int], cellsTackled: list[int] = []) -> None:
         if self.VERBOSE:
-            logger.debug(f"[FightBot] Ask move follwing path {cells}.")
+            Logger().debug(f"[FightBot] Ask move follwing path {cells}.")
         if not self._myTurn:
-            logger.warn("[FightBot] Wants to move when it's not its turn yet.")
+            Logger().warn("[FightBot] Wants to move when it's not its turn yet.")
             return False
         fightTurnFrame: "FightTurnFrame" = Kernel().worker.getFrame("FightTurnFrame")
         if not fightTurnFrame:
-            logger.warn("[FightBot] Wants to move inside fight but 'FightTurnFrame' not found in kernel.")
+            Logger().warn("[FightBot] Wants to move inside fight but 'FightTurnFrame' not found in kernel.")
             return False
         fightTurnFrame.askMoveTo(cells, cellsTackled)
         return True

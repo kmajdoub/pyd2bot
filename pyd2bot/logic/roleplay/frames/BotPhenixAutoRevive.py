@@ -24,7 +24,7 @@ from pyd2bot.misc.Localizer import Localizer
 if TYPE_CHECKING:
     from pydofus2.com.ankamagames.dofus.logic.game.roleplay.frames.RoleplayInteractivesFrame import RoleplayInteractivesFrame
 
-logger = Logger("Dofus2")
+
 class AutoReviveStateEnum:
     PHANTOME = 0
     SAOUL_RELEASED = 1
@@ -62,7 +62,7 @@ class BotPhenixAutoRevive(Frame):
                 # state changed from tomb to phantome
                 self._waitingForMapData = True
             else:
-                logger.info("Player is not in phantom state will renmove the phenix frame")
+                Logger().info("Player is not in phantom state will renmove the phenix frame")
                 Kernel().worker.removeFrame(self)
             return False
 
@@ -81,4 +81,4 @@ class BotPhenixAutoRevive(Frame):
 
     def releaseSoul(self):
         grpfsrmmsg = GameRolePlayFreeSoulRequestMessage()
-        ConnectionsHandler()._conn.send(grpfsrmmsg)
+        ConnectionsHandler().conn.send(grpfsrmmsg)

@@ -5,6 +5,8 @@ from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterMa
 from pydofus2.com.ankamagames.atouin.managers.MapDisplayManager import MapDisplayManager
 from typing import TYPE_CHECKING
 
+from pydofus2.com.ankamagames.jerakine.metaclasses.Singleton import Singleton
+
 if TYPE_CHECKING:
     from pydofus2.com.ankamagames.dofus.logic.game.roleplay.frames.RoleplayEntitiesFrame import (
         RoleplayEntitiesFrame,
@@ -21,10 +23,14 @@ if TYPE_CHECKING:
     from pyd2bot.logic.roleplay.frames.BotUnloadInSellerFrame import BotUnloadInSellerFrame
     from pyd2bot.logic.roleplay.frames.BotSellerCollectFrame import BotSellerCollectFrame
 
-
-class PlayerAPI:
-    @staticmethod
-    def status() -> str:
+    
+class PlayerAPI(metaclass=Singleton):
+    
+    def __init__(self):
+        self.inAutoTrip = False
+    
+    @property
+    def status(self) -> str:
         bpframe: "BotPartyFrame" = Kernel().worker.getFrame("BotPartyFrame")
         mvframe: "RoleplayMovementFrame" = Kernel().worker.getFrame("RoleplayMovementFrame")
         iframe: "RoleplayInteractivesFrame" = Kernel().worker.getFrame("RoleplayInteractivesFrame")
@@ -51,7 +57,7 @@ class PlayerAPI:
             status = "inSellerAutoUnload:" + f.state.name
         elif Kernel().worker.getFrame("BotPhenixAutoRevive"):
             status = "inPhenixAutoRevive"
-        elif Kernel().worker.getFrame("BotAutoTripFrame"):
+        elif self.inAutoTrip:
             status = "inAutoTrip"
         elif bfpf and bfpf._followinMonsterGroup:
             status = "followingMonsterGroup"

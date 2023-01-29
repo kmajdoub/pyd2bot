@@ -50,17 +50,17 @@ def sendTrace(func):
 class Pyd2botServer:
     def __init__(self, id: str):
         self.id = id
-        self.logger = Logger()
+        self.
 
     @sendTrace
     def fetchUsedServers(self, token: str) -> list[Server]:
         from pydofus2.com.ankamagames.dofus.network.types.connection.GameServerInformations import (
             GameServerInformations,
         )
-        self.logger.debug("fetchUsedServers called with token: " + token)
+        self.Logger().debug("fetchUsedServers called with token: " + token)
         DofusClient().login(token)
         servers: dict[str, list[GameServerInformations]] = KernelEventsManager().wait(KernelEvts.SERVERS_LIST, 60)
-        self.logger.info(f"list servers: {[s.to_json() for s in servers['used']]}")
+        self.Logger().info(f"list servers: {[s.to_json() for s in servers['used']]}")
         result = [
             Server(
                 server.id,
@@ -157,7 +157,7 @@ class Pyd2botServer:
         from pyd2bot.logic.roleplay.messages.LeaderPosMessage import LeaderPosMessage
 
         v = Vertex(**json.loads(vertex))
-        self.logger.debug(f"Leader pos given, leader in vertex {v}.")
+        self.Logger().debug(f"Leader pos given, leader in vertex {v}.")
         Kernel().worker.process(LeaderPosMessage(v))
 
     def followTransition(self, transition: str):
@@ -173,7 +173,7 @@ class Pyd2botServer:
     def getStatus(self) -> str:
         from pyd2bot.apis.PlayerAPI import PlayerAPI
 
-        status = PlayerAPI.status()
+        status = PlayerAPI().status
         print(f"get staus called -> Status: {status}")
         return status
 

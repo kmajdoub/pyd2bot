@@ -3,7 +3,7 @@ from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 from pydofus2.com.ankamagames.jerakine.metaclasses.Singleton import Singleton
 from pyd2bot.logic.managers.PathFactory import PathFactory
 from enum import Enum
-logger = Logger()
+
 
 class CharacterRoleEnum(Enum):
     LEADER = 0
@@ -32,6 +32,7 @@ class BotConfig(metaclass=Singleton):
         self.sessionType: SessionType = None
         self.seller: Character = None
         self.unloadType: UnloadType = None
+        self.monsterLvlCoefDiff = float('inf')
     
     @property
     def primarySpellId(self) -> int:
@@ -67,4 +68,4 @@ class BotConfig(metaclass=Singleton):
         self.isLeader = (role == CharacterRoleEnum.LEADER)
         if self.isFightSession and self.isLeader:
             self.path = PathFactory.from_thriftObj(session.path)
-            self.monsterLvlCoefDiff = session.monsterLvlCoefDiff
+            self.monsterLvlCoefDiff = session.monsterLvlCoefDiff if session.monsterLvlCoefDiff is not None else float('inf')

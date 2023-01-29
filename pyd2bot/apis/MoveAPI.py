@@ -36,7 +36,7 @@ from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 from pydofus2.com.ankamagames.jerakine.types.enums.DirectionsEnum import DirectionsEnum
 
-logger = Logger("Dofus2")
+
 
 
 class MapChange:
@@ -46,12 +46,13 @@ class MapChange:
 
 
 class MoveAPI:
+    
     @classmethod
     def randomMapChange(cls, discard=[]):
         transitions = cls.getOutGoingTransitions(discard)
         if len(transitions) == 0:
             raise Exception("Nbr of possible map change direction")
-        logger.debug("Nbr of Possible directions: %d", len(transitions))
+        Logger().debug("Nbr of Possible directions: %d", len(transitions))
         randTransition = random.choice(transitions)
         if randTransition.skillId > 0:
             rplInteractivesFrame: "RoleplayInteractivesFrame" = (
@@ -60,12 +61,12 @@ class MoveAPI:
             ie = rplInteractivesFrame.interactives.get(randTransition.id)
             if ie is None:
                 raise Exception(f"[MouvementAPI] InteractiveElement {randTransition.id} not found")
-            logger.debug(
+            Logger().debug(
                 f"[MouvementAPI] Activating skill {randTransition.skillId} to change map towards '{randTransition.transitionMapId}'"
             )
             rplInteractivesFrame.skillClicked(ie)
         else:
-            logger.debug(
+            Logger().debug(
                 f"[MouvementAPI] Sending a click to change map towards direction '{randTransition.transitionMapId}'"
             )
             cls.sendClickAdjacentMsg(randTransition.transitionMapId, randTransition.cell)
@@ -77,7 +78,7 @@ class MoveAPI:
     ) -> list[Transition]:
         result = []
         v = WorldPathFinder().currPlayerVertex
-        logger.debug(f"current map {v.mapId}")
+        Logger().debug(f"current map {v.mapId}")
         outgoingEdges = WorldPathFinder().worldGraph.getOutgoingEdgesFromVertex(v)
         for e in outgoingEdges:
             if e.dst.mapId in discard:
@@ -128,6 +129,19 @@ class MoveAPI:
             BenchmarkTimer(1, cls.getTransitionIe, [transition]).start()
             return
         ie = rpframe.getInteractiveElement(transition.id, transition.skillId)
+        if ie is not None:
+            Logger().debug(f"[RolePlayMovement] InteractiveElement found: '{ie.element.elementId}'")
+        else:
+            Logger().warning(f"[RolePlayMovement] InteractiveElement not found: '{transition.skillId}' - retrying...")
+            s = perf_counter()
+            while True:
+                if perf_counter() - s > 10:
+                    raise Exception(f"[RolePlayMovement] InteractiveElement not found: '{transition.skillId}'")
+                ie = cls.getTransitionIe(transition)
+                if ie is not None:
+                    break
+                sleep(0.2)
+            Logger().debug(f"[RolePlayMovement] InteractiveElement found: '{ie.element.elementId}' after retry")
         return ie
 
     @classmethod
@@ -135,28 +149,15 @@ class MoveAPI:
         if not tr.isValid:
             raise Exception("[RolePlayMovement] Trying to follow a NON valid transition")
         if tr.transitionMapId == PlayedCharacterManager().currentMap.mapId:
-            logger.warning(
+            Logger().warning(
                 f"[RolePlayMovement] transition is heading to my current map '{tr.transitionMapId}', nothing to do."
             )
             return True
         if TransitionTypeEnum(tr.type) == TransitionTypeEnum.INTERACTIVE:
-            logger.debug(
-                f"[RolePlayMovement] Wants to activate skillId '{tr.skillId}' to change map to '{tr.transitionMapId}'"
+            Logger().debug(
+                f"[RolePlayMovement] Wants to activate skill '{tr.skillId}' to change map to '{tr.transitionMapId}'"
             )
             ie = cls.getTransitionIe(tr)
-            if ie is not None:
-                logger.debug(f"[RolePlayMovement] InteractiveElement found: '{ie.element.elementId}'")
-            else:
-                logger.warning(f"[RolePlayMovement] InteractiveElement not found: '{tr.skillId}' - retrying...")
-                s = perf_counter()
-                while True:
-                    if perf_counter() - s > 10:
-                        raise Exception(f"[RolePlayMovement] InteractiveElement not found: '{tr.skillId}'")
-                    ie = cls.getTransitionIe(tr)
-                    if ie is not None:
-                        break
-                    sleep(0.2)
-                logger.debug(f"[RolePlayMovement] InteractiveElement found: '{ie.element.elementId}' after retry")
             rpmframe: "RoleplayMovementFrame" = Kernel().worker.getFrame("RoleplayMovementFrame")
             if tr.cell != PlayedCharacterManager().entity.position.cellId:
                 rpmframe.setFollowingInteraction(
@@ -171,7 +172,7 @@ class MoveAPI:
             else:
                 rpmframe.activateSkill(ie.skillUID, tr.id, 0)
         else:
-            logger.debug(f"[RolePlayMovement] Scroll MAP change towards '{tr.transitionMapId}'")
+            Logger().debug(f"[RolePlayMovement] Scroll MAP change towards '{tr.transitionMapId}'")
             cls.sendClickAdjacentMsg(tr.transitionMapId, tr.cell)
 
     @classmethod

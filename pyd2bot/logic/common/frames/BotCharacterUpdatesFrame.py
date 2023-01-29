@@ -21,7 +21,7 @@ from pydofus2.com.ankamagames.jerakine.types.enums.Priority import Priority
 from pydofus2.damageCalculation.tools.StatIds import StatIds
 from pyd2bot.logic.managers.BotConfig import BotConfig
 
-logger = Logger()
+
 
 
 class BotCharacterUpdatesFrame(Frame):
@@ -57,7 +57,13 @@ class BotCharacterUpdatesFrame(Frame):
         additional = PlayedCharacterManager().stats.getStatAdditionalValue(statId)
         base = PlayedCharacterManager().stats.getStatBaseValue(statId)
         current_stat_points = base + additional
-        current_floor_cost = next(floor[1] for floor in stat_floors if floor[0] > current_stat_points)
+        
+        try:
+            current_floor_cost = next(floor[1] for floor in stat_floors if floor[0] > current_stat_points)
+        except StopIteration:
+            # if there's no floor that the current stat points is less than
+            current_floor_cost = 4
+        
         boost = 0
         for i in range(len(stat_floors)):
             next_floor = stat_floors[i + 1][0] if i + 1 < len(stat_floors) else float("inf")

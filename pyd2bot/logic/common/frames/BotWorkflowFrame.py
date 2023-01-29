@@ -33,7 +33,7 @@ from pyd2bot.logic.roleplay.frames.BotUnloadInBankFrame import BotUnloadInBankFr
 from pyd2bot.logic.roleplay.messages.BankUnloadEndedMessage import BankUnloadEndedMessage
 from pyd2bot.thriftServer.pyd2botService.ttypes import Session, SessionType
 
-logger = Logger()
+
 
 
 class BotWorkflowFrame(Frame):
@@ -60,7 +60,7 @@ class BotWorkflowFrame(Frame):
         if BotConfig().party:
             Kernel().worker.removeFrameByName("BotPartyFrame")
         self._inAutoUnload = True
-        logger.warn(f"Inventory is almost full {InventoryAPI.getWeightPercent()}%, will trigger auto bank unload...")
+        Logger().warn(f"Inventory is almost full {InventoryAPI.getWeightPercent()}%, will trigger auto bank unload...")
         if BotConfig().unloadInBank:
             Kernel().worker.addFrame(BotUnloadInBankFrame(True))
         elif BotConfig().unloadInSeller:
@@ -69,7 +69,7 @@ class BotWorkflowFrame(Frame):
     def process(self, msg: Message) -> bool:
 
         if isinstance(msg, GameContextCreateMessage):
-            logger.debug(
+            Logger().debug(
                 "*************************************** GameContext Created ************************************************"
             )
             self.currentContext = msg.context
@@ -90,7 +90,7 @@ class BotWorkflowFrame(Frame):
             return True
 
         elif isinstance(msg, GameContextDestroyMessage):
-            logger.debug(
+            Logger().debug(
                 "*************************************** GameContext Destroyed ************************************************"
             )
             if self.currentContext == GameContextEnum.FIGHT:
@@ -105,7 +105,7 @@ class BotWorkflowFrame(Frame):
                 if WeightPercent > 95:
                     if self.currentContext is None:
                         self._delayedAutoUnlaod = True
-                        logger.debug("Inventory full but the context is not created yet, so we will delay the unload.")
+                        Logger().debug("Inventory full but the context is not created yet, so we will delay the unload.")
                         return False
                     self.triggerUnload()
                 return True
@@ -126,7 +126,7 @@ class BotWorkflowFrame(Frame):
                 or PlayerLifeStatusEnum(msg.state) == PlayerLifeStatusEnum.STATUS_PHANTOM
             )
         ) or isinstance(msg, GameRolePlayGameOverMessage):
-            logger.debug(f"Player is dead, auto reviving...")
+            Logger().debug(f"Player is dead, auto reviving...")
             self._inPhenixAutoRevive = True
             Kernel().worker.removeFrameByName("BotFarmPathFrame")
             PlayedCharacterManager().state = PlayerLifeStatusEnum(msg.state)
@@ -137,7 +137,7 @@ class BotWorkflowFrame(Frame):
             isinstance(msg, GameRolePlayPlayerLifeStatusMessage)
             and PlayerLifeStatusEnum(msg.state) == PlayerLifeStatusEnum.STATUS_ALIVE_AND_KICKING
         ):
-            logger.debug(f"Player is alive and kicking, returning to work...")
+            Logger().debug(f"Player is alive and kicking, returning to work...")
             self._inPhenixAutoRevive = False
             Kernel().worker.removeFrameByName("BotPhenixAutoRevive")
             if BotConfig().path:

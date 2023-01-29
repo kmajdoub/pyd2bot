@@ -14,7 +14,7 @@ from pyd2bot.logic.roleplay.messages.AutoTripEndedMessage import AutoTripEndedMe
 from pyd2bot.logic.roleplay.messages.BankUnloadEndedMessage import BankUnloadEndedMessage
 from pyd2bot.misc.Localizer import Localizer
 from enum import Enum
-logger = Logger()
+
 
 class BankUnloadStates(Enum):
     WAITING_FOR_MAP = -1
@@ -32,7 +32,7 @@ class BotUnloadInBankFrame(Frame):
         self.return_to_start = return_to_start
 
     def pushed(self) -> bool:
-        logger.debug("BotUnloadInBankFrame pushed")
+        Logger().debug("BotUnloadInBankFrame pushed")
         self.state = BankUnloadStates.IDLE
         if PlayedCharacterManager().currentMap is not None:
             self.start()
@@ -41,7 +41,7 @@ class BotUnloadInBankFrame(Frame):
         return True
 
     def pulled(self) -> bool:
-        logger.debug("BotUnloadInBankFrame pulled")
+        Logger().debug("BotUnloadInBankFrame pulled")
         return True
 
     @property
@@ -50,7 +50,7 @@ class BotUnloadInBankFrame(Frame):
 
     def start(self):
         self.infos = Localizer.getBankInfos()
-        logger.debug("Bank infos: %s", self.infos.__dict__)
+        Logger().debug("Bank infos: %s", self.infos.__dict__)
         currentMapId = PlayedCharacterManager().currentMap.mapId
         self._startMapId = currentMapId
         self._startRpZone = PlayedCharacterManager().currentZoneRp
@@ -66,11 +66,11 @@ class BotUnloadInBankFrame(Frame):
     def process(self, msg: Message) -> bool:
 
         if isinstance(msg, AutoTripEndedMessage):
-            logger.debug("AutoTripEndedMessage received")
+            Logger().debug("AutoTripEndedMessage received")
             if self.state == BankUnloadStates.RETURNING_TO_START_POINT:
                 self.state = BankUnloadStates.IDLE
                 Kernel().worker.removeFrame(self)
-                Kernel().worker.processImmediately(BankUnloadEndedMessage())
+                Kernel().worker.process(BankUnloadEndedMessage())
             elif self.state == BankUnloadStates.WALKING_TO_BANK:
                 self.state = BankUnloadStates.ISIDE_BANK
                 Kernel().worker.addFrame(BotBankInteractionFrame(self.infos))
@@ -86,7 +86,7 @@ class BotUnloadInBankFrame(Frame):
             if not self.return_to_start:
                 self.state = BankUnloadStates.IDLE
                 Kernel().worker.removeFrame(self)
-                Kernel().worker.processImmediately(BankUnloadEndedMessage())
+                Kernel().worker.process(BankUnloadEndedMessage())
             else:
                 self.state = BankUnloadStates.RETURNING_TO_START_POINT
                 Kernel().worker.addFrame(BotAutoTripFrame(self._startMapId, self._startRpZone))

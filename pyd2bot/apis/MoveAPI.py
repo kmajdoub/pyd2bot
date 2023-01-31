@@ -1,4 +1,6 @@
 import random
+from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import KernelEventsManager, KernelEvts
+from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.WorldGraph import WorldGraph
 from pydofus2.com.ankamagames.jerakine.benchmark.BenchmarkTimer import BenchmarkTimer
 from time import perf_counter, sleep
 from typing import TYPE_CHECKING
@@ -79,7 +81,7 @@ class MoveAPI:
         result = []
         v = WorldPathFinder().currPlayerVertex
         Logger().debug(f"current map {v.mapId}")
-        outgoingEdges = WorldPathFinder().worldGraph.getOutgoingEdgesFromVertex(v)
+        outgoingEdges = WorldGraph().getOutgoingEdgesFromVertex(v)
         for e in outgoingEdges:
             if e.dst.mapId in discard:
                 continue
@@ -126,22 +128,11 @@ class MoveAPI:
     def getTransitionIe(cls, transition: Transition) -> "InteractiveElementData":
         rpframe: "RoleplayInteractivesFrame" = Kernel().worker.getFrame("RoleplayInteractivesFrame")
         if not rpframe:
-            BenchmarkTimer(1, cls.getTransitionIe, [transition]).start()
+            KernelEventsManager().on(KernelEvts.MAPPROCESSED, lambda e:cls.getTransitionIe(transition))
             return
         ie = rpframe.getInteractiveElement(transition.id, transition.skillId)
-        if ie is not None:
-            Logger().debug(f"[RolePlayMovement] InteractiveElement found: '{ie.element.elementId}'")
-        else:
-            Logger().warning(f"[RolePlayMovement] InteractiveElement not found: '{transition.skillId}' - retrying...")
-            s = perf_counter()
-            while True:
-                if perf_counter() - s > 10:
-                    raise Exception(f"[RolePlayMovement] InteractiveElement not found: '{transition.skillId}'")
-                ie = cls.getTransitionIe(transition)
-                if ie is not None:
-                    break
-                sleep(0.2)
-            Logger().debug(f"[RolePlayMovement] InteractiveElement found: '{ie.element.elementId}' after retry")
+        if not ie:
+            raise Exception(f"InteractiveElement {transition.id} not found")
         return ie
 
     @classmethod
@@ -179,9 +170,8 @@ class MoveAPI:
     def neighborMapIdFromcoords(cls, x: int, y: int) -> int:
         v = WorldPathFinder().currPlayerVertex
         if not v:
-            BenchmarkTimer(1, cls.neighborMapIdFromcoords, [x, y]).start()
-            return
-        outgoingEdges = WorldPathFinder().worldGraph.getOutgoingEdgesFromVertex(v)
+            KernelEventsManager().on(KernelEvts.MAPPROCESSED, lambda e:cls.neighborMapIdFromcoords(x, y))
+        outgoingEdges = WorldGraph().getOutgoingEdgesFromVertex(v)
         for edge in outgoingEdges:
             mp = MapPosition.getMapPositionById(edge.dst.mapId)
             if mp.posX == x and mp.posY == y:
@@ -193,9 +183,8 @@ class MoveAPI:
     def changeMapToDstCoords(cls, x: int, y: int) -> None:
         v = WorldPathFinder().currPlayerVertex
         if not v:
-            BenchmarkTimer(1, cls.changeMapToDstCoords, [x, y]).start()
-            return
-        outgoingEdges = WorldPathFinder().worldGraph.getOutgoingEdgesFromVertex(v)
+            KernelEventsManager().on(KernelEvts.MAPPROCESSED, lambda e:cls.changeMapToDstCoords(x, y))
+        outgoingEdges = WorldGraph().getOutgoingEdgesFromVertex(v)
         for edge in outgoingEdges:
             mp = MapPosition.getMapPositionById(edge.dst.mapId)
             if mp.posX == x and mp.posY == y:

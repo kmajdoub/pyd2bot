@@ -7,6 +7,7 @@ from pydofus2.com.ankamagames.dofus.datacenter.world.SubArea import SubArea
 from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.astar.AStar import AStar
 from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Transition import Transition
 from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Vertex import Vertex
+from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.WorldGraph import WorldGraph
 from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.WorldPathFinder import WorldPathFinder
 from pyd2bot.models.farmPaths.AbstractFarmPath import AbstractFarmPath
 
@@ -26,7 +27,7 @@ class RandomSubAreaFarmPath(AbstractFarmPath):
         self.onlyDirections = onlyDirections
 
     def __next__(self) -> Transition:
-        outgoingEdges = WorldPathFinder().worldGraph.getOutgoingEdgesFromVertex(self.currentVertex)
+        outgoingEdges = WorldGraph().getOutgoingEdgesFromVertex(self.currentVertex)
         transitions = []
         for edge in outgoingEdges:
             if edge.dst.mapId in self.subArea.mapIds:
@@ -40,7 +41,7 @@ class RandomSubAreaFarmPath(AbstractFarmPath):
         return self.neighbors(self.currentVertex)
 
     def neighbors(self, vertex: Vertex) -> Iterator[Vertex]:
-        outgoingEdges = WorldPathFinder().worldGraph.getOutgoingEdgesFromVertex(vertex)
+        outgoingEdges = WorldGraph().getOutgoingEdgesFromVertex(vertex)
         for edge in outgoingEdges:
             if edge.dst.mapId in self.subArea.mapIds:
                 found = False
@@ -85,7 +86,7 @@ class RandomSubAreaFarmPath(AbstractFarmPath):
 
     @classmethod
     def from_thriftObj(cls, path: Path) -> "RandomSubAreaFarmPath":
-        startVertex = WorldPathFinder().worldGraph.getVertex(path.startVertex.mapId, path.startVertex.zoneId)
+        startVertex = WorldGraph().getVertex(path.startVertex.mapId, path.startVertex.zoneId)
         if startVertex is None:
             raise ValueError("Could not find start vertex from startVertex : " + str(path.startVertex))
         return cls(path.id, startVertex)

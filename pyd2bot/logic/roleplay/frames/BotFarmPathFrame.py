@@ -1,3 +1,4 @@
+from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import KernelEventsManager, KernelEvts
 from pydofus2.com.ankamagames.dofus.kernel.net.DisconnectionReasonEnum import DisconnectionReasonEnum
 from pydofus2.com.ankamagames.jerakine.benchmark.BenchmarkTimer import BenchmarkTimer
 from typing import TYPE_CHECKING
@@ -103,7 +104,7 @@ class BotFarmPathFrame(Frame):
         Logger().info("BotFarmPathFrame pushed")
         self._followinMonsterGroup = None
         if self._autoStart:
-            BenchmarkTimer(5, self.doFarm).start()
+            KernelEventsManager().onceFramePushed("BotPartyFrame", self.doFarm)
         return True
 
     def pulled(self) -> bool:
@@ -119,7 +120,6 @@ class BotFarmPathFrame(Frame):
         self._followingIe = None
         self._usingInteractive = False
         self._followinMonsterGroup = None
-        self._lastCellId = None
         self._inAutoTrip = False
         self._discardedMonstersIds.clear()
         if self.movementFrame:
@@ -255,21 +255,16 @@ class BotFarmPathFrame(Frame):
         return tgtRpZone == PlayedCharacterManager().currentZoneRp
 
     def doFarm(self, event=None):
+        Logger().debug("[BotFarmFrame] doFarm called")
         if self._pulled:
+            Logger().debug("[BotFarmFrame] Already pulled")
             return
-        if BotEventsManager().has_listeners(BotEventsManager.MEMBERS_READY):
-            BotEventsManager().remove_listener(BotEventsManager.MEMBERS_READY, self.doFarm)
         if PlayerAPI().status != "idle":
             Logger().debug(f"[BotFarmFrame] Can't farm, bot is not idle but '{PlayerAPI().status}'")
-            BotEventsManager().add_listener(BotEventsManager.MEMBERS_READY, self.doFarm)
-            return
-        Logger().debug("[BotFarmFrame] doFarm called")
-        if BotConfig().isFightSession and not BotConfig().isLeader:
-            Logger().warning("[BotFarmFrame] In fight mode only the leader can run a farm path")
-            Kernel().worker.removeFrame(self)
             return
         if WorldPathFinder().currPlayerVertex is None:
-            BotEventsManager().add_listener(BotEventsManager.MEMBERS_READY, self.doFarm)
+            Logger().debug("[BotFarmFrame] Can't farm, bot is still loading map")
+            KernelEventsManager().once(KernelEvts.MAPPROCESSED, self.doFarm)
             return
         if WorldPathFinder().currPlayerVertex not in self.farmPath:
             Logger().debug(
@@ -279,16 +274,21 @@ class BotFarmPathFrame(Frame):
             self._worker.addFrame(BotAutoTripFrame(self.farmPath.startVertex.mapId))
             return
         if self.partyFrame:
-            if not self.partyFrame.allMembersOnSameMap or not self.partyFrame.allMembersIdle:
-                BotEventsManager().add_listener(BotEventsManager.MEMBERS_READY, self.doFarm)
+            if not self.partyFrame.allMembersOnSameMap:
+                Logger().debug("[BotFarmFrame] Waiting for party members to be on the same map")
+                BotEventsManager().onAllPartyMembersShowed(self.doFarm)
                 return
+            else:
+                Logger().debug("[BotFarmFrame] Waiting for party members to be idle")
+                BotEventsManager().onAllPartyMembersIdle(self.doFarmEnsured)
+                self.partyFrame.checkAllMembersIdle()
+        else:
+            self.doFarmEnsured()
+    
+    def doFarmEnsured(self):
         Logger().info("[BotFarmFrame] Party found and all members on the same map and are idle.")
-        if self._followingIe or self._followinMonsterGroup:
-            BotEventsManager().add_listener(BotEventsManager.MEMBERS_READY, self.doFarm)
-            return 
         self._followinMonsterGroup = None
         self._followingIe = None
-        self._lastCellId = PlayedCharacterManager().currentCellId
         if BotConfig().isFightSession:
             self.attackMonsterGroup()
         elif BotConfig().isFarmSession:

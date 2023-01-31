@@ -190,7 +190,6 @@ class Pyd2botServer:
         from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.WorldPathFinder import (
             WorldPathFinder,
         )
-
         return json.dumps(WorldPathFinder().currPlayerVertex.to_json())
 
     def getInventoryKamas(self) -> int:

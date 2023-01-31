@@ -187,13 +187,7 @@ class BotFightFrame(Frame):
         :param targets: positions of the mobs
         :return: cell of the mob, path to the ldv if any else None
         """
-        Logger().debug(
-            f"entities positions : {[entity.disposition.cellId for entity in self.entitiesFrame.entities.values()]}"
-        )
-        Logger().debug(f"entities ids : {[entity.contextualId for entity in self.entitiesFrame.entities.values()]}")
         if not targets:
-            if self.VERBOSE:
-                Logger().debug("[FightAlgo] Not hittable target found")
             return None, None
         for target in targets:
             if target.pos.distanceTo(self.fighterPos) == 1.0:

@@ -45,7 +45,9 @@ struct Character {
     4:int breedId,
     5:string breedName,
     6:int serverId,
-    7:string serverName
+    7:string serverName,
+    8:string login,
+    9:int accountId,
 }
 struct Session {
     1: double id,

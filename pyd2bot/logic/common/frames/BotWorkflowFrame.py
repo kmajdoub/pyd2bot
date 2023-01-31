@@ -77,15 +77,14 @@ class BotWorkflowFrame(Frame):
                 self._delayedAutoUnlaod = False
                 self.triggerUnload()
                 return True
+            
             if not self._inAutoUnload and not self._inPhenixAutoRevive:
+                if BotConfig().party and not Kernel().worker.contains("BotPartyFrame"):
+                    Kernel().worker.addFrame(BotPartyFrame())
                 if self.currentContext == GameContextEnum.ROLE_PLAY:
-                    if BotConfig().party:
-                        Kernel().worker.addFrame(BotPartyFrame())
-                    if BotConfig().path:
+                    if BotConfig().path and not Kernel().worker.contains("BotFarmPathFrame"):
                         Kernel().worker.addFrame(BotFarmPathFrame(True))
                 elif self.currentContext == GameContextEnum.FIGHT:
-                    if BotConfig().party:
-                        Kernel().worker.addFrame(BotPartyFrame())
                     Kernel().worker.addFrame(BotFightFrame())
             return True
 
@@ -114,9 +113,9 @@ class BotWorkflowFrame(Frame):
 
         elif isinstance(msg, (BankUnloadEndedMessage, SellerCollectedGuestItemsMessage)):
             self._inAutoUnload = False
-            if BotConfig().path:
+            if BotConfig().path and not Kernel().worker.contains("BotFarmPathFrame"):
                 Kernel().worker.addFrame(BotFarmPathFrame(True))
-            if BotConfig().party:
+            if BotConfig().party and not Kernel().worker.contains("BotPartyFrame"):
                 Kernel().worker.addFrame(BotPartyFrame())
 
         elif (
@@ -140,6 +139,6 @@ class BotWorkflowFrame(Frame):
             Logger().debug(f"Player is alive and kicking, returning to work...")
             self._inPhenixAutoRevive = False
             Kernel().worker.removeFrameByName("BotPhenixAutoRevive")
-            if BotConfig().path:
+            if BotConfig().path and not Kernel().worker.contains("BotFarmPathFrame"):
                 Kernel().worker.addFrame(BotFarmPathFrame(True))
             return True

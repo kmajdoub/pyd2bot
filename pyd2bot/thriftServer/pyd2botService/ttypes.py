@@ -438,11 +438,13 @@ class Character(object):
      - breedName
      - serverId
      - serverName
+     - login
+     - accountId
 
     """
 
 
-    def __init__(self, name=None, id=None, level=None, breedId=None, breedName=None, serverId=None, serverName=None,):
+    def __init__(self, name=None, id=None, level=None, breedId=None, breedName=None, serverId=None, serverName=None, login=None, accountId=None,):
         self.name = name
         self.id = id
         self.level = level
@@ -450,6 +452,8 @@ class Character(object):
         self.breedName = breedName
         self.serverId = serverId
         self.serverName = serverName
+        self.login = login
+        self.accountId = accountId
 
     def read(self, iprot):
         if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
@@ -495,6 +499,16 @@ class Character(object):
                     self.serverName = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
                 else:
                     iprot.skip(ftype)
+            elif fid == 8:
+                if ftype == TType.STRING:
+                    self.login = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 9:
+                if ftype == TType.I32:
+                    self.accountId = iprot.readI32()
+                else:
+                    iprot.skip(ftype)
             else:
                 iprot.skip(ftype)
             iprot.readFieldEnd()
@@ -532,6 +546,14 @@ class Character(object):
         if self.serverName is not None:
             oprot.writeFieldBegin('serverName', TType.STRING, 7)
             oprot.writeString(self.serverName.encode('utf-8') if sys.version_info[0] == 2 else self.serverName)
+            oprot.writeFieldEnd()
+        if self.login is not None:
+            oprot.writeFieldBegin('login', TType.STRING, 8)
+            oprot.writeString(self.login.encode('utf-8') if sys.version_info[0] == 2 else self.login)
+            oprot.writeFieldEnd()
+        if self.accountId is not None:
+            oprot.writeFieldBegin('accountId', TType.I32, 9)
+            oprot.writeI32(self.accountId)
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
         oprot.writeStructEnd()
@@ -823,6 +845,8 @@ Character.thrift_spec = (
     (5, TType.STRING, 'breedName', 'UTF8', None, ),  # 5
     (6, TType.I32, 'serverId', None, None, ),  # 6
     (7, TType.STRING, 'serverName', 'UTF8', None, ),  # 7
+    (8, TType.STRING, 'login', 'UTF8', None, ),  # 8
+    (9, TType.I32, 'accountId', None, None, ),  # 9
 )
 all_structs.append(Session)
 Session.thrift_spec = (

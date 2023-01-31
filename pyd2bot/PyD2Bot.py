@@ -1,6 +1,5 @@
 import threading
 import time
-from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 from pyd2bot.thriftServer.pyd2botServer import Pyd2botServer
 from thrift.protocol.THeaderProtocol import THeaderProtocolFactory
 from thrift.protocol.TJSONProtocol import TJSONProtocolFactory

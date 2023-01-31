@@ -24,7 +24,7 @@ class BotConfig(metaclass=Singleton):
         self.character: Character = None
         self.path = None
         self.isLeader: bool = None
-        self.isLeader: Character = None
+        self.leader: Character = None
         self.followers: list[Character] = None
         self.jobIds: list[int] = None
         self.resourceIds: list[int] = None
@@ -69,3 +69,5 @@ class BotConfig(metaclass=Singleton):
         if self.isFightSession and self.isLeader:
             self.path = PathFactory.from_thriftObj(session.path)
             self.monsterLvlCoefDiff = session.monsterLvlCoefDiff if session.monsterLvlCoefDiff is not None else float('inf')
+        else:
+            self.leader = session.leader

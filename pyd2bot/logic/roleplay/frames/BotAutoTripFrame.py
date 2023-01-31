@@ -55,7 +55,7 @@ class BotAutoTripFrame(Frame):
         self._computed = False
         self.changeMapFails.clear()
         self.path = None
-        BenchmarkTimer(0.2, self.walkToNextStep).start()
+        KernelEventsManager().onceFramePushed("BotAutoTripFrame", self.walkToNextStep)
         return True
 
     def pulled(self) -> bool:

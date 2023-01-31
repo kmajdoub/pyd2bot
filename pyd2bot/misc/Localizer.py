@@ -6,6 +6,7 @@ from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterMa
     PlayedCharacterManager,
 )
 from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.astar.AStar import AStar
+from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.WorldGraph import WorldGraph
 from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.WorldPathFinder import (
     WorldPathFinder,
 )
@@ -55,10 +56,10 @@ class Localizer:
                 closestBank = bank["npcMapId"]
                 break
             while True:
-                dstV = WorldPathFinder().worldGraph.getVertex(bank["npcMapId"], rpZ)
+                dstV = WorldGraph().getVertex(bank["npcMapId"], rpZ)
                 if not dstV:
                     break
-                path = AStar().search(WorldPathFinder().worldGraph, srcV, dstV, lambda x: (), False)
+                path = AStar().search(WorldGraph(), srcV, dstV, lambda x: (), False)
                 if path is not None:
                     dist = len(path)
                     if dist < minDist:

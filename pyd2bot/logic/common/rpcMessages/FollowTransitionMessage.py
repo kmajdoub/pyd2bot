@@ -4,7 +4,6 @@ from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Transition i
 
 
 class FollowTransitionMessage(RPCMessage):
-    
     def __init__(self, dest, transition: Transition) -> None:
         super().__init__(dest)
         self.transition = transition

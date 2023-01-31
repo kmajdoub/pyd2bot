@@ -2,10 +2,12 @@ from enum import Enum
 import json
 import threading
 from time import sleep
+from pyd2bot.logic.common.frames.BotRPCFrame import BotRPCFrame
 from pyd2bot.logic.managers.BotConfig import BotConfig
 from pyd2bot.logic.roleplay.frames.BotExchangeFrame import BotExchangeFrame, ExchangeDirectionEnum
 from pyd2bot.logic.roleplay.messages.ExchangeConcludedMessage import ExchangeConcludedMessage
 from pyd2bot.logic.roleplay.messages.SellerCollectedGuestItemsMessage import SellerCollectedGuestItemsMessage
+from pyd2bot.thriftServer.pyd2botService.ttypes import Character
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import PlayedCharacterManager
 from pydofus2.com.ankamagames.dofus.network.messages.game.context.roleplay.MapComplementaryInformationsDataMessage import (
     MapComplementaryInformationsDataMessage,
@@ -19,9 +21,9 @@ from pyd2bot.logic.roleplay.frames.BotAutoTripFrame import BotAutoTripFrame
 from pyd2bot.logic.roleplay.messages.AutoTripEndedMessage import AutoTripEndedMessage
 from pyd2bot.misc.Localizer import Localizer
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
     from pydofus2.com.ankamagames.dofus.logic.game.roleplay.frames.RoleplayEntitiesFrame import RoleplayEntitiesFrame
-
 
 
 class UnloadInSellerStatesEnum(Enum):
@@ -37,9 +39,9 @@ class UnloadInSellerStatesEnum(Enum):
 class BotUnloadInSellerFrame(Frame):
     PHENIX_MAPID = None
 
-    def __init__(self, sellerInfos: dict, return_to_start=True):
+    def __init__(self, sellerInfos: Character, return_to_start=True):
         super().__init__()
-        self.sellerInfos = sellerInfos
+        self.seller = sellerInfos
         self.return_to_start = return_to_start
         self.stopWaitingForSeller = threading.Event()
 
@@ -55,8 +57,6 @@ class BotUnloadInSellerFrame(Frame):
 
     def pulled(self) -> bool:
         Logger().debug("BotUnloadInSellerFrame pulled")
-        transport, client = self.sellerInfos["client"]
-        transport.close()
         self.stopWaitingForSeller.set()
         return True
 
@@ -64,40 +64,33 @@ class BotUnloadInSellerFrame(Frame):
     def priority(self) -> int:
         return Priority.VERY_LOW
 
-    def connectToSellerServer(self):
-        from pyd2bot import PyD2Bot
-
-        transport, client = PyD2Bot().runClient('localhost', self.sellerInfos["serverPort"])
-        self.sellerInfos["client"] = (transport, client)
-        return transport, client
-    
     @property
     def entitiesFrame(self) -> "RoleplayEntitiesFrame":
         return Kernel().worker.getFrame("RoleplayEntitiesFrame")
-    
+
     def waitForSellerToComme(self):
         self.stopWaitingForSeller.clear()
         while not self.stopWaitingForSeller.is_set():
             if self.entitiesFrame:
-                if self.entitiesFrame.getEntityInfos(self.sellerInfos["id"]):
+                if self.entitiesFrame.getEntityInfos(self.seller.id):
                     Logger().debug("Seller found in the bank map")
-                    Kernel().worker.addFrame(BotExchangeFrame(ExchangeDirectionEnum.GIVE, target=self.sellerInfos))
+                    Kernel().worker.addFrame(BotExchangeFrame(ExchangeDirectionEnum.GIVE, target=self.seller))
                     self.state = UnloadInSellerStatesEnum.IN_EXCHANGE_WITH_SELLER
-                    return True        
+                    return True
                 else:
                     Logger().debug("Seller not found in the bank map")
             else:
                 Logger().debug("No entitiesFrame found")
             sleep(2)
-    
+
     def waitForSellerIdleStatus(self):
-        transport, client = self.connectToSellerServer()
         currentMapId = PlayedCharacterManager().currentMap.mapId
+        rpcFrame: BotRPCFrame = Kernel().worker.getFrame("BotRPCFrame")
         while not self.stopWaitingForSeller.is_set():
-            sellerStatus = client.getStatus()
+            sellerStatus = rpcFrame.askForStatusSync(self.seller.login)
             Logger().debug("Seller status: %s", sellerStatus)
             if sellerStatus == "idle":
-                client.comeToBankToCollectResources(json.dumps(self.bankInfos.to_json()), json.dumps(BotConfig().character))
+                rpcFrame.askComeToCollect(self.seller.login, self.bankInfos, BotConfig().character)
                 if currentMapId != self.bankInfos.npcMapId:
                     Kernel().worker.addFrame(BotAutoTripFrame(self.bankInfos.npcMapId))
                     self.state = UnloadInSellerStatesEnum.WALKING_TO_BANK
@@ -105,8 +98,8 @@ class BotUnloadInSellerFrame(Frame):
                     threading.Thread(target=self.waitForSellerToComme, name=threading.current_thread().name).start()
                     self.state = UnloadInSellerStatesEnum.WAITING_FOR_SELLER
                 return True
-            sleep(2)
-    
+        sleep(2)
+
     def start(self):
         self.bankInfos = Localizer.getBankInfos()
         Logger().debug("Bank infos: %s", self.bankInfos.__dict__)
@@ -139,5 +132,3 @@ class BotUnloadInSellerFrame(Frame):
             else:
                 self.state = UnloadInSellerStatesEnum.RETURNING_TO_START_POINT
                 Kernel().worker.addFrame(BotAutoTripFrame(self._startMapId, self._startRpZone))
-                
-    

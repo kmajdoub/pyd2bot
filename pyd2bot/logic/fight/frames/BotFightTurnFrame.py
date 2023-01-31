@@ -8,8 +8,6 @@ from pydofus2.com.ankamagames.jerakine.messages.Message import Message
 from pydofus2.com.ankamagames.jerakine.types.enums.Priority import Priority
 
 
-
-
 class BotFightTurnFrame(Frame):
     def __init__(self):
         self._myTurn = False

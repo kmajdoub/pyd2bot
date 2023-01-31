@@ -13,6 +13,7 @@ from thrift.TRecursive import fix_spec
 import sys
 
 from thrift.transport import TTransport
+
 all_structs = []
 
 
@@ -76,14 +77,22 @@ class Vertex(object):
 
     """
 
-
-    def __init__(self, mapId=None, zoneId=None, onlyDirections=None,):
+    def __init__(
+        self,
+        mapId=None,
+        zoneId=None,
+        onlyDirections=None,
+    ):
         self.mapId = mapId
         self.zoneId = zoneId
         self.onlyDirections = onlyDirections
 
     def read(self, iprot):
-        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+        if (
+            iprot._fast_decode is not None
+            and isinstance(iprot.trans, TTransport.CReadableTransport)
+            and self.thrift_spec is not None
+        ):
             iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
             return
         iprot.readStructBegin()
@@ -115,17 +124,17 @@ class Vertex(object):
         if oprot._fast_encode is not None and self.thrift_spec is not None:
             oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
             return
-        oprot.writeStructBegin('Vertex')
+        oprot.writeStructBegin("Vertex")
         if self.mapId is not None:
-            oprot.writeFieldBegin('mapId', TType.DOUBLE, 1)
+            oprot.writeFieldBegin("mapId", TType.DOUBLE, 1)
             oprot.writeDouble(self.mapId)
             oprot.writeFieldEnd()
         if self.zoneId is not None:
-            oprot.writeFieldBegin('zoneId', TType.I32, 2)
+            oprot.writeFieldBegin("zoneId", TType.I32, 2)
             oprot.writeI32(self.zoneId)
             oprot.writeFieldEnd()
         if self.onlyDirections is not None:
-            oprot.writeFieldBegin('onlyDirections', TType.BOOL, 3)
+            oprot.writeFieldBegin("onlyDirections", TType.BOOL, 3)
             oprot.writeBool(self.onlyDirections)
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
@@ -135,9 +144,8 @@ class Vertex(object):
         return
 
     def __repr__(self):
-        L = ['%s=%r' % (key, value)
-             for key, value in self.__dict__.items()]
-        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+        L = ["%s=%r" % (key, value) for key, value in self.__dict__.items()]
+        return "%s(%s)" % (self.__class__.__name__, ", ".join(L))
 
     def __eq__(self, other):
         return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
@@ -160,8 +168,17 @@ class Server(object):
 
     """
 
-
-    def __init__(self, id=None, status=None, completion=None, charactersCount=None, charactersSlots=None, date=None, isMonoAccount=None, isSelectable=None,):
+    def __init__(
+        self,
+        id=None,
+        status=None,
+        completion=None,
+        charactersCount=None,
+        charactersSlots=None,
+        date=None,
+        isMonoAccount=None,
+        isSelectable=None,
+    ):
         self.id = id
         self.status = status
         self.completion = completion
@@ -172,7 +189,11 @@ class Server(object):
         self.isSelectable = isSelectable
 
     def read(self, iprot):
-        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+        if (
+            iprot._fast_decode is not None
+            and isinstance(iprot.trans, TTransport.CReadableTransport)
+            and self.thrift_spec is not None
+        ):
             iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
             return
         iprot.readStructBegin()
@@ -229,37 +250,37 @@ class Server(object):
         if oprot._fast_encode is not None and self.thrift_spec is not None:
             oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
             return
-        oprot.writeStructBegin('Server')
+        oprot.writeStructBegin("Server")
         if self.id is not None:
-            oprot.writeFieldBegin('id', TType.I32, 1)
+            oprot.writeFieldBegin("id", TType.I32, 1)
             oprot.writeI32(self.id)
             oprot.writeFieldEnd()
         if self.status is not None:
-            oprot.writeFieldBegin('status', TType.I32, 2)
+            oprot.writeFieldBegin("status", TType.I32, 2)
             oprot.writeI32(self.status)
             oprot.writeFieldEnd()
         if self.completion is not None:
-            oprot.writeFieldBegin('completion', TType.I32, 3)
+            oprot.writeFieldBegin("completion", TType.I32, 3)
             oprot.writeI32(self.completion)
             oprot.writeFieldEnd()
         if self.charactersCount is not None:
-            oprot.writeFieldBegin('charactersCount', TType.I32, 4)
+            oprot.writeFieldBegin("charactersCount", TType.I32, 4)
             oprot.writeI32(self.charactersCount)
             oprot.writeFieldEnd()
         if self.charactersSlots is not None:
-            oprot.writeFieldBegin('charactersSlots', TType.I32, 5)
+            oprot.writeFieldBegin("charactersSlots", TType.I32, 5)
             oprot.writeI32(self.charactersSlots)
             oprot.writeFieldEnd()
         if self.date is not None:
-            oprot.writeFieldBegin('date', TType.DOUBLE, 6)
+            oprot.writeFieldBegin("date", TType.DOUBLE, 6)
             oprot.writeDouble(self.date)
             oprot.writeFieldEnd()
         if self.isMonoAccount is not None:
-            oprot.writeFieldBegin('isMonoAccount', TType.BOOL, 7)
+            oprot.writeFieldBegin("isMonoAccount", TType.BOOL, 7)
             oprot.writeBool(self.isMonoAccount)
             oprot.writeFieldEnd()
         if self.isSelectable is not None:
-            oprot.writeFieldBegin('isSelectable', TType.BOOL, 8)
+            oprot.writeFieldBegin("isSelectable", TType.BOOL, 8)
             oprot.writeBool(self.isSelectable)
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
@@ -269,9 +290,8 @@ class Server(object):
         return
 
     def __repr__(self):
-        L = ['%s=%r' % (key, value)
-             for key, value in self.__dict__.items()]
-        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+        L = ["%s=%r" % (key, value) for key, value in self.__dict__.items()]
+        return "%s(%s)" % (self.__class__.__name__, ", ".join(L))
 
     def __eq__(self, other):
         return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
@@ -289,14 +309,22 @@ class Path(object):
 
     """
 
-
-    def __init__(self, id=None, type=None, startVertex=None,):
+    def __init__(
+        self,
+        id=None,
+        type=None,
+        startVertex=None,
+    ):
         self.id = id
         self.type = type
         self.startVertex = startVertex
 
     def read(self, iprot):
-        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+        if (
+            iprot._fast_decode is not None
+            and isinstance(iprot.trans, TTransport.CReadableTransport)
+            and self.thrift_spec is not None
+        ):
             iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
             return
         iprot.readStructBegin()
@@ -306,7 +334,11 @@ class Path(object):
                 break
             if fid == 1:
                 if ftype == TType.STRING:
-                    self.id = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                    self.id = (
+                        iprot.readString().decode("utf-8", errors="replace")
+                        if sys.version_info[0] == 2
+                        else iprot.readString()
+                    )
                 else:
                     iprot.skip(ftype)
             elif fid == 2:
@@ -329,17 +361,17 @@ class Path(object):
         if oprot._fast_encode is not None and self.thrift_spec is not None:
             oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
             return
-        oprot.writeStructBegin('Path')
+        oprot.writeStructBegin("Path")
         if self.id is not None:
-            oprot.writeFieldBegin('id', TType.STRING, 1)
-            oprot.writeString(self.id.encode('utf-8') if sys.version_info[0] == 2 else self.id)
+            oprot.writeFieldBegin("id", TType.STRING, 1)
+            oprot.writeString(self.id.encode("utf-8") if sys.version_info[0] == 2 else self.id)
             oprot.writeFieldEnd()
         if self.type is not None:
-            oprot.writeFieldBegin('type', TType.I32, 2)
+            oprot.writeFieldBegin("type", TType.I32, 2)
             oprot.writeI32(self.type)
             oprot.writeFieldEnd()
         if self.startVertex is not None:
-            oprot.writeFieldBegin('startVertex', TType.STRUCT, 3)
+            oprot.writeFieldBegin("startVertex", TType.STRUCT, 3)
             self.startVertex.write(oprot)
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
@@ -349,9 +381,8 @@ class Path(object):
         return
 
     def __repr__(self):
-        L = ['%s=%r' % (key, value)
-             for key, value in self.__dict__.items()]
-        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+        L = ["%s=%r" % (key, value) for key, value in self.__dict__.items()]
+        return "%s(%s)" % (self.__class__.__name__, ", ".join(L))
 
     def __eq__(self, other):
         return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
@@ -368,13 +399,20 @@ class Spell(object):
 
     """
 
-
-    def __init__(self, id=None, name=None,):
+    def __init__(
+        self,
+        id=None,
+        name=None,
+    ):
         self.id = id
         self.name = name
 
     def read(self, iprot):
-        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+        if (
+            iprot._fast_decode is not None
+            and isinstance(iprot.trans, TTransport.CReadableTransport)
+            and self.thrift_spec is not None
+        ):
             iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
             return
         iprot.readStructBegin()
@@ -389,7 +427,11 @@ class Spell(object):
                     iprot.skip(ftype)
             elif fid == 2:
                 if ftype == TType.STRING:
-                    self.name = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                    self.name = (
+                        iprot.readString().decode("utf-8", errors="replace")
+                        if sys.version_info[0] == 2
+                        else iprot.readString()
+                    )
                 else:
                     iprot.skip(ftype)
             else:
@@ -401,14 +443,14 @@ class Spell(object):
         if oprot._fast_encode is not None and self.thrift_spec is not None:
             oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
             return
-        oprot.writeStructBegin('Spell')
+        oprot.writeStructBegin("Spell")
         if self.id is not None:
-            oprot.writeFieldBegin('id', TType.I32, 1)
+            oprot.writeFieldBegin("id", TType.I32, 1)
             oprot.writeI32(self.id)
             oprot.writeFieldEnd()
         if self.name is not None:
-            oprot.writeFieldBegin('name', TType.STRING, 2)
-            oprot.writeString(self.name.encode('utf-8') if sys.version_info[0] == 2 else self.name)
+            oprot.writeFieldBegin("name", TType.STRING, 2)
+            oprot.writeString(self.name.encode("utf-8") if sys.version_info[0] == 2 else self.name)
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
         oprot.writeStructEnd()
@@ -417,9 +459,8 @@ class Spell(object):
         return
 
     def __repr__(self):
-        L = ['%s=%r' % (key, value)
-             for key, value in self.__dict__.items()]
-        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+        L = ["%s=%r" % (key, value) for key, value in self.__dict__.items()]
+        return "%s(%s)" % (self.__class__.__name__, ", ".join(L))
 
     def __eq__(self, other):
         return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
@@ -443,8 +484,18 @@ class Character(object):
 
     """
 
-
-    def __init__(self, name=None, id=None, level=None, breedId=None, breedName=None, serverId=None, serverName=None, login=None, accountId=None,):
+    def __init__(
+        self,
+        name=None,
+        id=None,
+        level=None,
+        breedId=None,
+        breedName=None,
+        serverId=None,
+        serverName=None,
+        login=None,
+        accountId=None,
+    ):
         self.name = name
         self.id = id
         self.level = level
@@ -456,7 +507,11 @@ class Character(object):
         self.accountId = accountId
 
     def read(self, iprot):
-        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+        if (
+            iprot._fast_decode is not None
+            and isinstance(iprot.trans, TTransport.CReadableTransport)
+            and self.thrift_spec is not None
+        ):
             iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
             return
         iprot.readStructBegin()
@@ -466,7 +521,11 @@ class Character(object):
                 break
             if fid == 1:
                 if ftype == TType.STRING:
-                    self.name = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                    self.name = (
+                        iprot.readString().decode("utf-8", errors="replace")
+                        if sys.version_info[0] == 2
+                        else iprot.readString()
+                    )
                 else:
                     iprot.skip(ftype)
             elif fid == 2:
@@ -486,7 +545,11 @@ class Character(object):
                     iprot.skip(ftype)
             elif fid == 5:
                 if ftype == TType.STRING:
-                    self.breedName = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                    self.breedName = (
+                        iprot.readString().decode("utf-8", errors="replace")
+                        if sys.version_info[0] == 2
+                        else iprot.readString()
+                    )
                 else:
                     iprot.skip(ftype)
             elif fid == 6:
@@ -496,12 +559,20 @@ class Character(object):
                     iprot.skip(ftype)
             elif fid == 7:
                 if ftype == TType.STRING:
-                    self.serverName = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                    self.serverName = (
+                        iprot.readString().decode("utf-8", errors="replace")
+                        if sys.version_info[0] == 2
+                        else iprot.readString()
+                    )
                 else:
                     iprot.skip(ftype)
             elif fid == 8:
                 if ftype == TType.STRING:
-                    self.login = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                    self.login = (
+                        iprot.readString().decode("utf-8", errors="replace")
+                        if sys.version_info[0] == 2
+                        else iprot.readString()
+                    )
                 else:
                     iprot.skip(ftype)
             elif fid == 9:
@@ -518,41 +589,41 @@ class Character(object):
         if oprot._fast_encode is not None and self.thrift_spec is not None:
             oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
             return
-        oprot.writeStructBegin('Character')
+        oprot.writeStructBegin("Character")
         if self.name is not None:
-            oprot.writeFieldBegin('name', TType.STRING, 1)
-            oprot.writeString(self.name.encode('utf-8') if sys.version_info[0] == 2 else self.name)
+            oprot.writeFieldBegin("name", TType.STRING, 1)
+            oprot.writeString(self.name.encode("utf-8") if sys.version_info[0] == 2 else self.name)
             oprot.writeFieldEnd()
         if self.id is not None:
-            oprot.writeFieldBegin('id', TType.DOUBLE, 2)
+            oprot.writeFieldBegin("id", TType.DOUBLE, 2)
             oprot.writeDouble(self.id)
             oprot.writeFieldEnd()
         if self.level is not None:
-            oprot.writeFieldBegin('level', TType.I32, 3)
+            oprot.writeFieldBegin("level", TType.I32, 3)
             oprot.writeI32(self.level)
             oprot.writeFieldEnd()
         if self.breedId is not None:
-            oprot.writeFieldBegin('breedId', TType.I32, 4)
+            oprot.writeFieldBegin("breedId", TType.I32, 4)
             oprot.writeI32(self.breedId)
             oprot.writeFieldEnd()
         if self.breedName is not None:
-            oprot.writeFieldBegin('breedName', TType.STRING, 5)
-            oprot.writeString(self.breedName.encode('utf-8') if sys.version_info[0] == 2 else self.breedName)
+            oprot.writeFieldBegin("breedName", TType.STRING, 5)
+            oprot.writeString(self.breedName.encode("utf-8") if sys.version_info[0] == 2 else self.breedName)
             oprot.writeFieldEnd()
         if self.serverId is not None:
-            oprot.writeFieldBegin('serverId', TType.I32, 6)
+            oprot.writeFieldBegin("serverId", TType.I32, 6)
             oprot.writeI32(self.serverId)
             oprot.writeFieldEnd()
         if self.serverName is not None:
-            oprot.writeFieldBegin('serverName', TType.STRING, 7)
-            oprot.writeString(self.serverName.encode('utf-8') if sys.version_info[0] == 2 else self.serverName)
+            oprot.writeFieldBegin("serverName", TType.STRING, 7)
+            oprot.writeString(self.serverName.encode("utf-8") if sys.version_info[0] == 2 else self.serverName)
             oprot.writeFieldEnd()
         if self.login is not None:
-            oprot.writeFieldBegin('login', TType.STRING, 8)
-            oprot.writeString(self.login.encode('utf-8') if sys.version_info[0] == 2 else self.login)
+            oprot.writeFieldBegin("login", TType.STRING, 8)
+            oprot.writeString(self.login.encode("utf-8") if sys.version_info[0] == 2 else self.login)
             oprot.writeFieldEnd()
         if self.accountId is not None:
-            oprot.writeFieldBegin('accountId', TType.I32, 9)
+            oprot.writeFieldBegin("accountId", TType.I32, 9)
             oprot.writeI32(self.accountId)
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
@@ -562,9 +633,8 @@ class Character(object):
         return
 
     def __repr__(self):
-        L = ['%s=%r' % (key, value)
-             for key, value in self.__dict__.items()]
-        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+        L = ["%s=%r" % (key, value) for key, value in self.__dict__.items()]
+        return "%s(%s)" % (self.__class__.__name__, ", ".join(L))
 
     def __eq__(self, other):
         return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
@@ -587,8 +657,17 @@ class Session(object):
 
     """
 
-
-    def __init__(self, id=None, leader=None, followers=None, seller=None, type=None, unloadType=None, path=None, monsterLvlCoefDiff=None,):
+    def __init__(
+        self,
+        id=None,
+        leader=None,
+        followers=None,
+        seller=None,
+        type=None,
+        unloadType=None,
+        path=None,
+        monsterLvlCoefDiff=None,
+    ):
         self.id = id
         self.leader = leader
         self.followers = followers
@@ -599,7 +678,11 @@ class Session(object):
         self.monsterLvlCoefDiff = monsterLvlCoefDiff
 
     def read(self, iprot):
-        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+        if (
+            iprot._fast_decode is not None
+            and isinstance(iprot.trans, TTransport.CReadableTransport)
+            and self.thrift_spec is not None
+        ):
             iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
             return
         iprot.readStructBegin()
@@ -665,40 +748,40 @@ class Session(object):
         if oprot._fast_encode is not None and self.thrift_spec is not None:
             oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
             return
-        oprot.writeStructBegin('Session')
+        oprot.writeStructBegin("Session")
         if self.id is not None:
-            oprot.writeFieldBegin('id', TType.DOUBLE, 1)
+            oprot.writeFieldBegin("id", TType.DOUBLE, 1)
             oprot.writeDouble(self.id)
             oprot.writeFieldEnd()
         if self.leader is not None:
-            oprot.writeFieldBegin('leader', TType.STRUCT, 3)
+            oprot.writeFieldBegin("leader", TType.STRUCT, 3)
             self.leader.write(oprot)
             oprot.writeFieldEnd()
         if self.followers is not None:
-            oprot.writeFieldBegin('followers', TType.LIST, 4)
+            oprot.writeFieldBegin("followers", TType.LIST, 4)
             oprot.writeListBegin(TType.STRUCT, len(self.followers))
             for iter6 in self.followers:
                 iter6.write(oprot)
             oprot.writeListEnd()
             oprot.writeFieldEnd()
         if self.seller is not None:
-            oprot.writeFieldBegin('seller', TType.STRUCT, 5)
+            oprot.writeFieldBegin("seller", TType.STRUCT, 5)
             self.seller.write(oprot)
             oprot.writeFieldEnd()
         if self.type is not None:
-            oprot.writeFieldBegin('type', TType.I32, 6)
+            oprot.writeFieldBegin("type", TType.I32, 6)
             oprot.writeI32(self.type)
             oprot.writeFieldEnd()
         if self.unloadType is not None:
-            oprot.writeFieldBegin('unloadType', TType.I32, 7)
+            oprot.writeFieldBegin("unloadType", TType.I32, 7)
             oprot.writeI32(self.unloadType)
             oprot.writeFieldEnd()
         if self.path is not None:
-            oprot.writeFieldBegin('path', TType.STRUCT, 8)
+            oprot.writeFieldBegin("path", TType.STRUCT, 8)
             self.path.write(oprot)
             oprot.writeFieldEnd()
         if self.monsterLvlCoefDiff is not None:
-            oprot.writeFieldBegin('monsterLvlCoefDiff', TType.DOUBLE, 9)
+            oprot.writeFieldBegin("monsterLvlCoefDiff", TType.DOUBLE, 9)
             oprot.writeDouble(self.monsterLvlCoefDiff)
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
@@ -708,9 +791,8 @@ class Session(object):
         return
 
     def __repr__(self):
-        L = ['%s=%r' % (key, value)
-             for key, value in self.__dict__.items()]
-        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+        L = ["%s=%r" % (key, value) for key, value in self.__dict__.items()]
+        return "%s(%s)" % (self.__class__.__name__, ", ".join(L))
 
     def __eq__(self, other):
         return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
@@ -727,10 +809,13 @@ class DofusError(TException):
 
     """
 
-
-    def __init__(self, code=None, message=None,):
-        super(DofusError, self).__setattr__('code', code)
-        super(DofusError, self).__setattr__('message', message)
+    def __init__(
+        self,
+        code=None,
+        message=None,
+    ):
+        super(DofusError, self).__setattr__("code", code)
+        super(DofusError, self).__setattr__("message", message)
 
     def __setattr__(self, *args):
         raise TypeError("can't modify immutable instance")
@@ -739,11 +824,20 @@ class DofusError(TException):
         raise TypeError("can't modify immutable instance")
 
     def __hash__(self):
-        return hash(self.__class__) ^ hash((self.code, self.message, ))
+        return hash(self.__class__) ^ hash(
+            (
+                self.code,
+                self.message,
+            )
+        )
 
     @classmethod
     def read(cls, iprot):
-        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and cls.thrift_spec is not None:
+        if (
+            iprot._fast_decode is not None
+            and isinstance(iprot.trans, TTransport.CReadableTransport)
+            and cls.thrift_spec is not None
+        ):
             return iprot._fast_decode(None, iprot, [cls, cls.thrift_spec])
         iprot.readStructBegin()
         code = None
@@ -759,7 +853,11 @@ class DofusError(TException):
                     iprot.skip(ftype)
             elif fid == 2:
                 if ftype == TType.STRING:
-                    message = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                    message = (
+                        iprot.readString().decode("utf-8", errors="replace")
+                        if sys.version_info[0] == 2
+                        else iprot.readString()
+                    )
                 else:
                     iprot.skip(ftype)
             else:
@@ -775,14 +873,14 @@ class DofusError(TException):
         if oprot._fast_encode is not None and self.thrift_spec is not None:
             oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
             return
-        oprot.writeStructBegin('DofusError')
+        oprot.writeStructBegin("DofusError")
         if self.code is not None:
-            oprot.writeFieldBegin('code', TType.I32, 1)
+            oprot.writeFieldBegin("code", TType.I32, 1)
             oprot.writeI32(self.code)
             oprot.writeFieldEnd()
         if self.message is not None:
-            oprot.writeFieldBegin('message', TType.STRING, 2)
-            oprot.writeString(self.message.encode('utf-8') if sys.version_info[0] == 2 else self.message)
+            oprot.writeFieldBegin("message", TType.STRING, 2)
+            oprot.writeString(self.message.encode("utf-8") if sys.version_info[0] == 2 else self.message)
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
         oprot.writeStructEnd()
@@ -794,78 +892,289 @@ class DofusError(TException):
         return repr(self)
 
     def __repr__(self):
-        L = ['%s=%r' % (key, value)
-             for key, value in self.__dict__.items()]
-        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+        L = ["%s=%r" % (key, value) for key, value in self.__dict__.items()]
+        return "%s(%s)" % (self.__class__.__name__, ", ".join(L))
 
     def __eq__(self, other):
         return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
 
     def __ne__(self, other):
         return not (self == other)
+
+
 all_structs.append(Vertex)
 Vertex.thrift_spec = (
     None,  # 0
-    (1, TType.DOUBLE, 'mapId', None, None, ),  # 1
-    (2, TType.I32, 'zoneId', None, None, ),  # 2
-    (3, TType.BOOL, 'onlyDirections', None, None, ),  # 3
+    (
+        1,
+        TType.DOUBLE,
+        "mapId",
+        None,
+        None,
+    ),  # 1
+    (
+        2,
+        TType.I32,
+        "zoneId",
+        None,
+        None,
+    ),  # 2
+    (
+        3,
+        TType.BOOL,
+        "onlyDirections",
+        None,
+        None,
+    ),  # 3
 )
 all_structs.append(Server)
 Server.thrift_spec = (
     None,  # 0
-    (1, TType.I32, 'id', None, None, ),  # 1
-    (2, TType.I32, 'status', None, None, ),  # 2
-    (3, TType.I32, 'completion', None, None, ),  # 3
-    (4, TType.I32, 'charactersCount', None, None, ),  # 4
-    (5, TType.I32, 'charactersSlots', None, None, ),  # 5
-    (6, TType.DOUBLE, 'date', None, None, ),  # 6
-    (7, TType.BOOL, 'isMonoAccount', None, None, ),  # 7
-    (8, TType.BOOL, 'isSelectable', None, None, ),  # 8
+    (
+        1,
+        TType.I32,
+        "id",
+        None,
+        None,
+    ),  # 1
+    (
+        2,
+        TType.I32,
+        "status",
+        None,
+        None,
+    ),  # 2
+    (
+        3,
+        TType.I32,
+        "completion",
+        None,
+        None,
+    ),  # 3
+    (
+        4,
+        TType.I32,
+        "charactersCount",
+        None,
+        None,
+    ),  # 4
+    (
+        5,
+        TType.I32,
+        "charactersSlots",
+        None,
+        None,
+    ),  # 5
+    (
+        6,
+        TType.DOUBLE,
+        "date",
+        None,
+        None,
+    ),  # 6
+    (
+        7,
+        TType.BOOL,
+        "isMonoAccount",
+        None,
+        None,
+    ),  # 7
+    (
+        8,
+        TType.BOOL,
+        "isSelectable",
+        None,
+        None,
+    ),  # 8
 )
 all_structs.append(Path)
 Path.thrift_spec = (
     None,  # 0
-    (1, TType.STRING, 'id', 'UTF8', None, ),  # 1
-    (2, TType.I32, 'type', None, None, ),  # 2
-    (3, TType.STRUCT, 'startVertex', [Vertex, None], None, ),  # 3
+    (
+        1,
+        TType.STRING,
+        "id",
+        "UTF8",
+        None,
+    ),  # 1
+    (
+        2,
+        TType.I32,
+        "type",
+        None,
+        None,
+    ),  # 2
+    (
+        3,
+        TType.STRUCT,
+        "startVertex",
+        [Vertex, None],
+        None,
+    ),  # 3
 )
 all_structs.append(Spell)
 Spell.thrift_spec = (
     None,  # 0
-    (1, TType.I32, 'id', None, None, ),  # 1
-    (2, TType.STRING, 'name', 'UTF8', None, ),  # 2
+    (
+        1,
+        TType.I32,
+        "id",
+        None,
+        None,
+    ),  # 1
+    (
+        2,
+        TType.STRING,
+        "name",
+        "UTF8",
+        None,
+    ),  # 2
 )
 all_structs.append(Character)
 Character.thrift_spec = (
     None,  # 0
-    (1, TType.STRING, 'name', 'UTF8', None, ),  # 1
-    (2, TType.DOUBLE, 'id', None, None, ),  # 2
-    (3, TType.I32, 'level', None, None, ),  # 3
-    (4, TType.I32, 'breedId', None, None, ),  # 4
-    (5, TType.STRING, 'breedName', 'UTF8', None, ),  # 5
-    (6, TType.I32, 'serverId', None, None, ),  # 6
-    (7, TType.STRING, 'serverName', 'UTF8', None, ),  # 7
-    (8, TType.STRING, 'login', 'UTF8', None, ),  # 8
-    (9, TType.I32, 'accountId', None, None, ),  # 9
+    (
+        1,
+        TType.STRING,
+        "name",
+        "UTF8",
+        None,
+    ),  # 1
+    (
+        2,
+        TType.DOUBLE,
+        "id",
+        None,
+        None,
+    ),  # 2
+    (
+        3,
+        TType.I32,
+        "level",
+        None,
+        None,
+    ),  # 3
+    (
+        4,
+        TType.I32,
+        "breedId",
+        None,
+        None,
+    ),  # 4
+    (
+        5,
+        TType.STRING,
+        "breedName",
+        "UTF8",
+        None,
+    ),  # 5
+    (
+        6,
+        TType.I32,
+        "serverId",
+        None,
+        None,
+    ),  # 6
+    (
+        7,
+        TType.STRING,
+        "serverName",
+        "UTF8",
+        None,
+    ),  # 7
+    (
+        8,
+        TType.STRING,
+        "login",
+        "UTF8",
+        None,
+    ),  # 8
+    (
+        9,
+        TType.I32,
+        "accountId",
+        None,
+        None,
+    ),  # 9
 )
 all_structs.append(Session)
 Session.thrift_spec = (
     None,  # 0
-    (1, TType.DOUBLE, 'id', None, None, ),  # 1
+    (
+        1,
+        TType.DOUBLE,
+        "id",
+        None,
+        None,
+    ),  # 1
     None,  # 2
-    (3, TType.STRUCT, 'leader', [Character, None], None, ),  # 3
-    (4, TType.LIST, 'followers', (TType.STRUCT, [Character, None], False), None, ),  # 4
-    (5, TType.STRUCT, 'seller', [Character, None], None, ),  # 5
-    (6, TType.I32, 'type', None, None, ),  # 6
-    (7, TType.I32, 'unloadType', None, None, ),  # 7
-    (8, TType.STRUCT, 'path', [Path, None], None, ),  # 8
-    (9, TType.DOUBLE, 'monsterLvlCoefDiff', None, None, ),  # 9
+    (
+        3,
+        TType.STRUCT,
+        "leader",
+        [Character, None],
+        None,
+    ),  # 3
+    (
+        4,
+        TType.LIST,
+        "followers",
+        (TType.STRUCT, [Character, None], False),
+        None,
+    ),  # 4
+    (
+        5,
+        TType.STRUCT,
+        "seller",
+        [Character, None],
+        None,
+    ),  # 5
+    (
+        6,
+        TType.I32,
+        "type",
+        None,
+        None,
+    ),  # 6
+    (
+        7,
+        TType.I32,
+        "unloadType",
+        None,
+        None,
+    ),  # 7
+    (
+        8,
+        TType.STRUCT,
+        "path",
+        [Path, None],
+        None,
+    ),  # 8
+    (
+        9,
+        TType.DOUBLE,
+        "monsterLvlCoefDiff",
+        None,
+        None,
+    ),  # 9
 )
 all_structs.append(DofusError)
 DofusError.thrift_spec = (
     None,  # 0
-    (1, TType.I32, 'code', None, None, ),  # 1
-    (2, TType.STRING, 'message', 'UTF8', None, ),  # 2
+    (
+        1,
+        TType.I32,
+        "code",
+        None,
+        None,
+    ),  # 1
+    (
+        2,
+        TType.STRING,
+        "message",
+        "UTF8",
+        None,
+    ),  # 2
 )
 fix_spec(all_structs)
 del all_structs

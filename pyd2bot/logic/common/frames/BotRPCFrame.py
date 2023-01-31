@@ -20,7 +20,6 @@ from pydofus2.com.ankamagames.jerakine.types.enums.Priority import Priority
 
 
 class BotRPCFrame(Frame):
-    
     def __init__(self):
         self._waitingForResp = {}
         super().__init__()
@@ -51,72 +50,71 @@ class BotRPCFrame(Frame):
                 else:
                     Logger().warn("RPCResponseMessage without waiting caller")
                 return True
-            
+
             if isinstance(msg, GetStatusMessage):
-                Logger().info("GetStatusMessage received from " + msg.sender + "")
                 rsp = RPCResponseMessage(msg, data=PlayerAPI().status)
                 self.send(rsp)
                 return True
-            
+
             elif isinstance(msg, GetCurrentVertexMessage):
                 rsp = RPCResponseMessage(msg, data=WorldPathFinder().currPlayerVertex)
                 self.send(rsp)
                 return True
-            
+
             elif isinstance(msg, MoveToVertexMessage):
                 Kernel().worker.process(LeaderPosMessage(msg.vertex))
                 return True
-                
+
             elif isinstance(msg, FollowTransitionMessage):
                 Kernel().worker.process(LeaderTransitionMessage(msg.transition))
                 return True
-            
+
             elif isinstance(msg, ComeToCollectMessage):
                 Kernel().worker.addFrame(BotSellerCollectFrame(msg.bankInfos, msg.guestInfos))
                 return True
-                
+
         return False
 
     def onTimeout(self, msg: RPCMessage, timeout):
-        ConnectionsHandler.removeListener(msg.dest, lambda:self.send(msg, None, timeout))
+        ConnectionsHandler.removeListener(msg.dest, lambda: self.send(msg, None, timeout))
         if msg.uid in self._waitingForResp:
             respw = self._waitingForResp[msg.uid]
             if "callback" in respw:
-                self._waitingForResp.pop(msg.reqUid)
+                self._waitingForResp.pop(msg.uid)
                 respw["callback"](result=None, error="call timeout")
             if "event" in respw:
                 respw["event"].set()
                 respw["result"] = None
                 respw["err"] = "RPC call timeout"
-    
+
     def askForStatus(self, dst, callback):
         msg = GetStatusMessage(dst)
         self.send(msg, callback)
-        
+
     def askForStatusSync(self, dst, timeout=20):
         msg = GetStatusMessage(dst)
         return self.sendSync(msg, timeout)
-    
+
     def askCurrVertex(self, dst, callback):
         msg = GetCurrentVertexMessage(dst)
         self.send(msg, callback)
-    
+
     def askCurrVertexSync(self, dst, timeout=20):
         msg = GetCurrentVertexMessage(dst)
         return self.sendSync(msg, timeout)
-    
+
     def askMoveToVertex(self, dst, vertex):
         msg = MoveToVertexMessage(dst, vertex)
         self.send(msg)
-    
+
     def askFollowTransition(self, dst, transition):
         msg = FollowTransitionMessage(dst, transition)
         self.send(msg)
-    
+
     def askComeToCollect(self, dst, bankInfo, guestInfo):
         msg = ComeToCollectMessage(dst, bankInfo, guestInfo)
         self.send(msg)
-        
+
     def send(self, msg: RPCMessage, callback=None, timeout=20) -> None:
         if not msg.oneway and msg.uid not in self._waitingForResp:
             self._waitingForResp[msg.uid] = {}
@@ -125,7 +123,7 @@ class BotRPCFrame(Frame):
             self._waitingForResp[msg.uid]["timeout"].start()
         inst: ConnectionsHandler = ConnectionsHandler.getThreadInstance(msg.dest)
         if inst is None:
-            ConnectionsHandler.onceThreadRegister(msg.dest, lambda:self.send(msg, callback, timeout))
+            ConnectionsHandler.onceThreadRegister(msg.dest, lambda: self.send(msg, callback, timeout))
             return
         inst.putMessage(msg)
 
@@ -135,13 +133,13 @@ class BotRPCFrame(Frame):
         if msg.uid not in self._waitingForResp:
             self._waitingForResp[msg.uid] = {
                 "timeout": BenchmarkTimer(timeout, self.onTimeout, [msg, None]),
-                "event": threading.Event()
+                "event": threading.Event(),
             }
             self._waitingForResp[msg.uid]["timeout"].start()
         resw = self._waitingForResp[msg.uid]
         inst: ConnectionsHandler = ConnectionsHandler.getThreadInstance(msg.dest)
         if inst is None:
-            ConnectionsHandler.onceThreadRegister(msg.dest, lambda:self.sendSync(msg, timeout))
+            ConnectionsHandler.onceThreadRegister(msg.dest, lambda: self.sendSync(msg, timeout))
             return
         inst.putMessage(msg)
         if not resw["event"].wait(10):
@@ -152,4 +150,3 @@ class BotRPCFrame(Frame):
         if error:
             raise Exception(error)
         return result
-        

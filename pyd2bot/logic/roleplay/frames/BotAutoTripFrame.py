@@ -25,10 +25,7 @@ if TYPE_CHECKING:
 from pyd2bot.logic.roleplay.messages.AutoTripEndedMessage import AutoTripEndedMessage
 
 
-
-
 class BotAutoTripFrame(Frame):
-
     def __init__(self, dstMapId: int, rpZone: int = 1):
         self.dstMapId = dstMapId
         self.dstRpZone = rpZone

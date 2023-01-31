@@ -10,7 +10,9 @@ from pydofus2.com.ankamagames.dofus.kernel.net.ConnectionsHandler import Connect
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import PlayedCharacterManager
 from pydofus2.com.ankamagames.dofus.logic.game.fight.messages.FightRequestFailed import FightRequestFailed
 from pydofus2.com.ankamagames.dofus.logic.game.fight.messages.MapMoveFailed import MapMoveFailed
-from pydofus2.com.ankamagames.dofus.logic.game.roleplay.messages.MovementRequestTimeoutMessage import MovementRequestTimeoutMessage
+from pydofus2.com.ankamagames.dofus.logic.game.roleplay.messages.MovementRequestTimeoutMessage import (
+    MovementRequestTimeoutMessage,
+)
 from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.WorldPathFinder import WorldPathFinder
 from pydofus2.com.ankamagames.dofus.network.messages.game.context.GameMapMovementCancelMessage import (
     GameMapMovementCancelMessage,
@@ -18,14 +20,18 @@ from pydofus2.com.ankamagames.dofus.network.messages.game.context.GameMapMovemen
 from pydofus2.com.ankamagames.dofus.network.messages.game.context.notification.NotificationByServerMessage import (
     NotificationByServerMessage,
 )
-from pydofus2.com.ankamagames.dofus.network.messages.game.context.roleplay.MapChangeFailedMessage import MapChangeFailedMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.context.roleplay.MapChangeFailedMessage import (
+    MapChangeFailedMessage,
+)
 from pydofus2.com.ankamagames.dofus.network.messages.game.context.roleplay.MapComplementaryInformationsDataMessage import (
     MapComplementaryInformationsDataMessage,
 )
 from pydofus2.com.ankamagames.dofus.network.messages.game.context.roleplay.MapInformationsRequestMessage import (
     MapInformationsRequestMessage,
 )
-from pydofus2.com.ankamagames.dofus.network.messages.game.interactive.InteractiveUsedMessage import InteractiveUsedMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.interactive.InteractiveUsedMessage import (
+    InteractiveUsedMessage,
+)
 from pydofus2.com.ankamagames.dofus.network.messages.game.interactive.InteractiveUseEndedMessage import (
     InteractiveUseEndedMessage,
 )
@@ -51,14 +57,14 @@ from pyd2bot.models.enums.ServerNotificationTitlesEnum import ServerNotification
 
 if TYPE_CHECKING:
     from pydofus2.com.ankamagames.dofus.logic.game.roleplay.frames.RoleplayEntitiesFrame import RoleplayEntitiesFrame
-    from pydofus2.com.ankamagames.dofus.logic.game.roleplay.frames.RoleplayInteractivesFrame import RoleplayInteractivesFrame
+    from pydofus2.com.ankamagames.dofus.logic.game.roleplay.frames.RoleplayInteractivesFrame import (
+        RoleplayInteractivesFrame,
+    )
     from pydofus2.com.ankamagames.dofus.logic.game.roleplay.frames.RoleplayMovementFrame import RoleplayMovementFrame
     from pydofus2.com.ankamagames.dofus.logic.game.roleplay.frames.RoleplayWorldFrame import RoleplayWorldFrame
 
 
-
 class BotFarmPathFrame(Frame):
-    
     def __init__(self, autoStart: bool = False):
         super().__init__()
         self._autoStart = autoStart
@@ -140,7 +146,7 @@ class BotFarmPathFrame(Frame):
     @property
     def isInsideFarmPath(self) -> bool:
         return WorldPathFinder().currPlayerVertex in self.farmPath
-    
+
     def process(self, msg: Message) -> bool:
 
         if isinstance(msg, AutoTripEndedMessage):
@@ -170,13 +176,15 @@ class BotFarmPathFrame(Frame):
             return True
 
         elif isinstance(msg, (MapMoveFailed, MapChangeFailedMessage, MovementRequestTimeoutMessage)):
-            ConnectionsHandler().closeConnection(DisconnectionReasonEnum.RESTARTING, "Restart due to Map change failed")
+            ConnectionsHandler().closeConnection(
+                DisconnectionReasonEnum.RESTARTING, "Restart due to Map change failed"
+            )
 
         elif isinstance(msg, FightRequestFailed):
             self._followinMonsterGroup = None
             self._discardedMonstersIds.append(int(msg.actorId))
             self.doFarm()
-                
+
         elif isinstance(msg, InteractiveUsedMessage):
             if self._inAutoTrip:
                 return False
@@ -221,7 +229,9 @@ class BotFarmPathFrame(Frame):
         Logger().debug(
             f"[BotFarmFrame] Current Map {PlayedCharacterManager().currentMap.mapId} Moving to {self._currTransition.transitionMapId}"
         )
-        MoveAPI.followTransition(self._currTransition,)
+        MoveAPI.followTransition(
+            self._currTransition,
+        )
         if self.partyFrame:
             self.partyFrame.notifyFollowersWithTransition(self._currTransition)
 
@@ -251,7 +261,6 @@ class BotFarmPathFrame(Frame):
 
     def insideCurrentPlayerZoneRp(self, cellId):
         tgtRpZone = MapDisplayManager().dataMap.cells[cellId].linkedZoneRP
-        # Logger().debug(f"[BotFarmFrame] Current player zone {PlayedCharacterManager().currentZoneRp}, target zone {tgtRpZone}")
         return tgtRpZone == PlayedCharacterManager().currentZoneRp
 
     def doFarm(self, event=None):
@@ -259,13 +268,16 @@ class BotFarmPathFrame(Frame):
         if self._pulled:
             Logger().debug("[BotFarmFrame] Already pulled")
             return
+
         if PlayerAPI().status != "idle":
             Logger().debug(f"[BotFarmFrame] Can't farm, bot is not idle but '{PlayerAPI().status}'")
             return
+
         if WorldPathFinder().currPlayerVertex is None:
             Logger().debug("[BotFarmFrame] Can't farm, bot is still loading map")
             KernelEventsManager().once(KernelEvts.MAPPROCESSED, self.doFarm)
             return
+
         if WorldPathFinder().currPlayerVertex not in self.farmPath:
             Logger().debug(
                 f"[BotFarmFrame] Map {WorldPathFinder().currPlayerVertex.mapId} not in farm path will switch to autotrip"
@@ -273,6 +285,7 @@ class BotFarmPathFrame(Frame):
             self._inAutoTrip = True
             self._worker.addFrame(BotAutoTripFrame(self.farmPath.startVertex.mapId))
             return
+
         if self.partyFrame:
             if not self.partyFrame.allMembersOnSameMap:
                 Logger().debug("[BotFarmFrame] Waiting for party members to be on the same map")
@@ -282,9 +295,10 @@ class BotFarmPathFrame(Frame):
                 Logger().debug("[BotFarmFrame] Waiting for party members to be idle")
                 BotEventsManager().onAllPartyMembersIdle(self.doFarmEnsured)
                 self.partyFrame.checkAllMembersIdle()
+                return
         else:
             self.doFarmEnsured()
-    
+
     def doFarmEnsured(self):
         Logger().info("[BotFarmFrame] Party found and all members on the same map and are idle.")
         self._followinMonsterGroup = None

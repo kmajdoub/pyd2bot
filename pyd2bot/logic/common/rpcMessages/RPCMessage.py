@@ -2,8 +2,8 @@ import threading
 from time import perf_counter
 import uuid
 
+
 class RPCMessage:
-    
     def __init__(self, dst: str, data=None) -> None:
         self.oneway = None
         self.uid = uuid.uuid1()

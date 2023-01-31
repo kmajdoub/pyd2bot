@@ -24,6 +24,7 @@ class BankUnloadStates(Enum):
     INTERACTING_WITH_BANK_MAN = 3
     RETURNING_TO_START_POINT = 4
 
+
 class BotUnloadInBankFrame(Frame):
     PHENIX_MAPID = None
 
@@ -90,5 +91,3 @@ class BotUnloadInBankFrame(Frame):
             else:
                 self.state = BankUnloadStates.RETURNING_TO_START_POINT
                 Kernel().worker.addFrame(BotAutoTripFrame(self._startMapId, self._startRpZone))
-                
-    

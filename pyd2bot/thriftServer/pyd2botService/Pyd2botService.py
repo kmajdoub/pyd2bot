@@ -15,6 +15,7 @@ import logging
 from .ttypes import *
 from thrift.Thrift import TProcessor
 from thrift.transport import TTransport
+
 all_structs = []
 
 
@@ -75,7 +76,7 @@ class Client(Iface):
         return self.recv_fetchCharacters()
 
     def send_fetchCharacters(self, token, serverId):
-        self._oprot.writeMessageBegin('fetchCharacters', TMessageType.CALL, self._seqid)
+        self._oprot.writeMessageBegin("fetchCharacters", TMessageType.CALL, self._seqid)
         args = fetchCharacters_args()
         args.token = token
         args.serverId = serverId
@@ -110,7 +111,7 @@ class Client(Iface):
         return self.recv_fetchUsedServers()
 
     def send_fetchUsedServers(self, token):
-        self._oprot.writeMessageBegin('fetchUsedServers', TMessageType.CALL, self._seqid)
+        self._oprot.writeMessageBegin("fetchUsedServers", TMessageType.CALL, self._seqid)
         args = fetchUsedServers_args()
         args.token = token
         args.write(self._oprot)
@@ -145,7 +146,7 @@ class Client(Iface):
         self.recv_runSession()
 
     def send_runSession(self, token, session):
-        self._oprot.writeMessageBegin('runSession', TMessageType.CALL, self._seqid)
+        self._oprot.writeMessageBegin("runSession", TMessageType.CALL, self._seqid)
         args = runSession_args()
         args.token = token
         args.session = session
@@ -178,7 +179,7 @@ class Client(Iface):
         return self.recv_fetchBreedSpells()
 
     def send_fetchBreedSpells(self, breedId):
-        self._oprot.writeMessageBegin('fetchBreedSpells', TMessageType.CALL, self._seqid)
+        self._oprot.writeMessageBegin("fetchBreedSpells", TMessageType.CALL, self._seqid)
         args = fetchBreedSpells_args()
         args.breedId = breedId
         args.write(self._oprot)
@@ -207,7 +208,7 @@ class Client(Iface):
         return self.recv_fetchJobsInfosJson()
 
     def send_fetchJobsInfosJson(self):
-        self._oprot.writeMessageBegin('fetchJobsInfosJson', TMessageType.CALL, self._seqid)
+        self._oprot.writeMessageBegin("fetchJobsInfosJson", TMessageType.CALL, self._seqid)
         args = fetchJobsInfosJson_args()
         args.write(self._oprot)
         self._oprot.writeMessageEnd()
@@ -252,7 +253,7 @@ class Processor(Iface, TProcessor):
         if name not in self._processMap:
             iprot.skip(TType.STRUCT)
             iprot.readMessageEnd()
-            x = TApplicationException(TApplicationException.UNKNOWN_METHOD, 'Unknown function %s' % (name))
+            x = TApplicationException(TApplicationException.UNKNOWN_METHOD, "Unknown function %s" % (name))
             oprot.writeMessageBegin(name, TMessageType.EXCEPTION, seqid)
             x.write(oprot)
             oprot.writeMessageEnd()
@@ -276,13 +277,13 @@ class Processor(Iface, TProcessor):
             msg_type = TMessageType.REPLY
             result.error = error
         except TApplicationException as ex:
-            logging.exception('TApplication exception in handler')
+            logging.exception("TApplication exception in handler")
             msg_type = TMessageType.EXCEPTION
             result = ex
         except Exception:
-            logging.exception('Unexpected exception in handler')
+            logging.exception("Unexpected exception in handler")
             msg_type = TMessageType.EXCEPTION
-            result = TApplicationException(TApplicationException.INTERNAL_ERROR, 'Internal error')
+            result = TApplicationException(TApplicationException.INTERNAL_ERROR, "Internal error")
         oprot.writeMessageBegin("fetchCharacters", msg_type, seqid)
         result.write(oprot)
         oprot.writeMessageEnd()
@@ -302,13 +303,13 @@ class Processor(Iface, TProcessor):
             msg_type = TMessageType.REPLY
             result.error = error
         except TApplicationException as ex:
-            logging.exception('TApplication exception in handler')
+            logging.exception("TApplication exception in handler")
             msg_type = TMessageType.EXCEPTION
             result = ex
         except Exception:
-            logging.exception('Unexpected exception in handler')
+            logging.exception("Unexpected exception in handler")
             msg_type = TMessageType.EXCEPTION
-            result = TApplicationException(TApplicationException.INTERNAL_ERROR, 'Internal error')
+            result = TApplicationException(TApplicationException.INTERNAL_ERROR, "Internal error")
         oprot.writeMessageBegin("fetchUsedServers", msg_type, seqid)
         result.write(oprot)
         oprot.writeMessageEnd()
@@ -328,13 +329,13 @@ class Processor(Iface, TProcessor):
             msg_type = TMessageType.REPLY
             result.error = error
         except TApplicationException as ex:
-            logging.exception('TApplication exception in handler')
+            logging.exception("TApplication exception in handler")
             msg_type = TMessageType.EXCEPTION
             result = ex
         except Exception:
-            logging.exception('Unexpected exception in handler')
+            logging.exception("Unexpected exception in handler")
             msg_type = TMessageType.EXCEPTION
-            result = TApplicationException(TApplicationException.INTERNAL_ERROR, 'Internal error')
+            result = TApplicationException(TApplicationException.INTERNAL_ERROR, "Internal error")
         oprot.writeMessageBegin("runSession", msg_type, seqid)
         result.write(oprot)
         oprot.writeMessageEnd()
@@ -354,13 +355,13 @@ class Processor(Iface, TProcessor):
             msg_type = TMessageType.REPLY
             result.error = error
         except TApplicationException as ex:
-            logging.exception('TApplication exception in handler')
+            logging.exception("TApplication exception in handler")
             msg_type = TMessageType.EXCEPTION
             result = ex
         except Exception:
-            logging.exception('Unexpected exception in handler')
+            logging.exception("Unexpected exception in handler")
             msg_type = TMessageType.EXCEPTION
-            result = TApplicationException(TApplicationException.INTERNAL_ERROR, 'Internal error')
+            result = TApplicationException(TApplicationException.INTERNAL_ERROR, "Internal error")
         oprot.writeMessageBegin("fetchBreedSpells", msg_type, seqid)
         result.write(oprot)
         oprot.writeMessageEnd()
@@ -380,17 +381,18 @@ class Processor(Iface, TProcessor):
             msg_type = TMessageType.REPLY
             result.error = error
         except TApplicationException as ex:
-            logging.exception('TApplication exception in handler')
+            logging.exception("TApplication exception in handler")
             msg_type = TMessageType.EXCEPTION
             result = ex
         except Exception:
-            logging.exception('Unexpected exception in handler')
+            logging.exception("Unexpected exception in handler")
             msg_type = TMessageType.EXCEPTION
-            result = TApplicationException(TApplicationException.INTERNAL_ERROR, 'Internal error')
+            result = TApplicationException(TApplicationException.INTERNAL_ERROR, "Internal error")
         oprot.writeMessageBegin("fetchJobsInfosJson", msg_type, seqid)
         result.write(oprot)
         oprot.writeMessageEnd()
         oprot.trans.flush()
+
 
 # HELPER FUNCTIONS AND STRUCTURES
 
@@ -403,13 +405,20 @@ class fetchCharacters_args(object):
 
     """
 
-
-    def __init__(self, token=None, serverId=None,):
+    def __init__(
+        self,
+        token=None,
+        serverId=None,
+    ):
         self.token = token
         self.serverId = serverId
 
     def read(self, iprot):
-        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+        if (
+            iprot._fast_decode is not None
+            and isinstance(iprot.trans, TTransport.CReadableTransport)
+            and self.thrift_spec is not None
+        ):
             iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
             return
         iprot.readStructBegin()
@@ -419,7 +428,11 @@ class fetchCharacters_args(object):
                 break
             if fid == 1:
                 if ftype == TType.STRING:
-                    self.token = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                    self.token = (
+                        iprot.readString().decode("utf-8", errors="replace")
+                        if sys.version_info[0] == 2
+                        else iprot.readString()
+                    )
                 else:
                     iprot.skip(ftype)
             elif fid == 2:
@@ -436,13 +449,13 @@ class fetchCharacters_args(object):
         if oprot._fast_encode is not None and self.thrift_spec is not None:
             oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
             return
-        oprot.writeStructBegin('fetchCharacters_args')
+        oprot.writeStructBegin("fetchCharacters_args")
         if self.token is not None:
-            oprot.writeFieldBegin('token', TType.STRING, 1)
-            oprot.writeString(self.token.encode('utf-8') if sys.version_info[0] == 2 else self.token)
+            oprot.writeFieldBegin("token", TType.STRING, 1)
+            oprot.writeString(self.token.encode("utf-8") if sys.version_info[0] == 2 else self.token)
             oprot.writeFieldEnd()
         if self.serverId is not None:
-            oprot.writeFieldBegin('serverId', TType.I32, 2)
+            oprot.writeFieldBegin("serverId", TType.I32, 2)
             oprot.writeI32(self.serverId)
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
@@ -452,20 +465,33 @@ class fetchCharacters_args(object):
         return
 
     def __repr__(self):
-        L = ['%s=%r' % (key, value)
-             for key, value in self.__dict__.items()]
-        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+        L = ["%s=%r" % (key, value) for key, value in self.__dict__.items()]
+        return "%s(%s)" % (self.__class__.__name__, ", ".join(L))
 
     def __eq__(self, other):
         return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
 
     def __ne__(self, other):
         return not (self == other)
+
+
 all_structs.append(fetchCharacters_args)
 fetchCharacters_args.thrift_spec = (
     None,  # 0
-    (1, TType.STRING, 'token', 'UTF8', None, ),  # 1
-    (2, TType.I32, 'serverId', None, None, ),  # 2
+    (
+        1,
+        TType.STRING,
+        "token",
+        "UTF8",
+        None,
+    ),  # 1
+    (
+        2,
+        TType.I32,
+        "serverId",
+        None,
+        None,
+    ),  # 2
 )
 
 
@@ -477,13 +503,20 @@ class fetchCharacters_result(object):
 
     """
 
-
-    def __init__(self, success=None, error=None,):
+    def __init__(
+        self,
+        success=None,
+        error=None,
+    ):
         self.success = success
         self.error = error
 
     def read(self, iprot):
-        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+        if (
+            iprot._fast_decode is not None
+            and isinstance(iprot.trans, TTransport.CReadableTransport)
+            and self.thrift_spec is not None
+        ):
             iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
             return
         iprot.readStructBegin()
@@ -516,16 +549,16 @@ class fetchCharacters_result(object):
         if oprot._fast_encode is not None and self.thrift_spec is not None:
             oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
             return
-        oprot.writeStructBegin('fetchCharacters_result')
+        oprot.writeStructBegin("fetchCharacters_result")
         if self.success is not None:
-            oprot.writeFieldBegin('success', TType.LIST, 0)
+            oprot.writeFieldBegin("success", TType.LIST, 0)
             oprot.writeListBegin(TType.STRUCT, len(self.success))
             for iter13 in self.success:
                 iter13.write(oprot)
             oprot.writeListEnd()
             oprot.writeFieldEnd()
         if self.error is not None:
-            oprot.writeFieldBegin('error', TType.STRUCT, 1)
+            oprot.writeFieldBegin("error", TType.STRUCT, 1)
             self.error.write(oprot)
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
@@ -535,19 +568,32 @@ class fetchCharacters_result(object):
         return
 
     def __repr__(self):
-        L = ['%s=%r' % (key, value)
-             for key, value in self.__dict__.items()]
-        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+        L = ["%s=%r" % (key, value) for key, value in self.__dict__.items()]
+        return "%s(%s)" % (self.__class__.__name__, ", ".join(L))
 
     def __eq__(self, other):
         return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
 
     def __ne__(self, other):
         return not (self == other)
+
+
 all_structs.append(fetchCharacters_result)
 fetchCharacters_result.thrift_spec = (
-    (0, TType.LIST, 'success', (TType.STRUCT, [Character, None], False), None, ),  # 0
-    (1, TType.STRUCT, 'error', [DofusError, None], None, ),  # 1
+    (
+        0,
+        TType.LIST,
+        "success",
+        (TType.STRUCT, [Character, None], False),
+        None,
+    ),  # 0
+    (
+        1,
+        TType.STRUCT,
+        "error",
+        [DofusError, None],
+        None,
+    ),  # 1
 )
 
 
@@ -558,12 +604,18 @@ class fetchUsedServers_args(object):
 
     """
 
-
-    def __init__(self, token=None,):
+    def __init__(
+        self,
+        token=None,
+    ):
         self.token = token
 
     def read(self, iprot):
-        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+        if (
+            iprot._fast_decode is not None
+            and isinstance(iprot.trans, TTransport.CReadableTransport)
+            and self.thrift_spec is not None
+        ):
             iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
             return
         iprot.readStructBegin()
@@ -573,7 +625,11 @@ class fetchUsedServers_args(object):
                 break
             if fid == 1:
                 if ftype == TType.STRING:
-                    self.token = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                    self.token = (
+                        iprot.readString().decode("utf-8", errors="replace")
+                        if sys.version_info[0] == 2
+                        else iprot.readString()
+                    )
                 else:
                     iprot.skip(ftype)
             else:
@@ -585,10 +641,10 @@ class fetchUsedServers_args(object):
         if oprot._fast_encode is not None and self.thrift_spec is not None:
             oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
             return
-        oprot.writeStructBegin('fetchUsedServers_args')
+        oprot.writeStructBegin("fetchUsedServers_args")
         if self.token is not None:
-            oprot.writeFieldBegin('token', TType.STRING, 1)
-            oprot.writeString(self.token.encode('utf-8') if sys.version_info[0] == 2 else self.token)
+            oprot.writeFieldBegin("token", TType.STRING, 1)
+            oprot.writeString(self.token.encode("utf-8") if sys.version_info[0] == 2 else self.token)
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
         oprot.writeStructEnd()
@@ -597,19 +653,26 @@ class fetchUsedServers_args(object):
         return
 
     def __repr__(self):
-        L = ['%s=%r' % (key, value)
-             for key, value in self.__dict__.items()]
-        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+        L = ["%s=%r" % (key, value) for key, value in self.__dict__.items()]
+        return "%s(%s)" % (self.__class__.__name__, ", ".join(L))
 
     def __eq__(self, other):
         return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
 
     def __ne__(self, other):
         return not (self == other)
+
+
 all_structs.append(fetchUsedServers_args)
 fetchUsedServers_args.thrift_spec = (
     None,  # 0
-    (1, TType.STRING, 'token', 'UTF8', None, ),  # 1
+    (
+        1,
+        TType.STRING,
+        "token",
+        "UTF8",
+        None,
+    ),  # 1
 )
 
 
@@ -621,13 +684,20 @@ class fetchUsedServers_result(object):
 
     """
 
-
-    def __init__(self, success=None, error=None,):
+    def __init__(
+        self,
+        success=None,
+        error=None,
+    ):
         self.success = success
         self.error = error
 
     def read(self, iprot):
-        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+        if (
+            iprot._fast_decode is not None
+            and isinstance(iprot.trans, TTransport.CReadableTransport)
+            and self.thrift_spec is not None
+        ):
             iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
             return
         iprot.readStructBegin()
@@ -660,16 +730,16 @@ class fetchUsedServers_result(object):
         if oprot._fast_encode is not None and self.thrift_spec is not None:
             oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
             return
-        oprot.writeStructBegin('fetchUsedServers_result')
+        oprot.writeStructBegin("fetchUsedServers_result")
         if self.success is not None:
-            oprot.writeFieldBegin('success', TType.LIST, 0)
+            oprot.writeFieldBegin("success", TType.LIST, 0)
             oprot.writeListBegin(TType.STRUCT, len(self.success))
             for iter20 in self.success:
                 iter20.write(oprot)
             oprot.writeListEnd()
             oprot.writeFieldEnd()
         if self.error is not None:
-            oprot.writeFieldBegin('error', TType.STRUCT, 1)
+            oprot.writeFieldBegin("error", TType.STRUCT, 1)
             self.error.write(oprot)
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
@@ -679,19 +749,32 @@ class fetchUsedServers_result(object):
         return
 
     def __repr__(self):
-        L = ['%s=%r' % (key, value)
-             for key, value in self.__dict__.items()]
-        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+        L = ["%s=%r" % (key, value) for key, value in self.__dict__.items()]
+        return "%s(%s)" % (self.__class__.__name__, ", ".join(L))
 
     def __eq__(self, other):
         return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
 
     def __ne__(self, other):
         return not (self == other)
+
+
 all_structs.append(fetchUsedServers_result)
 fetchUsedServers_result.thrift_spec = (
-    (0, TType.LIST, 'success', (TType.STRUCT, [Server, None], False), None, ),  # 0
-    (1, TType.STRUCT, 'error', [DofusError, None], None, ),  # 1
+    (
+        0,
+        TType.LIST,
+        "success",
+        (TType.STRUCT, [Server, None], False),
+        None,
+    ),  # 0
+    (
+        1,
+        TType.STRUCT,
+        "error",
+        [DofusError, None],
+        None,
+    ),  # 1
 )
 
 
@@ -703,13 +786,20 @@ class runSession_args(object):
 
     """
 
-
-    def __init__(self, token=None, session=None,):
+    def __init__(
+        self,
+        token=None,
+        session=None,
+    ):
         self.token = token
         self.session = session
 
     def read(self, iprot):
-        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+        if (
+            iprot._fast_decode is not None
+            and isinstance(iprot.trans, TTransport.CReadableTransport)
+            and self.thrift_spec is not None
+        ):
             iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
             return
         iprot.readStructBegin()
@@ -719,7 +809,11 @@ class runSession_args(object):
                 break
             if fid == 1:
                 if ftype == TType.STRING:
-                    self.token = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                    self.token = (
+                        iprot.readString().decode("utf-8", errors="replace")
+                        if sys.version_info[0] == 2
+                        else iprot.readString()
+                    )
                 else:
                     iprot.skip(ftype)
             elif fid == 6:
@@ -737,13 +831,13 @@ class runSession_args(object):
         if oprot._fast_encode is not None and self.thrift_spec is not None:
             oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
             return
-        oprot.writeStructBegin('runSession_args')
+        oprot.writeStructBegin("runSession_args")
         if self.token is not None:
-            oprot.writeFieldBegin('token', TType.STRING, 1)
-            oprot.writeString(self.token.encode('utf-8') if sys.version_info[0] == 2 else self.token)
+            oprot.writeFieldBegin("token", TType.STRING, 1)
+            oprot.writeString(self.token.encode("utf-8") if sys.version_info[0] == 2 else self.token)
             oprot.writeFieldEnd()
         if self.session is not None:
-            oprot.writeFieldBegin('session', TType.STRUCT, 6)
+            oprot.writeFieldBegin("session", TType.STRUCT, 6)
             self.session.write(oprot)
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
@@ -753,24 +847,37 @@ class runSession_args(object):
         return
 
     def __repr__(self):
-        L = ['%s=%r' % (key, value)
-             for key, value in self.__dict__.items()]
-        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+        L = ["%s=%r" % (key, value) for key, value in self.__dict__.items()]
+        return "%s(%s)" % (self.__class__.__name__, ", ".join(L))
 
     def __eq__(self, other):
         return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
 
     def __ne__(self, other):
         return not (self == other)
+
+
 all_structs.append(runSession_args)
 runSession_args.thrift_spec = (
     None,  # 0
-    (1, TType.STRING, 'token', 'UTF8', None, ),  # 1
+    (
+        1,
+        TType.STRING,
+        "token",
+        "UTF8",
+        None,
+    ),  # 1
     None,  # 2
     None,  # 3
     None,  # 4
     None,  # 5
-    (6, TType.STRUCT, 'session', [Session, None], None, ),  # 6
+    (
+        6,
+        TType.STRUCT,
+        "session",
+        [Session, None],
+        None,
+    ),  # 6
 )
 
 
@@ -781,12 +888,18 @@ class runSession_result(object):
 
     """
 
-
-    def __init__(self, error=None,):
+    def __init__(
+        self,
+        error=None,
+    ):
         self.error = error
 
     def read(self, iprot):
-        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+        if (
+            iprot._fast_decode is not None
+            and isinstance(iprot.trans, TTransport.CReadableTransport)
+            and self.thrift_spec is not None
+        ):
             iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
             return
         iprot.readStructBegin()
@@ -808,9 +921,9 @@ class runSession_result(object):
         if oprot._fast_encode is not None and self.thrift_spec is not None:
             oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
             return
-        oprot.writeStructBegin('runSession_result')
+        oprot.writeStructBegin("runSession_result")
         if self.error is not None:
-            oprot.writeFieldBegin('error', TType.STRUCT, 1)
+            oprot.writeFieldBegin("error", TType.STRUCT, 1)
             self.error.write(oprot)
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
@@ -820,19 +933,26 @@ class runSession_result(object):
         return
 
     def __repr__(self):
-        L = ['%s=%r' % (key, value)
-             for key, value in self.__dict__.items()]
-        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+        L = ["%s=%r" % (key, value) for key, value in self.__dict__.items()]
+        return "%s(%s)" % (self.__class__.__name__, ", ".join(L))
 
     def __eq__(self, other):
         return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
 
     def __ne__(self, other):
         return not (self == other)
+
+
 all_structs.append(runSession_result)
 runSession_result.thrift_spec = (
     None,  # 0
-    (1, TType.STRUCT, 'error', [DofusError, None], None, ),  # 1
+    (
+        1,
+        TType.STRUCT,
+        "error",
+        [DofusError, None],
+        None,
+    ),  # 1
 )
 
 
@@ -843,12 +963,18 @@ class fetchBreedSpells_args(object):
 
     """
 
-
-    def __init__(self, breedId=None,):
+    def __init__(
+        self,
+        breedId=None,
+    ):
         self.breedId = breedId
 
     def read(self, iprot):
-        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+        if (
+            iprot._fast_decode is not None
+            and isinstance(iprot.trans, TTransport.CReadableTransport)
+            and self.thrift_spec is not None
+        ):
             iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
             return
         iprot.readStructBegin()
@@ -870,9 +996,9 @@ class fetchBreedSpells_args(object):
         if oprot._fast_encode is not None and self.thrift_spec is not None:
             oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
             return
-        oprot.writeStructBegin('fetchBreedSpells_args')
+        oprot.writeStructBegin("fetchBreedSpells_args")
         if self.breedId is not None:
-            oprot.writeFieldBegin('breedId', TType.I32, 1)
+            oprot.writeFieldBegin("breedId", TType.I32, 1)
             oprot.writeI32(self.breedId)
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
@@ -882,19 +1008,26 @@ class fetchBreedSpells_args(object):
         return
 
     def __repr__(self):
-        L = ['%s=%r' % (key, value)
-             for key, value in self.__dict__.items()]
-        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+        L = ["%s=%r" % (key, value) for key, value in self.__dict__.items()]
+        return "%s(%s)" % (self.__class__.__name__, ", ".join(L))
 
     def __eq__(self, other):
         return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
 
     def __ne__(self, other):
         return not (self == other)
+
+
 all_structs.append(fetchBreedSpells_args)
 fetchBreedSpells_args.thrift_spec = (
     None,  # 0
-    (1, TType.I32, 'breedId', None, None, ),  # 1
+    (
+        1,
+        TType.I32,
+        "breedId",
+        None,
+        None,
+    ),  # 1
 )
 
 
@@ -906,13 +1039,20 @@ class fetchBreedSpells_result(object):
 
     """
 
-
-    def __init__(self, success=None, error=None,):
+    def __init__(
+        self,
+        success=None,
+        error=None,
+    ):
         self.success = success
         self.error = error
 
     def read(self, iprot):
-        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+        if (
+            iprot._fast_decode is not None
+            and isinstance(iprot.trans, TTransport.CReadableTransport)
+            and self.thrift_spec is not None
+        ):
             iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
             return
         iprot.readStructBegin()
@@ -945,16 +1085,16 @@ class fetchBreedSpells_result(object):
         if oprot._fast_encode is not None and self.thrift_spec is not None:
             oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
             return
-        oprot.writeStructBegin('fetchBreedSpells_result')
+        oprot.writeStructBegin("fetchBreedSpells_result")
         if self.success is not None:
-            oprot.writeFieldBegin('success', TType.LIST, 0)
+            oprot.writeFieldBegin("success", TType.LIST, 0)
             oprot.writeListBegin(TType.STRUCT, len(self.success))
             for iter27 in self.success:
                 iter27.write(oprot)
             oprot.writeListEnd()
             oprot.writeFieldEnd()
         if self.error is not None:
-            oprot.writeFieldBegin('error', TType.STRUCT, 1)
+            oprot.writeFieldBegin("error", TType.STRUCT, 1)
             self.error.write(oprot)
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
@@ -964,27 +1104,42 @@ class fetchBreedSpells_result(object):
         return
 
     def __repr__(self):
-        L = ['%s=%r' % (key, value)
-             for key, value in self.__dict__.items()]
-        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+        L = ["%s=%r" % (key, value) for key, value in self.__dict__.items()]
+        return "%s(%s)" % (self.__class__.__name__, ", ".join(L))
 
     def __eq__(self, other):
         return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
 
     def __ne__(self, other):
         return not (self == other)
+
+
 all_structs.append(fetchBreedSpells_result)
 fetchBreedSpells_result.thrift_spec = (
-    (0, TType.LIST, 'success', (TType.STRUCT, [Spell, None], False), None, ),  # 0
-    (1, TType.STRUCT, 'error', [DofusError, None], None, ),  # 1
+    (
+        0,
+        TType.LIST,
+        "success",
+        (TType.STRUCT, [Spell, None], False),
+        None,
+    ),  # 0
+    (
+        1,
+        TType.STRUCT,
+        "error",
+        [DofusError, None],
+        None,
+    ),  # 1
 )
 
 
 class fetchJobsInfosJson_args(object):
-
-
     def read(self, iprot):
-        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+        if (
+            iprot._fast_decode is not None
+            and isinstance(iprot.trans, TTransport.CReadableTransport)
+            and self.thrift_spec is not None
+        ):
             iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
             return
         iprot.readStructBegin()
@@ -1001,7 +1156,7 @@ class fetchJobsInfosJson_args(object):
         if oprot._fast_encode is not None and self.thrift_spec is not None:
             oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
             return
-        oprot.writeStructBegin('fetchJobsInfosJson_args')
+        oprot.writeStructBegin("fetchJobsInfosJson_args")
         oprot.writeFieldStop()
         oprot.writeStructEnd()
 
@@ -1009,18 +1164,18 @@ class fetchJobsInfosJson_args(object):
         return
 
     def __repr__(self):
-        L = ['%s=%r' % (key, value)
-             for key, value in self.__dict__.items()]
-        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+        L = ["%s=%r" % (key, value) for key, value in self.__dict__.items()]
+        return "%s(%s)" % (self.__class__.__name__, ", ".join(L))
 
     def __eq__(self, other):
         return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
 
     def __ne__(self, other):
         return not (self == other)
+
+
 all_structs.append(fetchJobsInfosJson_args)
-fetchJobsInfosJson_args.thrift_spec = (
-)
+fetchJobsInfosJson_args.thrift_spec = ()
 
 
 class fetchJobsInfosJson_result(object):
@@ -1031,13 +1186,20 @@ class fetchJobsInfosJson_result(object):
 
     """
 
-
-    def __init__(self, success=None, error=None,):
+    def __init__(
+        self,
+        success=None,
+        error=None,
+    ):
         self.success = success
         self.error = error
 
     def read(self, iprot):
-        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+        if (
+            iprot._fast_decode is not None
+            and isinstance(iprot.trans, TTransport.CReadableTransport)
+            and self.thrift_spec is not None
+        ):
             iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
             return
         iprot.readStructBegin()
@@ -1047,7 +1209,11 @@ class fetchJobsInfosJson_result(object):
                 break
             if fid == 0:
                 if ftype == TType.STRING:
-                    self.success = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                    self.success = (
+                        iprot.readString().decode("utf-8", errors="replace")
+                        if sys.version_info[0] == 2
+                        else iprot.readString()
+                    )
                 else:
                     iprot.skip(ftype)
             elif fid == 1:
@@ -1064,13 +1230,13 @@ class fetchJobsInfosJson_result(object):
         if oprot._fast_encode is not None and self.thrift_spec is not None:
             oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
             return
-        oprot.writeStructBegin('fetchJobsInfosJson_result')
+        oprot.writeStructBegin("fetchJobsInfosJson_result")
         if self.success is not None:
-            oprot.writeFieldBegin('success', TType.STRING, 0)
-            oprot.writeString(self.success.encode('utf-8') if sys.version_info[0] == 2 else self.success)
+            oprot.writeFieldBegin("success", TType.STRING, 0)
+            oprot.writeString(self.success.encode("utf-8") if sys.version_info[0] == 2 else self.success)
             oprot.writeFieldEnd()
         if self.error is not None:
-            oprot.writeFieldBegin('error', TType.STRUCT, 1)
+            oprot.writeFieldBegin("error", TType.STRUCT, 1)
             self.error.write(oprot)
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
@@ -1080,19 +1246,32 @@ class fetchJobsInfosJson_result(object):
         return
 
     def __repr__(self):
-        L = ['%s=%r' % (key, value)
-             for key, value in self.__dict__.items()]
-        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+        L = ["%s=%r" % (key, value) for key, value in self.__dict__.items()]
+        return "%s(%s)" % (self.__class__.__name__, ", ".join(L))
 
     def __eq__(self, other):
         return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
 
     def __ne__(self, other):
         return not (self == other)
+
+
 all_structs.append(fetchJobsInfosJson_result)
 fetchJobsInfosJson_result.thrift_spec = (
-    (0, TType.STRING, 'success', 'UTF8', None, ),  # 0
-    (1, TType.STRUCT, 'error', [DofusError, None], None, ),  # 1
+    (
+        0,
+        TType.STRING,
+        "success",
+        "UTF8",
+        None,
+    ),  # 0
+    (
+        1,
+        TType.STRUCT,
+        "error",
+        [DofusError, None],
+        None,
+    ),  # 1
 )
 fix_spec(all_structs)
 del all_structs

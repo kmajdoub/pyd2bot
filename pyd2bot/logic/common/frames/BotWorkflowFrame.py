@@ -34,8 +34,6 @@ from pyd2bot.logic.roleplay.messages.BankUnloadEndedMessage import BankUnloadEnd
 from pyd2bot.thriftServer.pyd2botService.ttypes import Session, SessionType
 
 
-
-
 class BotWorkflowFrame(Frame):
     def __init__(self):
         self.currentContext = None
@@ -77,7 +75,7 @@ class BotWorkflowFrame(Frame):
                 self._delayedAutoUnlaod = False
                 self.triggerUnload()
                 return True
-            
+
             if not self._inAutoUnload and not self._inPhenixAutoRevive:
                 if BotConfig().party and not Kernel().worker.contains("BotPartyFrame"):
                     Kernel().worker.addFrame(BotPartyFrame())
@@ -104,7 +102,9 @@ class BotWorkflowFrame(Frame):
                 if WeightPercent > 95:
                     if self.currentContext is None:
                         self._delayedAutoUnlaod = True
-                        Logger().debug("Inventory full but the context is not created yet, so we will delay the unload.")
+                        Logger().debug(
+                            "Inventory full but the context is not created yet, so we will delay the unload."
+                        )
                         return False
                     self.triggerUnload()
                 return True

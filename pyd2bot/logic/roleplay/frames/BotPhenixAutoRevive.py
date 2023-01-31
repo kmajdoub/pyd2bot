@@ -22,7 +22,9 @@ from typing import TYPE_CHECKING
 from pyd2bot.misc.Localizer import Localizer
 
 if TYPE_CHECKING:
-    from pydofus2.com.ankamagames.dofus.logic.game.roleplay.frames.RoleplayInteractivesFrame import RoleplayInteractivesFrame
+    from pydofus2.com.ankamagames.dofus.logic.game.roleplay.frames.RoleplayInteractivesFrame import (
+        RoleplayInteractivesFrame,
+    )
 
 
 class AutoReviveStateEnum:
@@ -30,6 +32,7 @@ class AutoReviveStateEnum:
     SAOUL_RELEASED = 1
     WALING_TO_PHOENIX = 2
     REVIVED = 3
+
 
 class BotPhenixAutoRevive(Frame):
     def __init__(self):

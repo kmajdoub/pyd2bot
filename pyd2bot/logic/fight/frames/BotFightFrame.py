@@ -13,7 +13,9 @@ from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
 from pydofus2.com.ankamagames.dofus.kernel.net.ConnectionsHandler import ConnectionsHandler
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import PlayedCharacterManager
 from pydofus2.com.ankamagames.dofus.logic.game.fight.frames.FightEntitiesFrame import FightEntitiesFrame
-from pydofus2.com.ankamagames.dofus.logic.game.fight.managers.CurrentPlayedFighterManager import CurrentPlayedFighterManager
+from pydofus2.com.ankamagames.dofus.logic.game.fight.managers.CurrentPlayedFighterManager import (
+    CurrentPlayedFighterManager,
+)
 from pydofus2.com.ankamagames.dofus.logic.game.fight.miscs.FightReachableCellsMaker import FightReachableCellsMaker
 from pydofus2.com.ankamagames.dofus.network.enums.FightOptionsEnum import FightOptionsEnum
 from pydofus2.com.ankamagames.dofus.network.messages.game.actions.fight.GameActionFightCastRequestMessage import (
@@ -23,16 +25,22 @@ from pydofus2.com.ankamagames.dofus.network.messages.game.actions.fight.GameActi
     GameActionFightNoSpellCastMessage,
 )
 from pydofus2.com.ankamagames.dofus.network.messages.game.actions.sequence.SequenceEndMessage import SequenceEndMessage
-from pydofus2.com.ankamagames.dofus.network.messages.game.actions.sequence.SequenceStartMessage import SequenceStartMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.actions.sequence.SequenceStartMessage import (
+    SequenceStartMessage,
+)
 from pydofus2.com.ankamagames.dofus.network.messages.game.context.fight.character.GameFightShowFighterMessage import (
     GameFightShowFighterMessage,
 )
 from pydofus2.com.ankamagames.dofus.network.messages.game.context.fight.GameFightEndMessage import GameFightEndMessage
-from pydofus2.com.ankamagames.dofus.network.messages.game.context.fight.GameFightJoinMessage import GameFightJoinMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.context.fight.GameFightJoinMessage import (
+    GameFightJoinMessage,
+)
 from pydofus2.com.ankamagames.dofus.network.messages.game.context.fight.GameFightOptionToggleMessage import (
     GameFightOptionToggleMessage,
 )
-from pydofus2.com.ankamagames.dofus.network.messages.game.context.fight.GameFightReadyMessage import GameFightReadyMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.context.fight.GameFightReadyMessage import (
+    GameFightReadyMessage,
+)
 from pydofus2.com.ankamagames.dofus.network.messages.game.context.fight.GameFightTurnResumeMessage import (
     GameFightTurnResumeMessage,
 )
@@ -45,7 +53,9 @@ from pydofus2.com.ankamagames.dofus.network.messages.game.context.roleplay.MapCo
 from pydofus2.com.ankamagames.dofus.network.types.game.context.fight.GameFightMonsterInformations import (
     GameFightMonsterInformations,
 )
-from pydofus2.com.ankamagames.dofus.network.types.game.context.GameContextActorInformations import GameContextActorInformations
+from pydofus2.com.ankamagames.dofus.network.types.game.context.GameContextActorInformations import (
+    GameContextActorInformations,
+)
 from pydofus2.com.ankamagames.jerakine.entities.interfaces.IInteractive import IInteractive
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 from pydofus2.com.ankamagames.jerakine.map.LosDetector import LosDetector
@@ -69,9 +79,6 @@ if TYPE_CHECKING:
     from pyd2bot.logic.roleplay.frames.BotPartyFrame import BotPartyFrame
 
 
-
-
-
 class _Target:
     def __init__(self, entityId: float, pos: MapPoint) -> None:
         self.pos: MapPoint = pos
@@ -84,7 +91,7 @@ class _Target:
 class BotFightFrame(Frame):
     VERBOSE = True
     ACTION_TIMEOUT = 7
-    
+
     _frameFightListRequest: bool
 
     _fightCount: int = 0
@@ -110,7 +117,7 @@ class BotFightFrame(Frame):
     _lastTarget: int = None
 
     _spellw: SpellWrapper = None
-    
+
     _fightOptionsSent = False
 
     def __init__(self):

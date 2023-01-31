@@ -1,12 +1,7 @@
-import json
-import threading
-
 from pyd2bot.logic.common.frames.BotRPCFrame import BotRPCFrame
 from pyd2bot.thriftServer.pyd2botService.ttypes import Character
 from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import KernelEventsManager, KernelEvts
 from pydofus2.com.ankamagames.jerakine.benchmark.BenchmarkTimer import BenchmarkTimer
-from time import sleep
-from typing import TYPE_CHECKING, Tuple
 from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Transition import Transition
 from pyd2bot.logic.roleplay.messages.LeaderPosMessage import LeaderPosMessage
 from pyd2bot.logic.roleplay.messages.LeaderTransitionMessage import LeaderTransitionMessage
@@ -91,6 +86,7 @@ if TYPE_CHECKING:
     from thrift.transport.TTransport import TBufferedTransport
     from pyd2bot.thriftServer.pyd2botService.Pyd2botService import Client as Pyd2botServiceClient
 
+
 class BotPartyFrame(Frame):
     ASK_INVITE_TIMOUT = 10
     CONFIRME_JOIN_TIMEOUT = 5
@@ -143,17 +139,18 @@ class BotPartyFrame(Frame):
             if not entity:
                 return False
         return True
-    
+
     def checkAllMembersIdle(self):
+        self._followerStatus = {follower.login: None for follower in self.followers}
         for follower in self.followers:
             self.fetchFollowerStatus(follower)
-            
+
     def fetchFollowerStatus(self, follower: Character):
-        Logger().debug(f"[BotPartyFrame] Fetching follower {follower.login} status")
-        return self.rpcFrame.askForStatus(follower.login, lambda result, error:self.onFollowerStatus(follower, result, error))
-    
+        return self.rpcFrame.askForStatus(
+            follower.login, lambda result, error: self.onFollowerStatus(follower, result, error)
+        )
+
     def onFollowerStatus(self, follower: Character, status: str, error: str):
-        Logger().debug(f"[BotPartyFrame] Follower {follower.login} status: {status}")
         if error is not None:
             raise Exception(f"Error while fetching follower status: {error}")
         self._followerStatus[follower.login] = status
@@ -163,8 +160,8 @@ class BotPartyFrame(Frame):
                     self._fetchStatusTimer.cancel()
                 BotEventsManager().send(BotEventsManager.ALL_PARTY_MEMBERS_IDLE)
             else:
-                Logger().info(f"Not all members idle, statuses: {self._followerStatus}")
-                self._followerStatus = {follower.login: None for follower in self.followers}
+                nonIdleMemberNames = [name for name, status in self._followerStatus.items() if status != "idle"]
+                Logger().info(f"Not all members idle, waiting for members {nonIdleMemberNames}")
                 self._fetchStatusTimer = BenchmarkTimer(3, self.checkAllMembersIdle)
                 self._fetchStatusTimer.start()
 
@@ -186,7 +183,7 @@ class BotPartyFrame(Frame):
         self.joiningLeaderVertex: Vertex = None
         self._wantsToJoinFight = None
         self.followingLeaderTransition = None
-        self._followerStatus = { follower.login: None for follower in self.followers}
+        self._followerStatus = {follower.login: None for follower in self.followers}
         self._fetchStatusTimer = None
         if self.isLeader:
             self.init()
@@ -195,14 +192,14 @@ class BotPartyFrame(Frame):
     def init(self):
         if WorldPathFinder().currPlayerVertex is None:
             Logger().debug("[BotPartyFrame] Cant invite members before am in game")
-            KernelEventsManager().once(KernelEvts.MAPPROCESSED, lambda e:self.init())
+            KernelEventsManager().once(KernelEvts.MAPPROCESSED, lambda e: self.init())
             return
         Logger().debug(f"[BotPartyFrame] Send party invite to all followers.")
         for follower in self.followers:
             Logger().debug(f"[BotPartyFrame] Will Send party invite to {follower.name}")
             self.sendPartyInvite(follower.name)
 
-    def getFollowerById(self, id: int) -> dict:
+    def getFollowerById(self, id: int) -> Character:
         for follower in self.followers:
             if follower.id == id:
                 return follower
@@ -248,7 +245,6 @@ class BotPartyFrame(Frame):
             Logger().debug(f"[BotPartyFrame] Join party invitation sent to {playerName}")
 
     def sendFollowMember(self, memberId):
-        Logger().debug(f"[BotPartyFrame] Send follow member {memberId}")
         pfmrm = PartyFollowMemberRequestMessage()
         pfmrm.init(memberId, self.currentPartyId)
         ConnectionsHandler().conn.send(pfmrm)
@@ -376,7 +372,7 @@ class BotPartyFrame(Frame):
                     f"[BotPartyFrame] Leader '{self.leader.name}' is heading to my current map '{msg.transition.transitionMapId}', nothing to do."
                 )
             else:
-                Logger().debug(f"[BotPartyFrame] Will follow '{self.leader.name}' transit '{msg.transition}'")
+                Logger().debug(f"[BotPartyFrame] Will follow '{self.leader.name}'")
                 self.followingLeaderTransition = msg.transition
                 MoveAPI.followTransition(msg.transition)
             return True
@@ -409,7 +405,7 @@ class BotPartyFrame(Frame):
                 self.partyMembers[msg.memberId].worldX = msg.coords.worldX
                 self.partyMembers[msg.memberId].worldY = msg.coords.worldY
                 Logger().debug(
-                    f"[BotPartyFrame] Member {msg.memberId} moved to map {(msg.coords.worldX, msg.coords.worldY)}"
+                    f"[BotPartyFrame] Member {self.getFollowerById(msg.memberId).name} moved to map {(msg.coords.worldX, msg.coords.worldY)}"
                 )
                 return True
             else:
@@ -464,7 +460,6 @@ class BotPartyFrame(Frame):
         ConnectionsHandler().conn.send(mirmsg)
 
     def moveToVertex(self, vertex: Vertex):
-        Logger().debug(f"[BotPartyFrame] Moving to vertex {vertex}")
         self.joiningLeaderVertex = vertex
         af = BotAutoTripFrame(vertex.mapId, vertex.zoneId)
         Kernel().worker.pushFrame(af)

@@ -21,21 +21,21 @@ class PyD2Bot(metaclass=Singleton):
     serverTransport = None
     inputTransportFactory = None
     inputProtocolFactory = None
-    
-    def __init__(self, id:str, host: str, port: int, deamon=False) -> None:
+
+    def __init__(self, id: str, host: str, port: int, deamon=False) -> None:
         self.id = id
         self.host = host
         self.port = port
         self._daemon = deamon
-        self.handler = Pyd2botServer(self.id)       
+        self.handler = Pyd2botServer(self.id)
         self.processor = Pyd2botService.Processor(self.handler)
-    
+
     def runHttpServer(self):
         self.serverTransport = THttpServer.THttpServer(self.processor, (self.host, self.port), TJSONProtocolFactory())
         self.serverTransport.httpd.RequestHandlerClass = getReqHandler(self.serverTransport)
         self.Logger().info(f"[Server - {self.id}] Started serving on {self.host}:{self.port}")
         self.serverTransport.serve()
-        
+
     def runSocketServer(self):
         self._stop.clear()
         self.serverTransport = TServerSocket(host=self.host, port=self.port)
@@ -70,7 +70,7 @@ class PyD2Bot(metaclass=Singleton):
                 time.sleep(5)
                 continue
         raise Exception("Can't connect to server")
-        
+
     def serveClient(self, client: TSocket):
         itrans = self.inputTransportFactory.getTransport(client)
         iprot = self.inputProtocolFactory.getProtocol(itrans)
@@ -91,7 +91,7 @@ class PyD2Bot(metaclass=Singleton):
         if otrans:
             otrans.close()
         client.close()
-            
+
     def stopServer(self):
         self.Logger().info(f"[Server - {self.id}] Stop called")
         self._stop.set()

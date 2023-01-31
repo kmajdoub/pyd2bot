@@ -3,6 +3,5 @@ from pydofus2.com.ankamagames.jerakine.messages.Message import Message
 
 
 class LeaderTransitionMessage(Message):
-    
     def __init__(self, transition: Transition):
         self.transition = transition

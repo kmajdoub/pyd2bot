@@ -7,7 +7,9 @@ from pydofus2.com.ankamagames.dofus.network.messages.game.achievement.Achievemen
 from pydofus2.com.ankamagames.dofus.network.messages.game.achievement.AchievementRewardRequestMessage import (
     AchievementRewardRequestMessage,
 )
-from pydofus2.com.ankamagames.dofus.network.messages.game.character.stats.CharacterLevelUpMessage import CharacterLevelUpMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.character.stats.CharacterLevelUpMessage import (
+    CharacterLevelUpMessage,
+)
 from pydofus2.com.ankamagames.dofus.network.messages.game.character.stats.CharacterStatsListMessage import (
     CharacterStatsListMessage,
 )
@@ -22,10 +24,7 @@ from pydofus2.damageCalculation.tools.StatIds import StatIds
 from pyd2bot.logic.managers.BotConfig import BotConfig
 
 
-
-
 class BotCharacterUpdatesFrame(Frame):
-    
     def __init__(self):
         self._statsInitialized = False
         super().__init__()
@@ -39,7 +38,7 @@ class BotCharacterUpdatesFrame(Frame):
     @property
     def priority(self) -> int:
         return Priority.VERY_LOW
-    
+
     def getStatFloor(self, statId: int):
         breed = Breed.getBreedById(PlayedCharacterManager().infos.breed)
         statFloors = {
@@ -48,22 +47,22 @@ class BotCharacterUpdatesFrame(Frame):
             StatIds.WISDOM: breed.statsPointsForWisdom,
             StatIds.INTELLIGENCE: breed.statsPointsForIntelligence,
             StatIds.AGILITY: breed.statsPointsForAgility,
-            StatIds.CHANCE: breed.statsPointsForChance
+            StatIds.CHANCE: breed.statsPointsForChance,
         }
         return statFloors[statId]
-        
+
     def boostStat(self, statId: int, points: int):
         stat_floors = self.getStatFloor(statId)
         additional = PlayedCharacterManager().stats.getStatAdditionalValue(statId)
         base = PlayedCharacterManager().stats.getStatBaseValue(statId)
         current_stat_points = base + additional
-        
+
         try:
             current_floor_cost = next(floor[1] for floor in stat_floors if floor[0] > current_stat_points)
         except StopIteration:
             # if there's no floor that the current stat points is less than
             current_floor_cost = 4
-        
+
         boost = 0
         for i in range(len(stat_floors)):
             next_floor = stat_floors[i + 1][0] if i + 1 < len(stat_floors) else float("inf")

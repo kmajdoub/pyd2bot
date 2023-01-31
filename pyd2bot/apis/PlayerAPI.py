@@ -23,12 +23,11 @@ if TYPE_CHECKING:
     from pyd2bot.logic.roleplay.frames.BotUnloadInSellerFrame import BotUnloadInSellerFrame
     from pyd2bot.logic.roleplay.frames.BotSellerCollectFrame import BotSellerCollectFrame
 
-    
+
 class PlayerAPI(metaclass=Singleton):
-    
     def __init__(self):
         self.inAutoTrip = False
-    
+
     @property
     def status(self) -> str:
         bpframe: "BotPartyFrame" = Kernel().worker.getFrame("BotPartyFrame")

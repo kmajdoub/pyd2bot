@@ -4,29 +4,36 @@ from pydofus2.com.ankamagames.dofus.kernel.net.ConnectionsHandler import Connect
 from pydofus2.com.ankamagames.dofus.network.messages.game.context.roleplay.npc.NpcDialogCreationMessage import (
     NpcDialogCreationMessage,
 )
-from pydofus2.com.ankamagames.dofus.network.messages.game.context.roleplay.npc.NpcDialogQuestionMessage import NpcDialogQuestionMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.context.roleplay.npc.NpcDialogQuestionMessage import (
+    NpcDialogQuestionMessage,
+)
 from pydofus2.com.ankamagames.dofus.network.messages.game.context.roleplay.npc.NpcDialogReplyMessage import (
     NpcDialogReplyMessage,
 )
 from pydofus2.com.ankamagames.dofus.network.messages.game.context.roleplay.npc.NpcGenericActionRequestMessage import (
     NpcGenericActionRequestMessage,
 )
-from pydofus2.com.ankamagames.dofus.network.messages.game.dialog.LeaveDialogRequestMessage import LeaveDialogRequestMessage
-from pydofus2.com.ankamagames.dofus.network.messages.game.inventory.exchanges.ExchangeLeaveMessage import ExchangeLeaveMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.dialog.LeaveDialogRequestMessage import (
+    LeaveDialogRequestMessage,
+)
+from pydofus2.com.ankamagames.dofus.network.messages.game.inventory.exchanges.ExchangeLeaveMessage import (
+    ExchangeLeaveMessage,
+)
 from pydofus2.com.ankamagames.dofus.network.messages.game.inventory.exchanges.ExchangeObjectTransfertAllFromInvMessage import (
     ExchangeObjectTransfertAllFromInvMessage,
 )
 from pydofus2.com.ankamagames.dofus.network.messages.game.inventory.exchanges.ExchangeStartedWithStorageMessage import (
     ExchangeStartedWithStorageMessage,
 )
-from pydofus2.com.ankamagames.dofus.network.messages.game.inventory.items.InventoryWeightMessage import InventoryWeightMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.inventory.items.InventoryWeightMessage import (
+    InventoryWeightMessage,
+)
 from pydofus2.com.ankamagames.jerakine.messages.Frame import Frame
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 from pydofus2.com.ankamagames.jerakine.messages.Message import Message
 from pydofus2.com.ankamagames.jerakine.types.enums.Priority import Priority
 from pyd2bot.misc.Localizer import BankInfos
-
 
 
 class BankUnloadStateEnum:
@@ -38,10 +45,11 @@ class BankUnloadStateEnum:
     BANK_OPEN_REQUESTED = 4
     LEAVE_BANK_REQUESTED = 5
 
+
 class BotBankInteractionFrame(Frame):
     PHENIX_MAPID = None
 
-    def __init__(self, bankInfos : BankInfos):
+    def __init__(self, bankInfos: BankInfos):
         super().__init__()
         self.infos = bankInfos
 
@@ -61,13 +69,12 @@ class BotBankInteractionFrame(Frame):
 
     def start(self):
         Logger().debug("Bank infos: %s", self.infos.__dict__)
-        
 
     def process(self, msg: Message) -> bool:
 
         if isinstance(msg, NpcDialogCreationMessage):
             self.state = BankUnloadStateEnum.WAITING_FOR_BANKMAN_QUESTION
-    
+
         elif isinstance(msg, NpcDialogQuestionMessage):
             if self.state == BankUnloadStateEnum.WAITING_FOR_BANKMAN_QUESTION:
                 Logger().debug("bank man dialog engaged")
@@ -77,7 +84,6 @@ class BotBankInteractionFrame(Frame):
                 Logger().debug("Bank reply to open bank storage sent")
                 return True
 
-            
         elif isinstance(msg, ExchangeStartedWithStorageMessage):
             if self.requestTimer:
                 self.requestTimer.cancel()

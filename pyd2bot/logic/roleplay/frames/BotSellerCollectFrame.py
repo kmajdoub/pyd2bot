@@ -17,7 +17,7 @@ from pyd2bot.logic.roleplay.messages.AutoTripEndedMessage import AutoTripEndedMe
 from pyd2bot.misc.Localizer import BankInfos
 from enum import Enum
 
-        
+
 class SellerCollecteStateEnum(Enum):
     WATING_MAP = 0
     IDLE = 4
@@ -30,11 +30,11 @@ class SellerCollecteStateEnum(Enum):
     EXCHANGE_OPEN_REQUEST_RECEIVED = 7
     EXCHANGE_OPEN = 9
     EXCHANGE_ACCEPT_SENT = 10
-    
+
 
 class BotSellerCollectFrame(Frame):
     PHENIX_MAPID = None
-    
+
     def __init__(self, bankInfos: BankInfos, guest: dict, items: list = None):
         self.guest = guest
         self.bankInfos = bankInfos
@@ -65,9 +65,9 @@ class BotSellerCollectFrame(Frame):
             self.state = SellerCollecteStateEnum.INSIDE_BANK
             Kernel().worker.addFrame(BotExchangeFrame(ExchangeDirectionEnum.RECEIVE, self.guest, self.items))
             self.state = SellerCollecteStateEnum.EXCHANGING_WITH_GUEST
-            
+
     def process(self, msg: Message) -> bool:
-    
+
         if isinstance(msg, AutoTripEndedMessage):
             Logger().debug("AutoTripEndedMessage received")
             if self.state == SellerCollecteStateEnum.GOING_TO_BANK:
@@ -81,15 +81,13 @@ class BotSellerCollectFrame(Frame):
                 Logger().debug("MapComplementaryInformationsDataMessage received")
                 self.state = SellerCollecteStateEnum.GOING_TO_BANK
                 self.goToBank()
-                
+
         elif isinstance(msg, ExchangeConcludedMessage):
             Logger().debug("Exchange with guest ended successfully")
             self.state = SellerCollecteStateEnum.UNLOADING_IN_BANK
             Kernel().worker.addFrame(BotBankInteractionFrame(self.bankInfos))
-        
+
         elif isinstance(msg, BankInteractionEndedMessage):
             Logger().debug("BankInteractionEndedMessage received")
             Kernel().worker.removeFrame(self)
             Kernel().worker.process(SellerCollectedGuestItemsMessage())
-
- 

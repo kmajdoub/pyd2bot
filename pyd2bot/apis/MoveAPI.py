@@ -39,8 +39,6 @@ from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 from pydofus2.com.ankamagames.jerakine.types.enums.DirectionsEnum import DirectionsEnum
 
 
-
-
 class MapChange:
     def __init__(self, mapId, outCellId):
         self.destMapId = mapId
@@ -48,7 +46,6 @@ class MapChange:
 
 
 class MoveAPI:
-    
     @classmethod
     def randomMapChange(cls, discard=[]):
         transitions = cls.getOutGoingTransitions(discard)
@@ -57,9 +54,7 @@ class MoveAPI:
         Logger().debug("Nbr of Possible directions: %d", len(transitions))
         randTransition = random.choice(transitions)
         if randTransition.skillId > 0:
-            rplInteractivesFrame: "RoleplayInteractivesFrame" = (
-                Kernel().worker.getFrame("RoleplayInteractivesFrame")
-            )
+            rplInteractivesFrame: "RoleplayInteractivesFrame" = Kernel().worker.getFrame("RoleplayInteractivesFrame")
             ie = rplInteractivesFrame.interactives.get(randTransition.id)
             if ie is None:
                 raise Exception(f"[MouvementAPI] InteractiveElement {randTransition.id} not found")
@@ -128,7 +123,8 @@ class MoveAPI:
     def getTransitionIe(cls, transition: Transition) -> "InteractiveElementData":
         rpframe: "RoleplayInteractivesFrame" = Kernel().worker.getFrame("RoleplayInteractivesFrame")
         if not rpframe:
-            KernelEventsManager().on(KernelEvts.MAPPROCESSED, lambda e:cls.getTransitionIe(transition))
+
+            KernelEventsManager().on(KernelEvts.MAPPROCESSED, lambda e: cls.getTransitionIe(transition))
             return
         ie = rpframe.getInteractiveElement(transition.id, transition.skillId)
         if not ie:
@@ -170,7 +166,7 @@ class MoveAPI:
     def neighborMapIdFromcoords(cls, x: int, y: int) -> int:
         v = WorldPathFinder().currPlayerVertex
         if not v:
-            KernelEventsManager().on(KernelEvts.MAPPROCESSED, lambda e:cls.neighborMapIdFromcoords(x, y))
+            KernelEventsManager().on(KernelEvts.MAPPROCESSED, lambda e: cls.neighborMapIdFromcoords(x, y))
         outgoingEdges = WorldGraph().getOutgoingEdgesFromVertex(v)
         for edge in outgoingEdges:
             mp = MapPosition.getMapPositionById(edge.dst.mapId)
@@ -183,7 +179,7 @@ class MoveAPI:
     def changeMapToDstCoords(cls, x: int, y: int) -> None:
         v = WorldPathFinder().currPlayerVertex
         if not v:
-            KernelEventsManager().on(KernelEvts.MAPPROCESSED, lambda e:cls.changeMapToDstCoords(x, y))
+            KernelEventsManager().on(KernelEvts.MAPPROCESSED, lambda e: cls.changeMapToDstCoords(x, y))
         outgoingEdges = WorldGraph().getOutgoingEdgesFromVertex(v)
         for edge in outgoingEdges:
             mp = MapPosition.getMapPositionById(edge.dst.mapId)

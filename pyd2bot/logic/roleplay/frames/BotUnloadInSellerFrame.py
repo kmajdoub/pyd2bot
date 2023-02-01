@@ -7,6 +7,7 @@ from pyd2bot.logic.managers.BotConfig import BotConfig
 from pyd2bot.logic.roleplay.frames.BotExchangeFrame import BotExchangeFrame, ExchangeDirectionEnum
 from pyd2bot.logic.roleplay.messages.ExchangeConcludedMessage import ExchangeConcludedMessage
 from pyd2bot.logic.roleplay.messages.SellerCollectedGuestItemsMessage import SellerCollectedGuestItemsMessage
+from pyd2bot.misc.Watcher import Watcher
 from pyd2bot.thriftServer.pyd2botService.ttypes import Character
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import PlayedCharacterManager
 from pydofus2.com.ankamagames.dofus.network.messages.game.context.roleplay.MapComplementaryInformationsDataMessage import (
@@ -95,10 +96,10 @@ class BotUnloadInSellerFrame(Frame):
                     Kernel().worker.addFrame(BotAutoTripFrame(self.bankInfos.npcMapId))
                     self.state = UnloadInSellerStatesEnum.WALKING_TO_BANK
                 else:
-                    threading.Thread(target=self.waitForSellerToComme, name=threading.current_thread().name).start()
+                    Watcher(target=self.waitForSellerToComme).start()
                     self.state = UnloadInSellerStatesEnum.WAITING_FOR_SELLER
                 return True
-        sleep(2)
+            sleep(2)
 
     def start(self):
         self.bankInfos = Localizer.getBankInfos()
@@ -106,7 +107,7 @@ class BotUnloadInSellerFrame(Frame):
         currentMapId = PlayedCharacterManager().currentMap.mapId
         self._startMapId = currentMapId
         self._startRpZone = PlayedCharacterManager().currentZoneRp
-        threading.Thread(target=self.waitForSellerIdleStatus, name=threading.current_thread().name).start()
+        Watcher(target=self.waitForSellerIdleStatus).start()
 
     def process(self, msg: Message) -> bool:
 
@@ -116,7 +117,7 @@ class BotUnloadInSellerFrame(Frame):
                 Kernel().worker.removeFrame(self)
                 Kernel().worker.process(SellerCollectedGuestItemsMessage())
             elif self.state == UnloadInSellerStatesEnum.WALKING_TO_BANK:
-                threading.Thread(target=self.waitForSellerToComme, name=threading.current_thread().name).start()
+                Watcher(target=self.waitForSellerToComme).start()
                 self.state = UnloadInSellerStatesEnum.WAITING_FOR_SELLER
             return True
 

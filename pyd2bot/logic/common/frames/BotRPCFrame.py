@@ -40,10 +40,11 @@ class BotRPCFrame(Frame):
                 if msg.reqUid in self._waitingForResp:
                     respw = self._waitingForResp[msg.reqUid]
                     respw["timeout"].cancel()
+                    del respw["timeout"]
                     if "callback" in respw:
                         self._waitingForResp.pop(msg.reqUid)
                         if respw["callback"] is not None:
-                            respw["callback"](result=msg.data, error=None)
+                            respw["callback"](result=msg.data, error=None, sender=msg.sender)
                     if "event" in respw:
                         respw["result"] = msg.data
                         respw["event"].set()
@@ -122,9 +123,6 @@ class BotRPCFrame(Frame):
             self._waitingForResp[msg.uid]["callback"] = callback
             self._waitingForResp[msg.uid]["timeout"].start()
         inst: ConnectionsHandler = ConnectionsHandler.getThreadInstance(msg.dest)
-        if inst is None:
-            ConnectionsHandler.onceThreadRegister(msg.dest, lambda: self.send(msg, callback, timeout))
-            return
         inst.putMessage(msg)
 
     def sendSync(self, msg: RPCMessage, timeout=20) -> RPCResponseMessage:
@@ -138,9 +136,6 @@ class BotRPCFrame(Frame):
             self._waitingForResp[msg.uid]["timeout"].start()
         resw = self._waitingForResp[msg.uid]
         inst: ConnectionsHandler = ConnectionsHandler.getThreadInstance(msg.dest)
-        if inst is None:
-            ConnectionsHandler.onceThreadRegister(msg.dest, lambda: self.sendSync(msg, timeout))
-            return
         inst.putMessage(msg)
         if not resw["event"].wait(10):
             raise TimeoutError("RPC call timeout")

@@ -31,7 +31,6 @@ from pyd2bot.logic.roleplay.frames.BotFarmPathFrame import BotFarmPathFrame
 from pyd2bot.logic.roleplay.frames.BotPhenixAutoRevive import BotPhenixAutoRevive
 from pyd2bot.logic.roleplay.frames.BotUnloadInBankFrame import BotUnloadInBankFrame
 from pyd2bot.logic.roleplay.messages.BankUnloadEndedMessage import BankUnloadEndedMessage
-from pyd2bot.thriftServer.pyd2botService.ttypes import Session, SessionType
 
 
 class BotWorkflowFrame(Frame):

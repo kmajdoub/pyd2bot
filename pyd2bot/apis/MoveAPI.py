@@ -1,7 +1,8 @@
 import random
-from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import KernelEventsManager, KernelEvts
+
+from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import KernelEventsManager, KernelEvent
+from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Vertex import Vertex
 from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.WorldGraph import WorldGraph
-from pydofus2.com.ankamagames.jerakine.benchmark.BenchmarkTimer import BenchmarkTimer
 from time import perf_counter, sleep
 from typing import TYPE_CHECKING
 from pydofus2.com.ankamagames.dofus.datacenter.world.MapPosition import MapPosition
@@ -124,7 +125,7 @@ class MoveAPI:
         rpframe: "RoleplayInteractivesFrame" = Kernel().worker.getFrame("RoleplayInteractivesFrame")
         if not rpframe:
 
-            KernelEventsManager().on(KernelEvts.MAPPROCESSED, lambda e: cls.getTransitionIe(transition))
+            KernelEventsManager().on(KernelEvent.MAPPROCESSED, lambda e: cls.getTransitionIe(transition))
             return
         ie = rpframe.getInteractiveElement(transition.id, transition.skillId)
         if not ie:
@@ -166,7 +167,7 @@ class MoveAPI:
     def neighborMapIdFromcoords(cls, x: int, y: int) -> int:
         v = WorldPathFinder().currPlayerVertex
         if not v:
-            KernelEventsManager().on(KernelEvts.MAPPROCESSED, lambda e: cls.neighborMapIdFromcoords(x, y))
+            KernelEventsManager().on(KernelEvent.MAPPROCESSED, lambda e: cls.neighborMapIdFromcoords(x, y))
         outgoingEdges = WorldGraph().getOutgoingEdgesFromVertex(v)
         for edge in outgoingEdges:
             mp = MapPosition.getMapPositionById(edge.dst.mapId)
@@ -179,7 +180,7 @@ class MoveAPI:
     def changeMapToDstCoords(cls, x: int, y: int) -> None:
         v = WorldPathFinder().currPlayerVertex
         if not v:
-            KernelEventsManager().on(KernelEvts.MAPPROCESSED, lambda e: cls.changeMapToDstCoords(x, y))
+            KernelEventsManager().on(KernelEvent.MAPPROCESSED, lambda e: cls.changeMapToDstCoords(x, y))
         outgoingEdges = WorldGraph().getOutgoingEdgesFromVertex(v)
         for edge in outgoingEdges:
             mp = MapPosition.getMapPositionById(edge.dst.mapId)
@@ -189,3 +190,8 @@ class MoveAPI:
                         cls.followTransition(tr)
                         return True
         raise Exception("No valid transition found!!!")
+
+    @classmethod
+    def moveToVertex(cls, vertex: Vertex):
+        from pyd2bot.logic.roleplay.frames.BotAutoTripFrame import BotAutoTripFrame
+        Kernel().worker.addFrame(BotAutoTripFrame(vertex.mapId, vertex.zoneId))

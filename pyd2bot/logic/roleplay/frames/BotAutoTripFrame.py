@@ -1,6 +1,5 @@
 from pyd2bot.apis.PlayerAPI import PlayerAPI
-from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import KernelEventsManager, KernelEvts
-from pydofus2.com.ankamagames.jerakine.benchmark.BenchmarkTimer import BenchmarkTimer
+from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import KernelEventsManager, KernelEvent
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import PlayedCharacterManager
 from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Edge import Edge
 from pydofus2.com.ankamagames.jerakine.messages.Frame import Frame
@@ -85,7 +84,7 @@ class BotAutoTripFrame(Frame):
 
     def walkToNextStep(self):
         if not PlayedCharacterManager().currentMap:
-            KernelEventsManager().once(KernelEvts.MAPPROCESSED, self.walkToNextStep)
+            KernelEventsManager().once(KernelEvent.MAPPROCESSED, self.walkToNextStep)
             return
         PlayerAPI().inAutoTrip = True
         if self._computed:

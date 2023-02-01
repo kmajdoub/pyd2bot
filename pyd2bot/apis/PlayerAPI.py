@@ -28,6 +28,9 @@ class PlayerAPI(metaclass=Singleton):
     def __init__(self):
         self.inAutoTrip = False
 
+    def isIdle(self) -> bool:
+        return self.status == "idle"
+    
     @property
     def status(self) -> str:
         bpframe: "BotPartyFrame" = Kernel().worker.getFrame("BotPartyFrame")

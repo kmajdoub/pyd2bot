@@ -1,6 +1,5 @@
 import collections
-from pydofus2.com.ankamagames.jerakine.benchmark.BenchmarkTimer import BenchmarkTimer
-from time import perf_counter
+from time import perf_counter, sleep
 from types import FunctionType
 from typing import TYPE_CHECKING, Tuple
 from pydofus2.com.ankamagames.atouin.AtouinConstants import AtouinConstants
@@ -56,7 +55,6 @@ from pydofus2.com.ankamagames.dofus.network.types.game.context.fight.GameFightMo
 from pydofus2.com.ankamagames.dofus.network.types.game.context.GameContextActorInformations import (
     GameContextActorInformations,
 )
-from pydofus2.com.ankamagames.jerakine.entities.interfaces.IInteractive import IInteractive
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 from pydofus2.com.ankamagames.jerakine.map.LosDetector import LosDetector
 from pydofus2.com.ankamagames.jerakine.messages.Frame import Frame
@@ -74,10 +72,8 @@ from pyd2bot.logic.managers.BotConfig import BotConfig
 if TYPE_CHECKING:
     from pydofus2.com.ankamagames.dofus.logic.game.fight.frames.FightBattleFrame import FightBattleFrame
     from pydofus2.com.ankamagames.dofus.logic.game.fight.frames.FightContextFrame import FightContextFrame
-    from pydofus2.com.ankamagames.dofus.logic.game.fight.frames.FightSpellCastFrame import FightSpellCastFrame
     from pydofus2.com.ankamagames.dofus.logic.game.fight.frames.FightTurnFrame import FightTurnFrame
     from pyd2bot.logic.roleplay.frames.BotPartyFrame import BotPartyFrame
-
 
 class _Target:
     def __init__(self, entityId: float, pos: MapPoint) -> None:
@@ -87,61 +83,36 @@ class _Target:
     def __str__(self) -> str:
         return f"({self.entityId} at {self.pos.cellId})"
 
-
 class BotFightFrame(Frame):
     VERBOSE = True
     ACTION_TIMEOUT = 7
-
-    _frameFightListRequest: bool
-
-    _fightCount: int = 0
-
-    _mapPos: list
-
-    _enabled: bool
-
-    _inFight: bool
-
-    _lastEntityOver: IInteractive
-
-    _wait: bool
-
-    _turnPlayed: int
-
-    _myTurn: bool
-
-    _turnAction: list[FunctionType]
-
-    spellId = None
-
-    _lastTarget: int = None
-
-    _spellw: SpellWrapper = None
-
-    _fightOptionsSent = False
-
+    
     def __init__(self):
-        self._turnAction = []
-        self._spellw = None
+        self._turnAction = list[FunctionType]()
         self._botTurnFrame = BotFightTurnFrame()
         self.spellId = BotConfig().primarySpellId
         self._spellCastFails = 0
         self._inFight = False
+        self._fightCount: int = 0
+        self._lastTarget: int = None
+        self._spellw: SpellWrapper = None
         super().__init__()
 
-    def pushed(self) -> bool:
+    def pushed(self) -> bool:        
+        self._turnAction = list[FunctionType]()
+        self._botTurnFrame = BotFightTurnFrame()
+        self.spellId = BotConfig().primarySpellId
+        self._inFight = False
+        self._lastTarget: int = None
+        self._spellw: SpellWrapper = None
         self._enabled = True
         self._myTurn = False
         self._wantcastSpell = None
         self._reachableCells = None
-        self._turnAction = []
         self._seqQueue = []
         self._waitingSeqEnd = False
         self._turnPlayed = 0
-        self._spellw = None
-        self._repeatActionTimeout = None
         self._spellCastFails = 0
-        self._fightOptionsSent = False
         Kernel().worker.addFrame(self._botTurnFrame)
         return True
 
@@ -156,10 +127,6 @@ class BotFightFrame(Frame):
     @property
     def entitiesFrame(self) -> "FightEntitiesFrame":
         return Kernel().worker.getFrame("FightEntitiesFrame")
-
-    @property
-    def spellFrame(self) -> "FightSpellCastFrame":
-        return Kernel().worker.getFrame("FightSpellCastFrame")
 
     @property
     def battleFrame(self) -> "FightBattleFrame":
@@ -241,7 +208,7 @@ class BotFightFrame(Frame):
             elif path[-1] in self._reachableCells:
                 if self.VERBOSE:
                     Logger().debug(
-                        f"[FightAlgo] Last Path cell to target {target} is reachable will move to it before casting the spell"
+                        f"[FightAlgo] Last Path cell to target {target} is reachable will move to it and casti the spell"
                     )
                 self.addTurnAction(self.askMove, [path])
                 self.addTurnAction(self.castSpell, [self.spellId, target.pos.cellId])
@@ -325,7 +292,8 @@ class BotFightFrame(Frame):
         if self.battleFrame._executingSequence:
             if self.VERBOSE:
                 Logger().warn(f"[FightBot] Battle is busy processing sequences")
-            BenchmarkTimer(1, self.nextTurnAction).start()
+            sleep(1)
+            self.nextTurnAction()
             return
         else:
             if self.VERBOSE:
@@ -355,14 +323,15 @@ class BotFightFrame(Frame):
             self._fightCount += 1
             self._spellCastFails = 0
             self._inFight = True
-            if BotConfig().isLeader and not self._fightOptionsSent:
+            if BotConfig().isLeader and not BotConfig().fightOptionsSent:
                 gfotmsg = GameFightOptionToggleMessage()
                 gfotmsg.init(FightOptionsEnum.FIGHT_OPTION_SET_SECRET)
                 ConnectionsHandler().conn.send(gfotmsg)
+                sleep(0.3)
                 gfotmsg = GameFightOptionToggleMessage()
                 gfotmsg.init(FightOptionsEnum.FIGHT_OPTION_SET_TO_PARTY_ONLY)
                 ConnectionsHandler().conn.send(gfotmsg)
-                self._fightOptionsSent = True
+                BotConfig().fightOptionsSent = True
             return False
 
         elif isinstance(msg, GameFightEndMessage):
@@ -445,8 +414,6 @@ class BotFightFrame(Frame):
         self._myTurn = False
         self._seqQueue.clear()
         self._turnAction.clear()
-        if self._repeatActionTimeout:
-            self._repeatActionTimeout.cancel()
         if self.turnFrame:
             self.turnFrame.finishTurn()
 
@@ -463,8 +430,6 @@ class BotFightFrame(Frame):
         result = list[_Target]()
         if not FightEntitiesFrame.getCurrentInstance() or not self.battleFrame:
             return []
-        if self.VERBOSE:
-            Logger().debug(f"Deads list : {self.battleFrame._deadTurnsList}")
         if self.fighterInfos is None:
             return []
         for entity in FightEntitiesFrame.getCurrentInstance().entities.values():

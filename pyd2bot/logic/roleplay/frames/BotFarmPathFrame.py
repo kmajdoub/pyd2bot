@@ -1,6 +1,5 @@
-from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import KernelEventsManager, KernelEvts
+from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import KernelEventsManager, KernelEvent
 from pydofus2.com.ankamagames.dofus.kernel.net.DisconnectionReasonEnum import DisconnectionReasonEnum
-from pydofus2.com.ankamagames.jerakine.benchmark.BenchmarkTimer import BenchmarkTimer
 from typing import TYPE_CHECKING
 from pyd2bot.apis.PlayerAPI import PlayerAPI
 from pydofus2.com.ankamagames.atouin.managers.MapDisplayManager import MapDisplayManager
@@ -65,6 +64,7 @@ if TYPE_CHECKING:
 
 
 class BotFarmPathFrame(Frame):
+    
     def __init__(self, autoStart: bool = False):
         super().__init__()
         self._autoStart = autoStart
@@ -72,7 +72,6 @@ class BotFarmPathFrame(Frame):
         self._usingInteractive = False
         self._followingMapchange = -1
         self._entities = dict()
-        self._inAutoTrip = False
         self._discardedMonstersIds = []
         self._worker = Kernel().worker
         self._pulled = False
@@ -110,7 +109,7 @@ class BotFarmPathFrame(Frame):
         Logger().info("BotFarmPathFrame pushed")
         self._followinMonsterGroup = None
         if self._autoStart:
-            KernelEventsManager().onceFramePushed("BotPartyFrame", self.doFarm)
+            KernelEventsManager().once(KernelEvent.MAPPROCESSED, self.doFarm)
         return True
 
     def pulled(self) -> bool:
@@ -118,6 +117,8 @@ class BotFarmPathFrame(Frame):
         self._pulled = True
         if BotEventsManager().has_listeners(BotEventsManager.MEMBERS_READY):
             BotEventsManager().remove_listener(BotEventsManager.MEMBERS_READY, self.doFarm)
+        if KernelEventsManager().has_listeners(KernelEvent.MAPPROCESSED):
+            KernelEventsManager().remove_listener(KernelEvent.MAPPROCESSED, self.doFarm)
         self.reset()
         return True
 
@@ -126,7 +127,6 @@ class BotFarmPathFrame(Frame):
         self._followingIe = None
         self._usingInteractive = False
         self._followinMonsterGroup = None
-        self._inAutoTrip = False
         self._discardedMonstersIds.clear()
         if self.movementFrame:
             self.movementFrame._canMove = True
@@ -150,15 +150,12 @@ class BotFarmPathFrame(Frame):
     def process(self, msg: Message) -> bool:
 
         if isinstance(msg, AutoTripEndedMessage):
-            self._inAutoTrip = False
             Logger().info("[BotFarmFrame] Auto trip ended calling doFarm")
             if msg.mapId is None:
                 raise Exception("Auto trip was Unable to reach destination")
             self.doFarm()
 
         elif isinstance(msg, InteractiveUseErrorMessage):
-            if self._inAutoTrip:
-                return False
             Logger().error(
                 f"[BotFarmFrame] Error unable to use interactive element '{msg.elemId}' with the skill '{msg.skillInstanceUid}'"
             )
@@ -186,7 +183,7 @@ class BotFarmPathFrame(Frame):
             self.doFarm()
 
         elif isinstance(msg, InteractiveUsedMessage):
-            if self._inAutoTrip:
+            if PlayerAPI().inAutoTrip:
                 return False
             if PlayedCharacterManager().id == msg.entityId and msg.duration > 0:
                 Logger().debug(f"[BotFarmFrame] Inventory weight {InventoryAPI.getWeightPercent():.2f}%")
@@ -197,7 +194,7 @@ class BotFarmPathFrame(Frame):
             return True
 
         elif isinstance(msg, InteractiveUseEndedMessage):
-            if self._inAutoTrip:
+            if PlayerAPI().inAutoTrip:
                 return False
             if self._entities[msg.elemId] == PlayedCharacterManager().id:
                 self._followingIe = None
@@ -206,14 +203,6 @@ class BotFarmPathFrame(Frame):
                 Logger().debug("*" * 100)
                 self.doFarm()
             del self._entities[msg.elemId]
-            return True
-
-        elif isinstance(msg, MapComplementaryInformationsDataMessage):
-            if self._inAutoTrip:
-                return False
-            Logger().debug("-" * 100)
-            self.reset()
-            self.doFarm()
             return True
 
         elif isinstance(msg, NotificationByServerMessage):
@@ -225,15 +214,15 @@ class BotFarmPathFrame(Frame):
             return True
 
     def moveToNextStep(self):
+        self.reset()
+        KernelEventsManager().once(KernelEvent.MAPPROCESSED, self.doFarm)
         self._currTransition = next(self.farmPath)
-        Logger().debug(
-            f"[BotFarmFrame] Current Map {PlayedCharacterManager().currentMap.mapId} Moving to {self._currTransition.transitionMapId}"
-        )
-        MoveAPI.followTransition(
-            self._currTransition,
-        )
+        dstMapId = self._currTransition.transitionMapId
+        currMapId = PlayedCharacterManager().currentMap.mapId
+        Logger().debug(f"[BotFarmFrame] Current Map {currMapId} Moving to {dstMapId}")
+        MoveAPI.followTransition(self._currTransition)
         if self.partyFrame:
-            self.partyFrame.notifyFollowersWithTransition(self._currTransition)
+            self.partyFrame.askMembersToFollowTransit(self._currTransition)
 
     def attackMonsterGroup(self):
         availableMonsterFights = []
@@ -263,44 +252,24 @@ class BotFarmPathFrame(Frame):
         tgtRpZone = MapDisplayManager().dataMap.cells[cellId].linkedZoneRP
         return tgtRpZone == PlayedCharacterManager().currentZoneRp
 
-    def doFarm(self, event=None):
+    def doFarm(self, e=None):
         Logger().debug("[BotFarmFrame] doFarm called")
-        if self._pulled:
-            Logger().debug("[BotFarmFrame] Already pulled")
-            return
-
-        if PlayerAPI().status != "idle":
-            Logger().debug(f"[BotFarmFrame] Can't farm, bot is not idle but '{PlayerAPI().status}'")
-            return
-
-        if WorldPathFinder().currPlayerVertex is None:
-            Logger().debug("[BotFarmFrame] Can't farm, bot is still loading map")
-            KernelEventsManager().once(KernelEvts.MAPPROCESSED, self.doFarm)
-            return
-
-        if WorldPathFinder().currPlayerVertex not in self.farmPath:
-            Logger().debug(
-                f"[BotFarmFrame] Map {WorldPathFinder().currPlayerVertex.mapId} not in farm path will switch to autotrip"
-            )
-            self._inAutoTrip = True
-            self._worker.addFrame(BotAutoTripFrame(self.farmPath.startVertex.mapId))
-            return
-
         if self.partyFrame:
-            if not self.partyFrame.allMembersOnSameMap:
-                Logger().debug("[BotFarmFrame] Waiting for party members to be on the same map")
-                BotEventsManager().onAllPartyMembersShowed(self.doFarm)
-                return
+            if not self.partyFrame.allMembersJoinedParty:
+                BotEventsManager().onceAllMembersJoinedParty(self.doFarm)
             else:
-                Logger().debug("[BotFarmFrame] Waiting for party members to be idle")
-                BotEventsManager().onAllPartyMembersIdle(self.doFarmEnsured)
-                self.partyFrame.checkAllMembersIdle()
-                return
-        else:
-            self.doFarmEnsured()
+                BotEventsManager().onAllPartyMembersIdle(self.doFarm2)
+            return
+        self.doFarm2()
 
-    def doFarmEnsured(self):
-        Logger().info("[BotFarmFrame] Party found and all members on the same map and are idle.")
+    def doFarm2(self, e=None):
+        if WorldPathFinder().currPlayerVertex not in self.farmPath:
+            MoveAPI.moveToVertex(self.farmPath.startVertex)
+            if self.partyFrame:
+                self.partyFrame.askMembersToMoveToVertex(self.farmPath.startVertex)
+            return
+        if self.partyFrame and not self.partyFrame.allMembersOnSameMap:
+            BotEventsManager().onAllPartyMembersShowed(self.doFarm)
         self._followinMonsterGroup = None
         self._followingIe = None
         if BotConfig().isFightSession:

@@ -13,7 +13,7 @@ from pyd2bot.thriftServer.pyd2botService.ttypes import (
 )
 from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import (
     KernelEventsManager,
-    KernelEvts,
+    KernelEvent,
 )
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.InventoryManager import (
@@ -59,7 +59,7 @@ class Pyd2botServer:
         )
         self.Logger().debug("fetchUsedServers called with token: " + token)
         DofusClient().login(token)
-        servers: dict[str, list[GameServerInformations]] = KernelEventsManager().wait(KernelEvts.SERVERS_LIST, 60)
+        servers: dict[str, list[GameServerInformations]] = KernelEventsManager().wait(KernelEvent.SERVERS_LIST, 60)
         self.Logger().info(f"list servers: {[s.to_json() for s in servers['used']]}")
         result = [
             Server(
@@ -86,7 +86,7 @@ class Pyd2botServer:
 
         result = list()
         DofusClient().login(token, serverId)
-        charactersList: list[BasicCharacterWrapper] = KernelEventsManager().wait(KernelEvts.CHARACTERS_LIST, 60)
+        charactersList: list[BasicCharacterWrapper] = KernelEventsManager().wait(KernelEvent.CHARACTERS_LIST, 60)
         if charactersList is None:
             raise Exception("Timeout!")
         result = [

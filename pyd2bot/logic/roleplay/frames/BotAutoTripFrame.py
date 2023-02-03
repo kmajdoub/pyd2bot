@@ -1,10 +1,12 @@
+import threading
 from pyd2bot.apis.PlayerAPI import PlayerAPI
 from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import KernelEventsManager, KernelEvent
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import PlayedCharacterManager
+from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.astar.AStar import AStar
 from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Edge import Edge
 from pydofus2.com.ankamagames.jerakine.messages.Frame import Frame
 from pydofus2.com.ankamagames.jerakine.messages.Message import Message
-from pyd2bot.apis.MoveAPI import MoveAPI
+from pyd2bot.apis.MoveAPI import FollowTransitionError, MoveAPI
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
 from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.WorldPathFinder import (
     WorldPathFinder,
@@ -30,7 +32,7 @@ class BotAutoTripFrame(Frame):
         self.dstRpZone = rpZone
         self.path = None
         self.changeMapFails = dict()
-        self._computed = False
+        self._computed = threading.Event()
         self._worker = Kernel().worker
         self._pulled = False
         super().__init__()
@@ -41,9 +43,10 @@ class BotAutoTripFrame(Frame):
 
     def reset(self):
         self.dstMapId = None
-        self.path = None
+        if self.path is not None:
+            self.path.clear()
         self.changeMapFails.clear()
-        self._computed = False
+        self._computed.clear()
 
     def pushed(self) -> bool:
         Logger().debug("Auto trip frame pushed")
@@ -69,7 +72,6 @@ class BotAutoTripFrame(Frame):
             return True
 
         if isinstance(msg, MapChangeFailedMessage):
-            Logger().debug(f"Autotrip received map change failed for reason: {msg.reason}")
             raise Exception(f"Autotrip received map change failed for reason: {msg.reason}")
 
     @property
@@ -86,16 +88,16 @@ class BotAutoTripFrame(Frame):
         if not PlayedCharacterManager().currentMap:
             KernelEventsManager().once(KernelEvent.MAPPROCESSED, self.walkToNextStep)
             return
-        PlayerAPI().inAutoTrip = True
-        if self._computed:
+        PlayerAPI().inAutoTrip.set()
+        if self._computed.is_set():
             currMapId = WorldPathFinder().currPlayerVertex.mapId
             dstMapId = self.path[-1].dst.mapId
             Logger().debug(f"Player current mapId {currMapId} and dst mapId {dstMapId}")
             if currMapId == dstMapId:
-                PlayerAPI().inAutoTrip = False
                 Logger().debug(f"Trip reached destination Map : {dstMapId}")
                 Kernel().worker.removeFrame(self)
                 Kernel().worker.process(AutoTripEndedMessage(self.dstMapId))
+                PlayerAPI().inAutoTrip.clear()
                 return True
             Logger().debug(f"Current step index: {self.currentEdgeIndex + 1}/{len(self.path)}")
             e = self.path[self.currentEdgeIndex]
@@ -103,12 +105,17 @@ class BotAutoTripFrame(Frame):
             Logger().debug(f"\t|- src {e.src.mapId} -> dst {e.dst.mapId}")
             for tr in e.transitions:
                 Logger().debug(f"\t\t|- direction : {tr.direction}, skill : {tr.skillId}, cell : {tr.cell}")
-            MoveAPI.followEdge(e)
+            try:
+                MoveAPI.followEdge(e)
+            except FollowTransitionError as e:
+                Logger().debug(f"Follow transition error: {e}, will recompute path ignoring this edge.")
+                self._computed.clear()
+                AStar().addForbidenEdge(e)
+                WorldPathFinder().findPath(self.dstMapId, self.onComputeOver, self.dstRpZone)
         else:
             WorldPathFinder().findPath(self.dstMapId, self.onComputeOver, self.dstRpZone)
 
     def onComputeOver(self, *args):
-        self._computed = True
         path: list[Edge] = None
         for arg in args:
             if isinstance(arg, list):
@@ -127,5 +134,6 @@ class BotAutoTripFrame(Frame):
             print(f"\t|- src {e.src.mapId} -> dst {e.dst.mapId}")
             for tr in e.transitions:
                 print(f"\t\t|- {tr}")
-        self.path: list[Edge] = path
+        self.path = path
+        self._computed.set()
         self.walkToNextStep()

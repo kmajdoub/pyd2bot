@@ -4,12 +4,15 @@ from typing import Iterator
 
 from pyd2bot.thriftServer.pyd2botService.ttypes import Path
 from pydofus2.com.ankamagames.dofus.datacenter.world.SubArea import SubArea
+from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import PlayedCharacterManager
 from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.astar.AStar import AStar
 from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Transition import Transition
 from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Vertex import Vertex
 from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.WorldGraph import WorldGraph
-from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.WorldPathFinder import WorldPathFinder
 from pyd2bot.models.farmPaths.AbstractFarmPath import AbstractFarmPath
+from pydofus2.com.ankamagames.jerakine.pathfinding.Pathfinding import Pathfinding
+
+from pydofus2.com.ankamagames.jerakine.types.positions.MapPoint import MapPoint
 
 
 class RandomSubAreaFarmPath(AbstractFarmPath):
@@ -27,6 +30,8 @@ class RandomSubAreaFarmPath(AbstractFarmPath):
         self.onlyDirections = onlyDirections
 
     def __next__(self) -> Transition:
+        from pydofus2.com.ankamagames.atouin.utils.DataMapProvider import DataMapProvider
+
         outgoingEdges = WorldGraph().getOutgoingEdgesFromVertex(self.currentVertex)
         transitions = []
         for edge in outgoingEdges:
@@ -34,7 +39,14 @@ class RandomSubAreaFarmPath(AbstractFarmPath):
                 if AStar.hasValidTransition(edge):
                     for tr in edge.transitions:
                         if not self.onlyDirections or tr.direction != -1:
-                            transitions.append(tr)
+                            if tr.cell:
+                                currMP = PlayedCharacterManager().entity.position
+                                candidate = MapPoint.fromCellId(tr.cell)
+                                movePath = Pathfinding().findPath(DataMapProvider(), currMP, candidate)
+                                if movePath.end == candidate:
+                                    transitions.append(tr)
+                            else:
+                                transitions.append(tr)
         return random.choice(transitions)
 
     def currNeighbors(self) -> Iterator[Vertex]:

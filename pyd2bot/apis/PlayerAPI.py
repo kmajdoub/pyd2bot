@@ -1,3 +1,4 @@
+import threading
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import (
     PlayedCharacterManager,
@@ -26,11 +27,11 @@ if TYPE_CHECKING:
 
 class PlayerAPI(metaclass=Singleton):
     def __init__(self):
-        self.inAutoTrip = False
+        self.inAutoTrip = threading.Event()
 
     def isIdle(self) -> bool:
         return self.status == "idle"
-    
+
     @property
     def status(self) -> str:
         bpframe: "BotPartyFrame" = Kernel().worker.getFrame("BotPartyFrame")
@@ -59,7 +60,7 @@ class PlayerAPI(metaclass=Singleton):
             status = "inSellerAutoUnload:" + f.state.name
         elif Kernel().worker.getFrame("BotPhenixAutoRevive"):
             status = "inPhenixAutoRevive"
-        elif self.inAutoTrip:
+        elif self.inAutoTrip.is_set():
             status = "inAutoTrip"
         elif bfpf and bfpf._followinMonsterGroup:
             status = "followingMonsterGroup"

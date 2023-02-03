@@ -117,13 +117,15 @@ class BotRPCFrame(Frame):
         self.send(msg)
 
     def send(self, msg: RPCMessage, callback=None, timeout=20) -> None:
+        inst: Kernel = Kernel.getThreadInstance(msg.dest)
+        if not inst:
+            return
         if not msg.oneway and msg.uid not in self._waitingForResp:
             self._waitingForResp[msg.uid] = {}
             self._waitingForResp[msg.uid]["timeout"] = BenchmarkTimer(timeout, self.onTimeout, [msg, timeout])
             self._waitingForResp[msg.uid]["callback"] = callback
             self._waitingForResp[msg.uid]["timeout"].start()
-        inst: ConnectionsHandler = ConnectionsHandler.getThreadInstance(msg.dest)
-        inst.putMessage(msg)
+        inst.worker.process(msg)
 
     def sendSync(self, msg: RPCMessage, timeout=20) -> RPCResponseMessage:
         if msg.oneway:
@@ -135,8 +137,8 @@ class BotRPCFrame(Frame):
             }
             self._waitingForResp[msg.uid]["timeout"].start()
         resw = self._waitingForResp[msg.uid]
-        inst: ConnectionsHandler = ConnectionsHandler.getThreadInstance(msg.dest)
-        inst.putMessage(msg)
+        inst: Kernel = Kernel.getThreadInstance(msg.dest)
+        inst.worker.process(msg)
         if not resw["event"].wait(10):
             raise TimeoutError("RPC call timeout")
         result = resw["result"]

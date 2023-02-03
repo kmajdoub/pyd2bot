@@ -1,25 +1,25 @@
+from typing import TYPE_CHECKING
+
+from pyd2bot.logic.roleplay.frames.BotAutoTripFrame import BotAutoTripFrame
+from pyd2bot.logic.roleplay.messages.AutoTripEndedMessage import AutoTripEndedMessage
+from pyd2bot.misc.Localizer import Localizer
+from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
 from pydofus2.com.ankamagames.dofus.kernel.net.ConnectionsHandler import ConnectionsHandler
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import PlayedCharacterManager
 from pydofus2.com.ankamagames.dofus.network.enums.PlayerLifeStatusEnum import PlayerLifeStatusEnum
-from pydofus2.com.ankamagames.dofus.network.messages.game.context.roleplay.MapComplementaryInformationsDataMessage import (
-    MapComplementaryInformationsDataMessage,
-)
 from pydofus2.com.ankamagames.dofus.network.messages.game.context.roleplay.death.GameRolePlayFreeSoulRequestMessage import (
     GameRolePlayFreeSoulRequestMessage,
 )
 from pydofus2.com.ankamagames.dofus.network.messages.game.context.roleplay.death.GameRolePlayPlayerLifeStatusMessage import (
     GameRolePlayPlayerLifeStatusMessage,
 )
-from pydofus2.com.ankamagames.jerakine.messages.Frame import Frame
-from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
+from pydofus2.com.ankamagames.dofus.network.messages.game.context.roleplay.MapComplementaryInformationsDataMessage import (
+    MapComplementaryInformationsDataMessage,
+)
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
+from pydofus2.com.ankamagames.jerakine.messages.Frame import Frame
 from pydofus2.com.ankamagames.jerakine.messages.Message import Message
 from pydofus2.com.ankamagames.jerakine.types.enums.Priority import Priority
-from pyd2bot.logic.roleplay.frames.BotAutoTripFrame import BotAutoTripFrame
-from pyd2bot.logic.roleplay.messages.AutoTripEndedMessage import AutoTripEndedMessage
-from typing import TYPE_CHECKING
-
-from pyd2bot.misc.Localizer import Localizer
 
 if TYPE_CHECKING:
     from pydofus2.com.ankamagames.dofus.logic.game.roleplay.frames.RoleplayInteractivesFrame import (
@@ -84,4 +84,4 @@ class BotPhenixAutoRevive(Frame):
 
     def releaseSoul(self):
         grpfsrmmsg = GameRolePlayFreeSoulRequestMessage()
-        ConnectionsHandler().conn.send(grpfsrmmsg)
+        ConnectionsHandler().send(grpfsrmmsg)

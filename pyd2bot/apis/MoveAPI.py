@@ -1,9 +1,9 @@
 import random
+from pydofus2.com.ankamagames.atouin.utils.DataMapProvider import DataMapProvider
 
 from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import KernelEventsManager, KernelEvent
 from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Vertex import Vertex
 from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.WorldGraph import WorldGraph
-from time import perf_counter, sleep
 from typing import TYPE_CHECKING
 from pydofus2.com.ankamagames.dofus.datacenter.world.MapPosition import MapPosition
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import (
@@ -22,6 +22,8 @@ from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.TransitionTy
 from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.WorldPathFinder import (
     WorldPathFinder,
 )
+from pydofus2.com.ankamagames.jerakine.pathfinding.Pathfinding import Pathfinding
+from pydofus2.com.ankamagames.jerakine.types.positions.MapPoint import MapPoint
 
 if TYPE_CHECKING:
     from pydofus2.com.ankamagames.dofus.logic.game.roleplay.frames.RoleplayInteractivesFrame import (
@@ -38,6 +40,10 @@ from pydofus2.com.ankamagames.atouin.messages.CellClickMessage import CellClickM
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 from pydofus2.com.ankamagames.jerakine.types.enums.DirectionsEnum import DirectionsEnum
+
+
+class FollowTransitionError(Exception):
+    pass
 
 
 class MapChange:
@@ -116,21 +122,26 @@ class MoveAPI:
     def followEdge(cls, edge: Edge):
         for tr in edge.transitions:
             if tr.isValid:
-                cls.followTransition(tr)
-                return True
-        raise Exception("No valid transition found!!!")
+                return cls.followTransition(tr)
+        raise FollowTransitionError("No valid transition found!!!")
 
     @classmethod
     def getTransitionIe(cls, transition: Transition) -> "InteractiveElementData":
         rpframe: "RoleplayInteractivesFrame" = Kernel().worker.getFrame("RoleplayInteractivesFrame")
         if not rpframe:
-
             KernelEventsManager().on(KernelEvent.MAPPROCESSED, lambda e: cls.getTransitionIe(transition))
             return
         ie = rpframe.getInteractiveElement(transition.id, transition.skillId)
         if not ie:
             raise Exception(f"InteractiveElement {transition.id} not found")
         return ie
+
+    @classmethod
+    def canMoveToCell(cls, cellId: int) -> bool:
+        currMP = PlayedCharacterManager().entity.position
+        candidate = MapPoint.fromCellId(cellId)
+        movePath = Pathfinding().findPath(DataMapProvider(), currMP, candidate)
+        return movePath.end == candidate
 
     @classmethod
     def followTransition(cls, tr: Transition):
@@ -156,11 +167,16 @@ class MoveAPI:
                     }
                 )
                 rpmframe.resetNextMoveMapChange()
-                rpmframe.askMoveTo(ie.position, TransitionTypeEnum.INTERACTIVE)
+                if cls.canMoveToCell(tr.cell):
+                    return rpmframe.askMoveTo(MapPoint.fromCellId(tr.cell), TransitionTypeEnum.INTERACTIVE)
+                else:
+                    raise FollowTransitionError("Can't move to cell")
             else:
                 rpmframe.activateSkill(ie.skillUID, tr.id, 0)
         else:
             Logger().debug(f"[RolePlayMovement] Scroll MAP change towards '{tr.transitionMapId}'")
+            if not cls.canMoveToCell(tr.cell):
+                raise FollowTransitionError("Can't move to cell")
             cls.sendClickAdjacentMsg(tr.transitionMapId, tr.cell)
 
     @classmethod
@@ -194,4 +210,5 @@ class MoveAPI:
     @classmethod
     def moveToVertex(cls, vertex: Vertex):
         from pyd2bot.logic.roleplay.frames.BotAutoTripFrame import BotAutoTripFrame
+
         Kernel().worker.addFrame(BotAutoTripFrame(vertex.mapId, vertex.zoneId))

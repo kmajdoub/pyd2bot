@@ -1,27 +1,26 @@
-from enum import Enum
-import json
 import threading
-from time import sleep
+from enum import Enum
+from typing import TYPE_CHECKING
+
 from pyd2bot.logic.common.frames.BotRPCFrame import BotRPCFrame
 from pyd2bot.logic.managers.BotConfig import BotConfig
+from pyd2bot.logic.roleplay.frames.BotAutoTripFrame import BotAutoTripFrame
 from pyd2bot.logic.roleplay.frames.BotExchangeFrame import BotExchangeFrame, ExchangeDirectionEnum
+from pyd2bot.logic.roleplay.messages.AutoTripEndedMessage import AutoTripEndedMessage
 from pyd2bot.logic.roleplay.messages.ExchangeConcludedMessage import ExchangeConcludedMessage
 from pyd2bot.logic.roleplay.messages.SellerCollectedGuestItemsMessage import SellerCollectedGuestItemsMessage
+from pyd2bot.misc.Localizer import Localizer
 from pyd2bot.misc.Watcher import Watcher
 from pyd2bot.thriftServer.pyd2botService.ttypes import Character
+from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import PlayedCharacterManager
 from pydofus2.com.ankamagames.dofus.network.messages.game.context.roleplay.MapComplementaryInformationsDataMessage import (
     MapComplementaryInformationsDataMessage,
 )
-from pydofus2.com.ankamagames.jerakine.messages.Frame import Frame
-from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
+from pydofus2.com.ankamagames.jerakine.messages.Frame import Frame
 from pydofus2.com.ankamagames.jerakine.messages.Message import Message
 from pydofus2.com.ankamagames.jerakine.types.enums.Priority import Priority
-from pyd2bot.logic.roleplay.frames.BotAutoTripFrame import BotAutoTripFrame
-from pyd2bot.logic.roleplay.messages.AutoTripEndedMessage import AutoTripEndedMessage
-from pyd2bot.misc.Localizer import Localizer
-from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from pydofus2.com.ankamagames.dofus.logic.game.roleplay.frames.RoleplayEntitiesFrame import RoleplayEntitiesFrame
@@ -82,7 +81,7 @@ class BotUnloadInSellerFrame(Frame):
                     Logger().debug("Seller not found in the bank map")
             else:
                 Logger().debug("No entitiesFrame found")
-            sleep(2)
+            Kernel().worker.terminated.wait(2)
 
     def waitForSellerIdleStatus(self):
         currentMapId = PlayedCharacterManager().currentMap.mapId
@@ -99,7 +98,7 @@ class BotUnloadInSellerFrame(Frame):
                     Watcher(target=self.waitForSellerToComme).start()
                     self.state = UnloadInSellerStatesEnum.WAITING_FOR_SELLER
                 return True
-            sleep(2)
+            Kernel().worker.terminated.wait(2)
 
     def start(self):
         self.bankInfos = Localizer.getBankInfos()

@@ -1,8 +1,8 @@
-from pyd2bot.thriftServer.pyd2botService.ttypes import Session, SessionType, Character, UnloadType
-from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
-from pydofus2.com.ankamagames.jerakine.metaclasses.Singleton import Singleton
-from pyd2bot.logic.managers.PathFactory import PathFactory
 from enum import Enum
+
+from pyd2bot.logic.managers.PathFactory import PathFactory
+from pyd2bot.thriftServer.pyd2botService.ttypes import Character, Session, SessionType, UnloadType
+from pydofus2.com.ankamagames.jerakine.metaclasses.Singleton import Singleton
 
 
 class CharacterRoleEnum(Enum):
@@ -30,7 +30,7 @@ class BotConfig(metaclass=Singleton):
         self.seller: Character = None
         self.unloadType: UnloadType = None
         self.monsterLvlCoefDiff = float("inf")
-        self.fightOptionsSent = False
+        self.fightOptionsSent = True
 
     @property
     def primarySpellId(self) -> int:

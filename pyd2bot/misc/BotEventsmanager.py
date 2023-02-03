@@ -1,8 +1,4 @@
-import threading
-from time import sleep
-from pyd2bot.apis.PlayerAPI import PlayerAPI
 from pyd2bot.logic.managers.BotConfig import BotConfig
-from pyd2bot.misc.Watcher import Watcher
 from pydofus2.com.ankamagames.berilia.managers.EventsHandler import EventsHandler
 from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import KernelEventsManager, KernelEvent
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
@@ -13,8 +9,9 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from pydofus2.com.ankamagames.dofus.logic.game.roleplay.frames.RoleplayEntitiesFrame import RoleplayEntitiesFrame
-    from pyd2bot.logic.roleplay.frames.BotPartyFrame import BotPartyFrame
-    from pydofus2.com.ankamagames.dofus.network.types.game.context.roleplay.GameRolePlayHumanoidInformations import GameRolePlayHumanoidInformations
+    from pydofus2.com.ankamagames.dofus.network.types.game.context.roleplay.GameRolePlayHumanoidInformations import (
+        GameRolePlayHumanoidInformations,
+    )
 
 
 class BotEventsManager(EventsHandler, metaclass=Singleton):
@@ -27,6 +24,7 @@ class BotEventsManager(EventsHandler, metaclass=Singleton):
 
     def onAllPartyMembersShowed(self, callback, args=[]):
         Logger().debug("[BotEventsManager] Waiting for party members to show up.")
+
         def onTeamMemberShowed(e, infos: "GameRolePlayHumanoidInformations"):
             entitiesFrame: "RoleplayEntitiesFrame" = Kernel().worker.getFrame("RoleplayEntitiesFrame")
             if entitiesFrame is None:
@@ -53,11 +51,11 @@ class BotEventsManager(EventsHandler, metaclass=Singleton):
 
     def onAllPartyMembersIdle(self, callback, args=[]):
         Logger().debug("[BotEventsManager] Waiting for party members to be idle.")
+
         def onEvt(e):
             callback(e, *args)
+
         self.once(BotEventsManager.ALL_PARTY_MEMBERS_IDLE, onEvt)
-        partyFrame: "BotPartyFrame" = Kernel().worker.getFrame("BotPartyFrame")
-        partyFrame.checkAllMembersIdle()
 
     def oncePartyMemberShowed(self, callback, args=[]):
         def onActorShowed(e, infos: "GameRolePlayHumanoidInformations"):
@@ -65,10 +63,13 @@ class BotEventsManager(EventsHandler, metaclass=Singleton):
                 if int(follower.id) == int(infos.contextualId):
                     Logger().info("[BotEventsManager] Party member %s showed" % follower.name)
                     callback(e, *args)
+
         KernelEventsManager().on(KernelEvent.ACTORSHOWED, onActorShowed)
-    
+
     def onceAllMembersJoinedParty(self, callback, args=[]):
         Logger().debug("[BotEventsManager] Waiting for party members to join party.")
+
         def onEvt(e):
             callback(e, *args)
+
         self.once(BotEventsManager.ALL_MEMBERS_JOINED_PARTY, onEvt)

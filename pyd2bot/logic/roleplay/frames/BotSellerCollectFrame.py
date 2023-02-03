@@ -81,13 +81,16 @@ class BotSellerCollectFrame(Frame):
                 Logger().debug("MapComplementaryInformationsDataMessage received")
                 self.state = SellerCollecteStateEnum.GOING_TO_BANK
                 self.goToBank()
+            return True
 
         elif isinstance(msg, ExchangeConcludedMessage):
             Logger().debug("Exchange with guest ended successfully")
             self.state = SellerCollecteStateEnum.UNLOADING_IN_BANK
             Kernel().worker.addFrame(BotBankInteractionFrame(self.bankInfos))
+            return True
 
         elif isinstance(msg, BankInteractionEndedMessage):
             Logger().debug("BankInteractionEndedMessage received")
             Kernel().worker.removeFrame(self)
             Kernel().worker.process(SellerCollectedGuestItemsMessage())
+            return True

@@ -1,10 +1,14 @@
-import collections
-from time import perf_counter, sleep
+import threading
+from queue import PriorityQueue
+from time import perf_counter
 from types import FunctionType
 from typing import TYPE_CHECKING, Tuple
+from pyd2bot.logic.fight.frames.BotFightTurnFrame import BotFightTurnFrame
+from pyd2bot.logic.managers.BotConfig import BotConfig
 from pydofus2.com.ankamagames.atouin.AtouinConstants import AtouinConstants
 from pydofus2.com.ankamagames.atouin.messages.MapLoadedMessage import MapLoadedMessage
 from pydofus2.com.ankamagames.atouin.utils.DataMapProvider import DataMapProvider
+from pydofus2.com.ankamagames.dofus.datacenter.communication.InfoMessage import InfoMessage
 from pydofus2.com.ankamagames.dofus.datacenter.effects.EffectInstance import EffectInstance
 from pydofus2.com.ankamagames.dofus.internalDatacenter.spells.SpellWrapper import SpellWrapper
 from pydofus2.com.ankamagames.dofus.internalDatacenter.stats.EntityStats import EntityStats
@@ -17,6 +21,7 @@ from pydofus2.com.ankamagames.dofus.logic.game.fight.managers.CurrentPlayedFight
 )
 from pydofus2.com.ankamagames.dofus.logic.game.fight.miscs.FightReachableCellsMaker import FightReachableCellsMaker
 from pydofus2.com.ankamagames.dofus.network.enums.FightOptionsEnum import FightOptionsEnum
+from pydofus2.com.ankamagames.dofus.network.enums.TextInformationTypeEnum import TextInformationTypeEnum
 from pydofus2.com.ankamagames.dofus.network.messages.game.actions.fight.GameActionFightCastRequestMessage import (
     GameActionFightCastRequestMessage,
 )
@@ -27,6 +32,7 @@ from pydofus2.com.ankamagames.dofus.network.messages.game.actions.sequence.Seque
 from pydofus2.com.ankamagames.dofus.network.messages.game.actions.sequence.SequenceStartMessage import (
     SequenceStartMessage,
 )
+from pydofus2.com.ankamagames.dofus.network.messages.game.basic.TextInformationMessage import TextInformationMessage
 from pydofus2.com.ankamagames.dofus.network.messages.game.context.fight.character.GameFightShowFighterMessage import (
     GameFightShowFighterMessage,
 )
@@ -66,16 +72,17 @@ from pydofus2.com.ankamagames.jerakine.types.zones.IZone import IZone
 from pydofus2.com.ankamagames.jerakine.types.zones.Lozenge import Lozenge
 from pydofus2.com.ankamagames.jerakine.utils.display.spellZone.SpellShapeEnum import SpellShapeEnum
 from pydofus2.damageCalculation.tools.StatIds import StatIds
-from pyd2bot.logic.fight.frames.BotFightTurnFrame import BotFightTurnFrame
-from pyd2bot.logic.managers.BotConfig import BotConfig
+from pydofus2.mapTools import MapTools
 
+lock = threading.Lock()
 if TYPE_CHECKING:
+    from pyd2bot.logic.roleplay.frames.BotPartyFrame import BotPartyFrame
     from pydofus2.com.ankamagames.dofus.logic.game.fight.frames.FightBattleFrame import FightBattleFrame
     from pydofus2.com.ankamagames.dofus.logic.game.fight.frames.FightContextFrame import FightContextFrame
     from pydofus2.com.ankamagames.dofus.logic.game.fight.frames.FightTurnFrame import FightTurnFrame
-    from pyd2bot.logic.roleplay.frames.BotPartyFrame import BotPartyFrame
 
-class _Target:
+
+class Target:
     def __init__(self, entityId: float, pos: MapPoint) -> None:
         self.pos: MapPoint = pos
         self.entityId = entityId
@@ -83,10 +90,14 @@ class _Target:
     def __str__(self) -> str:
         return f"({self.entityId} at {self.pos.cellId})"
 
+
 class BotFightFrame(Frame):
     VERBOSE = True
     ACTION_TIMEOUT = 7
-    
+    _average_time_to_find_path = 0
+    _number_of_path_calculations = 0
+    _total_time_to_find_path = 0
+
     def __init__(self):
         self._turnAction = list[FunctionType]()
         self._botTurnFrame = BotFightTurnFrame()
@@ -96,16 +107,18 @@ class BotFightFrame(Frame):
         self._fightCount: int = 0
         self._lastTarget: int = None
         self._spellw: SpellWrapper = None
+        self._spellShape = None
+        self._currentPath = None
+        self._currentTarget = None
         super().__init__()
 
-    def pushed(self) -> bool:        
+    def pushed(self) -> bool:
         self._turnAction = list[FunctionType]()
         self._botTurnFrame = BotFightTurnFrame()
         self.spellId = BotConfig().primarySpellId
         self._inFight = False
         self._lastTarget: int = None
         self._spellw: SpellWrapper = None
-        self._enabled = True
         self._myTurn = False
         self._wantcastSpell = None
         self._reachableCells = None
@@ -137,7 +150,6 @@ class BotFightFrame(Frame):
         return Kernel().worker.getFrame("BotPartyFrame")
 
     def pulled(self) -> bool:
-        self._enabled = False
         self._spellw = None
         if self._reachableCells:
             self._reachableCells.clear()
@@ -153,39 +165,93 @@ class BotFightFrame(Frame):
     def fightCount(self) -> int:
         return self._fightCount
 
-    def findPathToTarget(self, spellw: SpellWrapper, targets: list[_Target]) -> Tuple[_Target, list[int]]:
-        """
-        Find path to the closest ldv to hit a mob.
-        :param origin: position of the character
-        :param po: max range of the spell
-        :param targets: positions of the mobs
-        :return: cell of the mob, path to the ldv if any else None
-        """
+    def buildPath(self, parentOfcell: dict[int, int], endCellId):
+        path = [endCellId]
+        currCellId = endCellId
+        while True:
+            currCellId = parentOfcell.get(currCellId)
+            if currCellId is None:
+                break
+            path.append(currCellId)
+        path.reverse()
+        return path
+
+    def findCellsWithLosToTargets(self, spellw: SpellWrapper, targets: list[Target]) -> list[int]:
+        LosDetector.clearCache()
+        hasLosToTargets = dict[int, list]()
+        spellZone = self.getSpellZone(spellw)
+        maxRangeFromFighter = 0
+        for target in targets:
+            currSpellZone = spellZone.getCells(target.pos.cellId)
+            los = LosDetector.getCells(DataMapProvider(), currSpellZone, target.pos.cellId)
+            for cellId in los:
+                if cellId not in hasLosToTargets:
+                    hasLosToTargets[cellId] = list[Target]()
+                hasLosToTargets[cellId].append(target)
+                maxRangeFromFighter = max(maxRangeFromFighter, MapTools.getDistance(self.fighterPos.cellId, cellId))
+        return maxRangeFromFighter, hasLosToTargets
+
+    def findPathToTarget(self, spellw: SpellWrapper, targets: list[Target]) -> Tuple[Target, list[int]]:
         if not targets:
             return None, None
         for target in targets:
-            if target.pos.distanceTo(self.fighterPos) == 1.0:
+            if target.pos.distanceTo(self.fighterPos) <= 1:
                 return target, []
-        spellZone = self.getSpellZone(spellw)
-        origin = self.fighterPos
-        queue = collections.deque([[origin.cellId]])
-        seen = {origin.cellId}
-        while queue:
-            path = queue.popleft()
-            currCellId: int = path[-1]
-            currSpellZone = spellZone.getCells(currCellId)
-            ldv = set(LosDetector.getCell(DataMapProvider(), currSpellZone, currCellId))
-            for target in targets:
-                if target.pos.cellId in ldv:
-                    return target, path[1:]
-            currReachableCells = set(FightReachableCellsMaker(self.fighterInfos, currCellId, 1).reachableCells)
-            for cellId in currReachableCells:
-                if cellId not in seen:
-                    queue.append(path + [cellId])
-                    seen.add(cellId)
-        if self.VERBOSE:
-            Logger().debug(f"[FightAlgo] No valid path to reach a target found")
-        return None, None
+        maxRangeFromFighter, hasLosToTargets = self.findCellsWithLosToTargets(spellw, targets)
+        if not hasLosToTargets:
+            return None, None
+        if self.fighterPos.cellId in hasLosToTargets:
+            return hasLosToTargets[self.fighterPos.cellId][0], []
+        if self.movementPoints <= 0:
+            return None, None
+        reachableCells = set(
+            FightReachableCellsMaker(self.fighterInfos, self.fighterPos.cellId, maxRangeFromFighter).reachableCells
+        )
+        queue = PriorityQueue[Tuple[int, int, int]]()
+        queue.put((0, 0, self.fighterPos.cellId))
+        visited = set()
+        parentOfCell = {}
+        bestAlternative = None
+        BtestAlternativeCost = float("inf")
+        while not queue.empty():
+            _, usedPms, currCellId = queue.get()
+            if currCellId in visited:
+                continue
+            visited.add(currCellId)
+            currPoint = MapPoint.fromCellId(currCellId)
+            for nextMapPoint in currPoint.vicinity():
+                nextCellId = nextMapPoint.cellId
+                if nextCellId not in visited and nextCellId in reachableCells:
+                    parentOfCell[nextCellId] = currCellId
+                    if nextCellId in hasLosToTargets:
+                        path = self.buildPath(parentOfCell, nextCellId)
+                        return hasLosToTargets[nextCellId][0], path[1:]
+                    heuristic = (
+                        usedPms
+                        + 1
+                        + 10 * min([MapTools.getDistance(nextCellId, cellId) for cellId in hasLosToTargets])
+                    )
+                    if heuristic < BtestAlternativeCost:
+                        bestAlternative = nextCellId
+                        BtestAlternativeCost = heuristic
+                    queue.put((heuristic, usedPms + 1, nextCellId))
+        path = self.buildPath(parentOfCell, bestAlternative)
+        return None, path[1:]
+
+    @classmethod
+    def updateAveragePathTime(cls, time: float):
+        with lock:
+            cls._total_time_to_find_path += time
+            cls._number_of_path_calculations += 1
+            cls._average_time_to_find_path = cls._total_time_to_find_path / cls._number_of_path_calculations
+            if cls._number_of_path_calculations > 100:
+                cls._total_time_to_find_path = 0
+                cls._number_of_path_calculations = 0
+
+    def onInvisibleMobBlockingWay(self):
+        self._turnAction.clear()
+        self.addTurnAction(self.turnEnd, [])
+        self.nextTurnAction()
 
     def playTurn(self):
         targets = self.getTargetableEntities(self.spellw, targetSum=False)
@@ -195,37 +261,23 @@ class BotFightFrame(Frame):
                 self.addTurnAction(self.turnEnd, [])
                 self.nextTurnAction()
                 return
-        if self.VERBOSE:
-            Logger().info(f"[FightAlgo] MP : {self.movementPoints}, AP : {self.actionPoints}")
-            Logger().info(f"[FightAlgo] Current attack spell : {self.spellw.spell.name}")
-        self.updateReachableCells()
+        Logger().info(f"[FightAlgo] MP : {self.movementPoints}, AP : {self.actionPoints}")
+        Logger().info(f"[FightAlgo] Current attack spell : {self.spellw.spell.name}")
         target, path = self.findPathToTarget(self.spellw, targets)
-        if target is not None:
-            if len(path) == 0:
-                if self.VERBOSE:
-                    Logger().debug(f"[FightAlgo] Can hit target {target} from current position")
-                self.addTurnAction(self.castSpell, [self.spellId, target.pos.cellId])
-            elif path[-1] in self._reachableCells:
-                if self.VERBOSE:
-                    Logger().debug(
-                        f"[FightAlgo] Last Path cell to target {target} is reachable will move to it and casti the spell"
-                    )
-                self.addTurnAction(self.askMove, [path])
-                self.addTurnAction(self.castSpell, [self.spellId, target.pos.cellId])
+        if path is not None:
+            self._currentPath = path
+            self._currentTarget = target
+            if len(path) <= self.movementPoints:
+                if path:
+                    self.addTurnAction(self.askMove, [path])
+                if target:
+                    self.addTurnAction(self.castSpell, [self.spellId, target.pos.cellId])
+                if not target and not path:
+                    self.addTurnAction(self.turnEnd, [])
             else:
-                found = False
-                for i, cellId in enumerate(path):
-                    if cellId not in self._reachableCells:
-                        if i != 0:
-                            found = True
-                            self.addTurnAction(self.askMove, [path[:i]])
-                        break
-                if self.VERBOSE:
-                    Logger().debug(f"[FightAlgo] Have enough PM to get closer to the target ? {found}")
+                self.addTurnAction(self.askMove, [path[: int(self.movementPoints)]])
                 self.addTurnAction(self.turnEnd, [])
         else:
-            if self.VERBOSE:
-                Logger().warn("[FightAlgo] No path to any target found")
             self.addTurnAction(self.turnEnd, [])
         self.nextTurnAction()
 
@@ -241,39 +293,35 @@ class BotFightFrame(Frame):
         playerStats: EntityStats = CurrentPlayedFighterManager().getStats()
         range: int = spellw["range"]
         minRange: int = spellw["minRange"]
-        Logger().debug(f"[FightAlgo] Spell {spellw.spell.name} has range {range}")
         if spellw["rangeCanBeBoosted"]:
             range += playerStats.getStatTotalValue(StatIds.RANGE) - playerStats.getStatAdditionalValue(StatIds.RANGE)
-        Logger().debug(f"[FightAlgo] Spell {spellw.spell.name} Range after apply of buffs is {range}")
-        if range < minRange:
-            range = minRange
-        range = min(range, AtouinConstants.MAP_WIDTH * AtouinConstants.MAP_HEIGHT)
-        if range < 0:
-            range = 0
+        range = max(min(max(minRange, range), AtouinConstants.MAP_WIDTH * AtouinConstants.MAP_HEIGHT), 0)
         return range
 
     def getSpellShape(self, spellw: SpellWrapper) -> int:
-        spellShape: int = 0
-        spellEffect: EffectInstance = None
-        for spellEffect in spellw["effects"]:
-            if spellEffect.zoneShape != 0 and (
-                spellEffect.zoneSize > 0
-                or spellEffect.zoneSize == 0
-                and (spellEffect.zoneShape == SpellShapeEnum.P or spellEffect.zoneMinSize < 0)
-            ):
-                spellShape = spellEffect.zoneShape
-        return spellShape
+        if not self._spellShape:
+            self._spellShape = 0
+            spellEffect: EffectInstance = None
+            for spellEffect in spellw["effects"]:
+                if spellEffect.zoneShape != 0 and (
+                    spellEffect.zoneSize > 0
+                    or spellEffect.zoneSize == 0
+                    and (spellEffect.zoneShape == SpellShapeEnum.P or spellEffect.zoneMinSize < 0)
+                ):
+                    self._spellShape = spellEffect.zoneShape
+                    break
+        return self._spellShape
 
     def getSpellZone(self, spellw: SpellWrapper) -> IZone:
         range: int = self.getActualSpellRange(spellw)
         minRange: int = spellw.minimalRange
         spellShape: int = self.getSpellShape(spellw)
         castInLine: bool = spellw["castInLine"] or spellShape == SpellShapeEnum.l
-        if castInLine and spellw["castInDiagonal"]:
-            shapePlus = Cross(minRange, range, DataMapProvider())
-            shapePlus.allDirections = True
-            return shapePlus
-        elif castInLine:
+        if castInLine:
+            if spellw["castInDiagonal"]:
+                shapePlus = Cross(minRange, range, DataMapProvider())
+                shapePlus.allDirections = True
+                return shapePlus
             return Cross(minRange, range, DataMapProvider())
         elif spellw["castInDiagonal"]:
             shapePlus = Cross(minRange, range, DataMapProvider())
@@ -292,7 +340,7 @@ class BotFightFrame(Frame):
         if self.battleFrame._executingSequence:
             if self.VERBOSE:
                 Logger().warn(f"[FightBot] Battle is busy processing sequences")
-            sleep(1)
+            Kernel().worker.terminated.wait(1)
             self.nextTurnAction()
             return
         else:
@@ -326,16 +374,17 @@ class BotFightFrame(Frame):
             if BotConfig().isLeader and not BotConfig().fightOptionsSent:
                 gfotmsg = GameFightOptionToggleMessage()
                 gfotmsg.init(FightOptionsEnum.FIGHT_OPTION_SET_SECRET)
-                ConnectionsHandler().conn.send(gfotmsg)
-                sleep(0.3)
+                ConnectionsHandler().send(gfotmsg)
+                Kernel(0.3)
                 gfotmsg = GameFightOptionToggleMessage()
                 gfotmsg.init(FightOptionsEnum.FIGHT_OPTION_SET_TO_PARTY_ONLY)
-                ConnectionsHandler().conn.send(gfotmsg)
+                ConnectionsHandler().send(gfotmsg)
                 BotConfig().fightOptionsSent = True
             return False
 
         elif isinstance(msg, GameFightEndMessage):
             self._inFight = False
+            Logger().debug(f"Average time to calculate path to target: {self._average_time_to_find_path}")
             return True
 
         elif isinstance(msg, GameActionFightNoSpellCastMessage):
@@ -366,7 +415,7 @@ class BotFightFrame(Frame):
                         return True
             startFightMsg = GameFightReadyMessage()
             startFightMsg.init(True)
-            ConnectionsHandler().conn.send(startFightMsg)
+            ConnectionsHandler().send(startFightMsg)
             return True
 
         elif isinstance(msg, SequenceEndMessage):
@@ -397,6 +446,22 @@ class BotFightFrame(Frame):
                 self._tryWithLessRangeOf = 0
                 self.nextTurnAction()
             return True
+
+        elif isinstance(msg, TextInformationMessage):
+            msgInfo = InfoMessage.getInfoMessageById(msg.msgType * 10000 + msg.msgId)
+            if msgInfo:
+                textId = msgInfo.textId
+            else:
+                if msg.msgType == TextInformationTypeEnum.TEXT_INFORMATION_ERROR:
+                    textId = InfoMessage.getInfoMessageById(10231).textId
+                else:
+                    textId = InfoMessage.getInfoMessageById(207).textId
+            if textId == 4993:  # Wants to use more than the pms available
+                self.turnEnd()
+            if textId == 4897:
+                self.onInvisibleMobBlockingWay()
+            return True
+
         return False
 
     @property
@@ -426,8 +491,8 @@ class BotFightFrame(Frame):
     def fighterPos(self) -> "MapPoint":
         return MapPoint.fromCellId(self.fighterInfos.disposition.cellId)
 
-    def getTargetableEntities(self, spellw: SpellWrapper, targetSum=False) -> list[_Target]:
-        result = list[_Target]()
+    def getTargetableEntities(self, spellw: SpellWrapper, targetSum=False) -> list[Target]:
+        result = list[Target]()
         if not FightEntitiesFrame.getCurrentInstance() or not self.battleFrame:
             return []
         if self.fighterInfos is None:
@@ -442,7 +507,7 @@ class BotFightFrame(Frame):
                     and self.canCastSpell(spellw, entity.contextualId)
                     and entity.disposition.cellId != -1
                 ):
-                    result.append(_Target(entity.contextualId, MapPoint.fromCellId(entity.disposition.cellId)))
+                    result.append(Target(entity.contextualId, MapPoint.fromCellId(entity.disposition.cellId)))
         if self.VERBOSE:
             Logger().debug(f"[FightBot] Found targets : {[str(tgt) for tgt in result]}")
         return result
@@ -452,9 +517,11 @@ class BotFightFrame(Frame):
             Logger().debug(f"[FightBot] Casting spell {spellId} on cell {cellId}.")
         gafcrmsg: GameActionFightCastRequestMessage = GameActionFightCastRequestMessage()
         gafcrmsg.init(spellId, cellId)
-        ConnectionsHandler().conn.send(gafcrmsg)
+        ConnectionsHandler().send(gafcrmsg)
 
     def askMove(self, cells: list[int], cellsTackled: list[int] = []) -> None:
+        if cells is None or len(cells) == 0:
+            Logger().error("cells input invalid", exec_info=True)
         if self.VERBOSE:
             Logger().debug(f"[FightBot] Ask move follwing path {cells}.")
         if not self._myTurn:

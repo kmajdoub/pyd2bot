@@ -1,5 +1,6 @@
-from pydofus2.com.ankamagames.dofus.datacenter.breeds.Breed import Breed
 import pydofus2.com.ankamagames.dofus.kernel.net.ConnectionsHandler as connh
+from pyd2bot.logic.managers.BotConfig import BotConfig
+from pydofus2.com.ankamagames.dofus.datacenter.breeds.Breed import Breed
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import PlayedCharacterManager
 from pydofus2.com.ankamagames.dofus.network.messages.game.achievement.AchievementFinishedMessage import (
     AchievementFinishedMessage,
@@ -16,12 +17,11 @@ from pydofus2.com.ankamagames.dofus.network.messages.game.character.stats.Charac
 from pydofus2.com.ankamagames.dofus.network.messages.game.context.roleplay.stats.StatsUpgradeRequestMessage import (
     StatsUpgradeRequestMessage,
 )
-from pydofus2.com.ankamagames.jerakine.messages.Frame import Frame
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
+from pydofus2.com.ankamagames.jerakine.messages.Frame import Frame
 from pydofus2.com.ankamagames.jerakine.messages.Message import Message
 from pydofus2.com.ankamagames.jerakine.types.enums.Priority import Priority
 from pydofus2.damageCalculation.tools.StatIds import StatIds
-from pyd2bot.logic.managers.BotConfig import BotConfig
 
 
 class BotCharacterUpdatesFrame(Frame):
@@ -76,7 +76,7 @@ class BotCharacterUpdatesFrame(Frame):
         if boost > 0:
             sumsg = StatsUpgradeRequestMessage()
             sumsg.init(False, statId, boost)
-            connh.ConnectionsHandler().conn.send(sumsg)
+            connh.ConnectionsHandler().send(sumsg)
 
     def process(self, msg: Message) -> bool:
 
@@ -84,7 +84,7 @@ class BotCharacterUpdatesFrame(Frame):
             msg.achievement.id
             arrmsg = AchievementRewardRequestMessage()
             arrmsg.init(msg.achievement.id)
-            connh.ConnectionsHandler().conn.send(arrmsg)
+            connh.ConnectionsHandler().send(arrmsg)
             return False
 
         elif isinstance(msg, CharacterLevelUpMessage):

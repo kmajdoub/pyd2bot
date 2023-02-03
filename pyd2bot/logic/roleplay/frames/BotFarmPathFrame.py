@@ -1,11 +1,19 @@
-from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import KernelEventsManager, KernelEvent
-from pydofus2.com.ankamagames.dofus.kernel.net.DisconnectionReasonEnum import DisconnectionReasonEnum
 from typing import TYPE_CHECKING
+
+from pyd2bot.apis.InventoryAPI import InventoryAPI
+from pyd2bot.apis.MoveAPI import MoveAPI
 from pyd2bot.apis.PlayerAPI import PlayerAPI
+from pyd2bot.logic.managers.BotConfig import BotConfig
+from pyd2bot.logic.roleplay.frames.BotPartyFrame import BotPartyFrame
+from pyd2bot.logic.roleplay.messages.AutoTripEndedMessage import AutoTripEndedMessage
+from pyd2bot.misc.BotEventsmanager import BotEventsManager
+from pyd2bot.models.enums.ServerNotificationTitlesEnum import ServerNotificationTitlesEnum
 from pydofus2.com.ankamagames.atouin.managers.MapDisplayManager import MapDisplayManager
+from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import KernelEvent, KernelEventsManager
 from pydofus2.com.ankamagames.dofus.datacenter.notifications.Notification import Notification
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
 from pydofus2.com.ankamagames.dofus.kernel.net.ConnectionsHandler import ConnectionsHandler
+from pydofus2.com.ankamagames.dofus.kernel.net.DisconnectionReasonEnum import DisconnectionReasonEnum
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import PlayedCharacterManager
 from pydofus2.com.ankamagames.dofus.logic.game.fight.messages.FightRequestFailed import FightRequestFailed
 from pydofus2.com.ankamagames.dofus.logic.game.fight.messages.MapMoveFailed import MapMoveFailed
@@ -45,14 +53,6 @@ from pydofus2.com.ankamagames.jerakine.messages.Frame import Frame
 from pydofus2.com.ankamagames.jerakine.messages.Message import Message
 from pydofus2.com.ankamagames.jerakine.types.enums.Priority import Priority
 from pydofus2.com.ankamagames.jerakine.types.positions.MapPoint import MapPoint
-from pyd2bot.apis.InventoryAPI import InventoryAPI
-from pyd2bot.apis.MoveAPI import MoveAPI
-from pyd2bot.logic.managers.BotConfig import BotConfig
-from pyd2bot.logic.roleplay.frames.BotAutoTripFrame import BotAutoTripFrame
-from pyd2bot.logic.roleplay.frames.BotPartyFrame import BotPartyFrame
-from pyd2bot.logic.roleplay.messages.AutoTripEndedMessage import AutoTripEndedMessage
-from pyd2bot.misc.BotEventsmanager import BotEventsManager
-from pyd2bot.models.enums.ServerNotificationTitlesEnum import ServerNotificationTitlesEnum
 
 if TYPE_CHECKING:
     from pydofus2.com.ankamagames.dofus.logic.game.roleplay.frames.RoleplayEntitiesFrame import RoleplayEntitiesFrame
@@ -64,7 +64,6 @@ if TYPE_CHECKING:
 
 
 class BotFarmPathFrame(Frame):
-    
     def __init__(self, autoStart: bool = False):
         super().__init__()
         self._autoStart = autoStart
@@ -109,7 +108,10 @@ class BotFarmPathFrame(Frame):
         Logger().info("BotFarmPathFrame pushed")
         self._followinMonsterGroup = None
         if self._autoStart:
-            KernelEventsManager().once(KernelEvent.MAPPROCESSED, self.doFarm)
+            if not self.entitiesFrame or not self.entitiesFrame.mcidm_processessed:
+                KernelEventsManager().once(KernelEvent.MAPPROCESSED, self.doFarm)
+            else:
+                self.doFarm()
         return True
 
     def pulled(self) -> bool:
@@ -183,7 +185,7 @@ class BotFarmPathFrame(Frame):
             self.doFarm()
 
         elif isinstance(msg, InteractiveUsedMessage):
-            if PlayerAPI().inAutoTrip:
+            if PlayerAPI().inAutoTrip.is_set():
                 return False
             if PlayedCharacterManager().id == msg.entityId and msg.duration > 0:
                 Logger().debug(f"[BotFarmFrame] Inventory weight {InventoryAPI.getWeightPercent():.2f}%")
@@ -194,7 +196,7 @@ class BotFarmPathFrame(Frame):
             return True
 
         elif isinstance(msg, InteractiveUseEndedMessage):
-            if PlayerAPI().inAutoTrip:
+            if PlayerAPI().inAutoTrip.is_set():
                 return False
             if self._entities[msg.elemId] == PlayedCharacterManager().id:
                 self._followingIe = None
@@ -257,8 +259,10 @@ class BotFarmPathFrame(Frame):
         if self.partyFrame:
             if not self.partyFrame.allMembersJoinedParty:
                 BotEventsManager().onceAllMembersJoinedParty(self.doFarm)
+                self.partyFrame.inviteAllFollowers()
             else:
                 BotEventsManager().onAllPartyMembersIdle(self.doFarm2)
+                self.partyFrame.checkAllMembersIdle()
             return
         self.doFarm2()
 
@@ -268,8 +272,11 @@ class BotFarmPathFrame(Frame):
             if self.partyFrame:
                 self.partyFrame.askMembersToMoveToVertex(self.farmPath.startVertex)
             return
-        if self.partyFrame and not self.partyFrame.allMembersOnSameMap:
-            BotEventsManager().onAllPartyMembersShowed(self.doFarm)
+        if self.partyFrame:
+            if not self.partyFrame.allMembersOnSameMap:
+                self.partyFrame.askMembersToMoveToVertex(self.farmPath.currentVertex)
+                BotEventsManager().onAllPartyMembersShowed(self.doFarm)
+                return
         self._followinMonsterGroup = None
         self._followingIe = None
         if BotConfig().isFightSession:
@@ -282,7 +289,7 @@ class BotFarmPathFrame(Frame):
     def requestMapData(self):
         mirmsg = MapInformationsRequestMessage()
         mirmsg.init(mapId_=MapDisplayManager().currentMapPoint.mapId)
-        ConnectionsHandler().conn.send(mirmsg)
+        ConnectionsHandler().send(mirmsg)
 
     def collectResource(self) -> None:
         target = None

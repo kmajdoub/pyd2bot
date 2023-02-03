@@ -112,9 +112,10 @@ class BotWorkflowFrame(Frame):
 
         elif isinstance(msg, (BankUnloadEndedMessage, SellerCollectedGuestItemsMessage)):
             self._inAutoUnload = False
-            if BotConfig().path and not Kernel().worker.contains("BotFarmPathFrame"):
+            Logger().debug("Bank unload ended, will resume the workflow...")
+            if BotConfig().path:
                 Kernel().worker.addFrame(BotFarmPathFrame(True))
-            if BotConfig().party and not Kernel().worker.contains("BotPartyFrame"):
+            if BotConfig().party:
                 Kernel().worker.addFrame(BotPartyFrame())
 
         elif (

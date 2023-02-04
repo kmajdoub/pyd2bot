@@ -161,7 +161,6 @@ class BotFarmPathFrame(Frame):
             Logger().error(
                 f"[BotFarmFrame] Error unable to use interactive element '{msg.elemId}' with the skill '{msg.skillInstanceUid}'"
             )
-            Logger().debug("*" * 80)
             self.reset()
             self.requestMapData()
             return True

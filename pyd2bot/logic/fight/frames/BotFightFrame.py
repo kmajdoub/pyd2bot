@@ -176,7 +176,7 @@ class BotFightFrame(Frame):
         path.reverse()
         return path
 
-    def findCellsWithLosToTargets(self, spellw: SpellWrapper, targets: list[Target]) -> list[int]:
+    def findCellsWithLosToTargets(self, spellw: SpellWrapper, targets: list[Target], fighterCell: int) -> list[int]:
         LosDetector.clearCache()
         hasLosToTargets = dict[int, list]()
         spellZone = self.getSpellZone(spellw)
@@ -184,6 +184,8 @@ class BotFightFrame(Frame):
         for target in targets:
             currSpellZone = spellZone.getCells(target.pos.cellId)
             los = LosDetector.getCells(DataMapProvider(), currSpellZone, target.pos.cellId)
+            if fighterCell in los:
+                return 0, {fighterCell: [target]}
             for cellId in los:
                 if cellId not in hasLosToTargets:
                     hasLosToTargets[cellId] = list[Target]()
@@ -197,7 +199,7 @@ class BotFightFrame(Frame):
         for target in targets:
             if target.pos.distanceTo(self.fighterPos) <= 1:
                 return target, []
-        maxRangeFromFighter, hasLosToTargets = self.findCellsWithLosToTargets(spellw, targets)
+        maxRangeFromFighter, hasLosToTargets = self.findCellsWithLosToTargets(spellw, targets, self.fighterPos.cellId)
         if not hasLosToTargets:
             return None, None
         if self.fighterPos.cellId in hasLosToTargets:
@@ -366,7 +368,7 @@ class BotFightFrame(Frame):
     def process(self, msg: Message) -> bool:
 
         if isinstance(msg, GameFightJoinMessage):
-            Logger().debug(f"****************** Joined fight ******************************************")
+            Logger().separator("Joined fight", "*")
             BotConfig().lastFightTime = perf_counter()
             self._fightCount += 1
             self._spellCastFails = 0
@@ -380,11 +382,10 @@ class BotFightFrame(Frame):
                 gfotmsg.init(FightOptionsEnum.FIGHT_OPTION_SET_TO_PARTY_ONLY)
                 ConnectionsHandler().send(gfotmsg)
                 BotConfig().fightOptionsSent = True
-            return False
+            return True
 
         elif isinstance(msg, GameFightEndMessage):
             self._inFight = False
-            Logger().debug(f"Average time to calculate path to target: {self._average_time_to_find_path}")
             return True
 
         elif isinstance(msg, GameActionFightNoSpellCastMessage):
@@ -436,14 +437,12 @@ class BotFightFrame(Frame):
 
         elif isinstance(msg, (GameFightTurnStartPlayingMessage, GameFightTurnResumeMessage)):
             if self._botTurnFrame._myTurn:
-                if self.VERBOSE:
-                    Logger().debug("******************** bot turn to play *********************************")
+                Logger().separator("bot turn to play", "~")
                 self._spellCastFails = 0
                 self._seqQueue.clear()
                 self._myTurn = True
                 self._turnAction.clear()
                 self._turnPlayed += 1
-                self._tryWithLessRangeOf = 0
                 self.nextTurnAction()
             return True
 

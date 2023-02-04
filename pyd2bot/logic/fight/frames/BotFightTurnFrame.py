@@ -28,3 +28,4 @@ class BotFightTurnFrame(Frame):
         if isinstance(msg, GameFightTurnStartMessage):
             turnStartMsg = msg
             self._myTurn = int(turnStartMsg.id) == int(PlayedCharacterManager().id)
+            return False

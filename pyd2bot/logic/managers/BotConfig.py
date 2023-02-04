@@ -30,7 +30,7 @@ class BotConfig(metaclass=Singleton):
         self.seller: Character = None
         self.unloadType: UnloadType = None
         self.monsterLvlCoefDiff = float("inf")
-        self.fightOptionsSent = True
+        self.fightOptionsSent = False
 
     @property
     def primarySpellId(self) -> int:

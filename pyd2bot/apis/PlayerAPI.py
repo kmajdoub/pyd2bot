@@ -31,17 +31,21 @@ class PlayerAPI(metaclass=Singleton):
 
     def isIdle(self) -> bool:
         return self.status == "idle"
+    
+    def isProcessingMapData(self) -> bool:
+        rpeframe: "RoleplayEntitiesFrame" = Kernel().worker.getFrame("RoleplayEntitiesFrame")
+        return not rpeframe or not rpeframe.mcidm_processessed
 
     @property
     def status(self) -> str:
         bpframe: "BotPartyFrame" = Kernel().worker.getFrame("BotPartyFrame")
         mvframe: "RoleplayMovementFrame" = Kernel().worker.getFrame("RoleplayMovementFrame")
         iframe: "RoleplayInteractivesFrame" = Kernel().worker.getFrame("RoleplayInteractivesFrame")
-        rpeframe: "RoleplayEntitiesFrame" = Kernel().worker.getFrame("RoleplayEntitiesFrame")
+        
         bfpf: "BotFarmPathFrame" = Kernel().worker.getFrame("BotFarmPathFrame")
         if MapDisplayManager().currentDataMap is None:
             status = "loadingMap"
-        elif rpeframe and not rpeframe.mcidm_processessed:
+        elif self.isProcessingMapData():
             status = "processingMapComplementaryData"
         elif PlayedCharacterManager().isInFight:
             status = "fighting"

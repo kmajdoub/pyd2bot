@@ -161,7 +161,6 @@ class BotFarmPathFrame(Frame):
             Logger().error(
                 f"[BotFarmFrame] Error unable to use interactive element '{msg.elemId}' with the skill '{msg.skillInstanceUid}'"
             )
-            Logger().debug("*" * 80)
             self.reset()
             self.requestMapData()
             return True
@@ -219,9 +218,6 @@ class BotFarmPathFrame(Frame):
         self.reset()
         KernelEventsManager().once(KernelEvent.MAPPROCESSED, self.doFarm)
         self._currTransition = next(self.farmPath)
-        dstMapId = self._currTransition.transitionMapId
-        currMapId = PlayedCharacterManager().currentMap.mapId
-        Logger().debug(f"[BotFarmFrame] Current Map {currMapId} Moving to {dstMapId}")
         MoveAPI.followTransition(self._currTransition)
         if self.partyFrame:
             self.partyFrame.askMembersToFollowTransit(self._currTransition)

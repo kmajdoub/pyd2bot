@@ -66,9 +66,7 @@ class BotWorkflowFrame(Frame):
     def process(self, msg: Message) -> bool:
 
         if isinstance(msg, GameContextCreateMessage):
-            Logger().debug(
-                "*************************************** GameContext Created ************************************************"
-            )
+            Logger().separator("GameContext Created")
             self.currentContext = msg.context
             if self._delayedAutoUnlaod:
                 self._delayedAutoUnlaod = False
@@ -86,9 +84,7 @@ class BotWorkflowFrame(Frame):
             return True
 
         elif isinstance(msg, GameContextDestroyMessage):
-            Logger().debug(
-                "*************************************** GameContext Destroyed ************************************************"
-            )
+            Logger().separator("GameContext Destroyed")
             if self.currentContext == GameContextEnum.FIGHT:
                 Kernel().worker.removeFrameByName("BotFightFrame")
             elif self.currentContext == GameContextEnum.ROLE_PLAY:

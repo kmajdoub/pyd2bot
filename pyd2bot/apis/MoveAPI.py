@@ -61,7 +61,7 @@ class MoveAPI:
         Logger().debug("Nbr of Possible directions: %d", len(transitions))
         randTransition = random.choice(transitions)
         if randTransition.skillId > 0:
-            rplInteractivesFrame: "RoleplayInteractivesFrame" = Kernel().worker.getFrame("RoleplayInteractivesFrame")
+            rplInteractivesFrame = Kernel().worker.getFrame("RoleplayInteractivesFrame")
             ie = rplInteractivesFrame.interactives.get(randTransition.id)
             if ie is None:
                 raise Exception(f"[MouvementAPI] InteractiveElement {randTransition.id} not found")

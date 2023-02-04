@@ -88,11 +88,10 @@ class BotCharacterUpdatesFrame(Frame):
             return False
 
         elif isinstance(msg, CharacterLevelUpMessage):
-            clumsg = msg
             if BotConfig().primaryStatId:
                 previousLevel = PlayedCharacterManager().infos.level
-                PlayedCharacterManager().infos.level = clumsg.newLevel
-                pointsEarned = (clumsg.newLevel - previousLevel) * 5
+                PlayedCharacterManager().infos.level = msg.newLevel
+                pointsEarned = (msg.newLevel - previousLevel) * 5
                 self.boostStat(BotConfig().primaryStatId, pointsEarned)
             return True
 

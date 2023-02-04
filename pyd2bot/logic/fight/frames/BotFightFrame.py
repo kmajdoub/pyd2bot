@@ -382,7 +382,7 @@ class BotFightFrame(Frame):
                 gfotmsg.init(FightOptionsEnum.FIGHT_OPTION_SET_TO_PARTY_ONLY)
                 ConnectionsHandler().send(gfotmsg)
                 BotConfig().fightOptionsSent = True
-            return False
+            return True
 
         elif isinstance(msg, GameFightEndMessage):
             self._inFight = False

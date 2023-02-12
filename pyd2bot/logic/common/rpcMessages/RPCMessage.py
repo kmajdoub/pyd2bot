@@ -12,3 +12,6 @@ class RPCMessage:
         self.sender = threading.current_thread().name
         self.dest = dst
         self.data = data
+
+    def __str__(self) -> str:
+        return f"RPCMessage({self.sender}, {self.dest}, {self.data})"

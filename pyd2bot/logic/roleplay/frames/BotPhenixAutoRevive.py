@@ -1,8 +1,9 @@
+import threading
 from typing import TYPE_CHECKING
-
-from pyd2bot.logic.roleplay.frames.BotAutoTripFrame import BotAutoTripFrame
-from pyd2bot.logic.roleplay.messages.AutoTripEndedMessage import AutoTripEndedMessage
+from pyd2bot.apis.MoveAPI import MoveAPI
+from pyd2bot.logic.roleplay.messages.PhenixAutoReviveEndedMessage import PhenixAutoReviveEndedMessage
 from pyd2bot.misc.Localizer import Localizer
+from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import KernelEventsManager
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
 from pydofus2.com.ankamagames.dofus.kernel.net.ConnectionsHandler import ConnectionsHandler
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import PlayedCharacterManager
@@ -39,12 +40,13 @@ class BotPhenixAutoRevive(Frame):
         super().__init__()
 
     def pushed(self) -> bool:
-        self._waitingForMapData = False
-        if PlayerLifeStatusEnum(PlayedCharacterManager().state) == PlayerLifeStatusEnum.STATUS_PHANTOM:
+        Logger().info("[PhenixFrame] frame pushed.")
+        self._waitingForMapData = threading.Event()
+        if self.playerState == PlayerLifeStatusEnum.STATUS_PHANTOM:
             self.phenixMapId = Localizer.getPhenixMapId()
-            Kernel().worker.addFrame(BotAutoTripFrame(self.phenixMapId))
-        elif PlayedCharacterManager().state == PlayerLifeStatusEnum.STATUS_TOMBSTONE:
-            self.releaseSoul()
+            MoveAPI.moveToMap(self.phenixMapId, self.clickOnPhenix)
+        elif self.playerState == PlayerLifeStatusEnum.STATUS_TOMBSTONE:
+            KernelEventsManager().onceFramePushed("BotPhenixAutoRevive", self.releaseSoul)
         return True
 
     def pulled(self) -> bool:
@@ -54,30 +56,32 @@ class BotPhenixAutoRevive(Frame):
     def priority(self) -> int:
         return Priority.HIGH
 
+    @property
+    def playerState(self) -> PlayerLifeStatusEnum:
+        return PlayerLifeStatusEnum(PlayedCharacterManager().state)
+    
     def process(self, msg: Message) -> bool:
 
-        if isinstance(msg, AutoTripEndedMessage):
-            self.clickOnPhenix()
-            return True
-
-        elif isinstance(msg, GameRolePlayPlayerLifeStatusMessage):
-            if PlayedCharacterManager().state == PlayerLifeStatusEnum.STATUS_PHANTOM:
-                # state changed from tomb to phantome
-                self._waitingForMapData = True
-            else:
-                Logger().info("Player is not in phantom state will renmove the phenix frame")
+        if isinstance(msg, GameRolePlayPlayerLifeStatusMessage):
+            if PlayerLifeStatusEnum(msg.state) == PlayerLifeStatusEnum.STATUS_PHANTOM:
+                Logger().debug(f"[PhenixFrame] Player saoul released wating for cimetary map to load.")
+                self._waitingForMapData.set()
+            elif PlayerLifeStatusEnum(msg.state) == PlayerLifeStatusEnum.STATUS_ALIVE_AND_KICKING:
+                Logger().info("[PhenixFrame] Player is not in phantom state anymore, will remove the phenix frame.")
                 Kernel().worker.removeFrame(self)
+                Kernel().worker.process(PhenixAutoReviveEndedMessage())
             return False
 
         elif isinstance(msg, MapComplementaryInformationsDataMessage):
-            if self._waitingForMapData:
+            if self._waitingForMapData.is_set():
+                Logger().debug(f"[PhenixFrame] Cimetary map loaded.")
                 self.phenixMapId = Localizer.getPhenixMapId()
-                Kernel().worker.addFrame(BotAutoTripFrame(self.phenixMapId))
-                self._waitingForMapData = False
+                MoveAPI.moveToMap(self.phenixMapId, self.clickOnPhenix)
+                self._waitingForMapData.clear()
             return False
 
     def clickOnPhenix(self):
-        interactives: "RoleplayInteractivesFrame" = Kernel().worker.getFrame("RoleplayInteractivesFrame")
+        interactives: "RoleplayInteractivesFrame" = Kernel().worker.getFrameByName("RoleplayInteractivesFrame")
         if interactives:
             reviveSkill = interactives.getReviveIe()
             interactives.skillClicked(reviveSkill)

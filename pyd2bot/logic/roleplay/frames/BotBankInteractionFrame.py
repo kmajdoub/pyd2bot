@@ -55,14 +55,12 @@ class BotBankInteractionFrame(Frame):
         self.requestTimer = None
 
     def pushed(self) -> bool:
-        Logger().debug("BotBankInteractionFrame pushed")
         self.state = BankUnloadStateEnum.IDLE
         self.requestTimer = None
         self.talkToBankMan()
         return True
 
     def pulled(self) -> bool:
-        Logger().debug("BotBankInteractionFrame pulled")
         return True
 
     @property

@@ -26,7 +26,7 @@ class BotEventsManager(EventsHandler, metaclass=Singleton):
         Logger().debug("[BotEventsManager] Waiting for party members to show up.")
 
         def onTeamMemberShowed(e, infos: "GameRolePlayHumanoidInformations"):
-            entitiesFrame: "RoleplayEntitiesFrame" = Kernel().worker.getFrame("RoleplayEntitiesFrame")
+            entitiesFrame: "RoleplayEntitiesFrame" = Kernel().worker.getFrameByName("RoleplayEntitiesFrame")
             if entitiesFrame is None:
                 KernelEventsManager().onceFramePushed("RoleplayEntitiesFrame", onTeamMemberShowed, [e, infos])
             notShowed = []
@@ -73,3 +73,17 @@ class BotEventsManager(EventsHandler, metaclass=Singleton):
             callback(e, *args)
 
         self.once(BotEventsManager.ALL_MEMBERS_JOINED_PARTY, onEvt)
+
+    def onceFighterMoved(self, fighterId, callback, args=[]):
+        def onEvt(e, evt_fighterId):
+            if evt_fighterId == fighterId:
+                KernelEventsManager().remove_listener(KernelEvent.FIGHTER_MOVEMENT_APPLIED, onEvt)
+                callback(*args)
+        KernelEventsManager().on(KernelEvent.FIGHTER_MOVEMENT_APPLIED, onEvt)
+    
+    def onceFighterCastedSpell(self, fighterId, cellId, callback, args=[]):
+        def onEvt(e, sourceId, destinationCellId, sourceCellId, spellId):
+            if sourceId == fighterId and cellId == destinationCellId:
+                KernelEventsManager().remove_listener(KernelEvent.FIGHTER_CASTED_SPELL, onEvt)
+                callback(*args)
+        KernelEventsManager().on(KernelEvent.FIGHTER_CASTED_SPELL, onEvt)

@@ -61,7 +61,7 @@ class MoveAPI:
         Logger().debug("Nbr of Possible directions: %d", len(transitions))
         randTransition = random.choice(transitions)
         if randTransition.skillId > 0:
-            rplInteractivesFrame = Kernel().worker.getFrame("RoleplayInteractivesFrame")
+            rplInteractivesFrame = Kernel().worker.getFrameByName("RoleplayInteractivesFrame")
             ie = rplInteractivesFrame.interactives.get(randTransition.id)
             if ie is None:
                 raise Exception(f"[MouvementAPI] InteractiveElement {randTransition.id} not found")
@@ -122,12 +122,13 @@ class MoveAPI:
     def followEdge(cls, edge: Edge):
         for tr in edge.transitions:
             if tr.isValid:
-                return cls.followTransition(tr)
+                cls.followTransition(tr)
+                return
         raise FollowTransitionError("No valid transition found!!!")
 
     @classmethod
     def getTransitionIe(cls, transition: Transition) -> "InteractiveElementData":
-        rpframe: "RoleplayInteractivesFrame" = Kernel().worker.getFrame("RoleplayInteractivesFrame")
+        rpframe: "RoleplayInteractivesFrame" = Kernel().worker.getFrameByName("RoleplayInteractivesFrame")
         if not rpframe:
             KernelEventsManager().on(KernelEvent.MAPPROCESSED, lambda e: cls.getTransitionIe(transition))
             return
@@ -157,15 +158,13 @@ class MoveAPI:
                 f"[RolePlayMovement] Wants to activate skill '{tr.skillId}' to change map to '{tr.transitionMapId}'"
             )
             ie = cls.getTransitionIe(tr)
-            rpmframe: "RoleplayMovementFrame" = Kernel().worker.getFrame("RoleplayMovementFrame")
+            rpmframe: "RoleplayMovementFrame" = Kernel().worker.getFrameByName("RoleplayMovementFrame")
             if tr.cell != PlayedCharacterManager().entity.position.cellId:
-                rpmframe.setFollowingInteraction(
-                    {
-                        "ie": ie.element,
-                        "skillInstanceId": int(ie.skillUID),
-                        "additionalParam": 0,
-                    }
-                )
+                rpmframe.setFollowingInteraction({
+                    "ie": ie.element,
+                    "skillInstanceId": int(ie.skillUID),
+                    "additionalParam": 0,
+                })
                 rpmframe.resetNextMoveMapChange()
                 if cls.canMoveToCell(tr.cell):
                     return rpmframe.askMoveTo(MapPoint.fromCellId(tr.cell), TransitionTypeEnum.INTERACTIVE)
@@ -208,7 +207,15 @@ class MoveAPI:
         raise Exception("No valid transition found!!!")
 
     @classmethod
-    def moveToVertex(cls, vertex: Vertex):
+    def moveToVertex(cls, vertex: Vertex, callback=None, args=[]):
         from pyd2bot.logic.roleplay.frames.BotAutoTripFrame import BotAutoTripFrame
-
+        if callback:
+            KernelEventsManager().once(KernelEvent.AUTO_TRIP_ENDED, callback)
         Kernel().worker.addFrame(BotAutoTripFrame(vertex.mapId, vertex.zoneId))
+
+    @classmethod
+    def moveToMap(cls, mapId: int, callback=None, zoneId=1):
+        from pyd2bot.logic.roleplay.frames.BotAutoTripFrame import BotAutoTripFrame
+        if callback:
+            KernelEventsManager().once(KernelEvent.AUTO_TRIP_ENDED, callback)
+        Kernel().worker.addFrame(BotAutoTripFrame(mapId, zoneId))

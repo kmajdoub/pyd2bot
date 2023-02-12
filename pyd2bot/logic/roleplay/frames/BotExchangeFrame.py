@@ -93,14 +93,12 @@ class BotExchangeFrame(Frame):
         super().__init__()
 
     def pushed(self) -> bool:
-        Logger().debug("BotExchangeFrame pushed")
         self.state = ExchangeStateEnum.IDLE
         if self.direction == ExchangeDirectionEnum.GIVE:
             self.sendExchangeRequest()
         return True
 
     def pulled(self) -> bool:
-        Logger().debug("BotExchangeFrame pulled")
         if self.acceptExchangeTimer is not None:
             self.acceptExchangeTimer.cancel()
         if self.openExchangeTimer:

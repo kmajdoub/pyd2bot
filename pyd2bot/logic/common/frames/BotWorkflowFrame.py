@@ -1,6 +1,7 @@
+from pyd2bot.logic.fight.frames.BotMuleFightFrame import BotMuleFightFrame
 from pyd2bot.logic.roleplay.frames.BotPartyFrame import BotPartyFrame
 from pyd2bot.logic.roleplay.frames.BotUnloadInSellerFrame import BotUnloadInSellerFrame
-from pyd2bot.logic.roleplay.messages.SellerCollectedGuestItemsMessage import SellerCollectedGuestItemsMessage
+from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import KernelEvent, KernelEventsManager
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import PlayedCharacterManager
 from pydofus2.com.ankamagames.dofus.network.enums.GameContextEnum import GameContextEnum
 from pydofus2.com.ankamagames.dofus.network.enums.PlayerLifeStatusEnum import PlayerLifeStatusEnum
@@ -30,7 +31,6 @@ from pyd2bot.logic.managers.BotConfig import BotConfig
 from pyd2bot.logic.roleplay.frames.BotFarmPathFrame import BotFarmPathFrame
 from pyd2bot.logic.roleplay.frames.BotPhenixAutoRevive import BotPhenixAutoRevive
 from pyd2bot.logic.roleplay.frames.BotUnloadInBankFrame import BotUnloadInBankFrame
-from pyd2bot.logic.roleplay.messages.BankUnloadEndedMessage import BankUnloadEndedMessage
 
 
 class BotWorkflowFrame(Frame):
@@ -51,26 +51,36 @@ class BotWorkflowFrame(Frame):
     def priority(self) -> int:
         return Priority.VERY_LOW
 
-    def triggerUnload(self):
+    def unloadInventory(self):
         if BotConfig().path:
             Kernel().worker.removeFrameByName("BotFarmPathFrame")
         if BotConfig().party:
             Kernel().worker.removeFrameByName("BotPartyFrame")
+        Logger().warning(f"[BotWorkflow] Inventory is almost full {InventoryAPI.getWeightPercent()}%, will trigger auto bank unload...")
+        KernelEventsManager().once(KernelEvent.INVENTORY_UNLOADED, self.onInventoryUnloaded)
         self._inAutoUnload = True
-        Logger().warn(f"Inventory is almost full {InventoryAPI.getWeightPercent()}%, will trigger auto bank unload...")
         if BotConfig().unloadInBank:
             Kernel().worker.addFrame(BotUnloadInBankFrame(True))
         elif BotConfig().unloadInSeller:
             Kernel().worker.addFrame(BotUnloadInSellerFrame(BotConfig().seller, True))
-
+    
+    def onInventoryUnloaded(self, e=None):
+        self._inAutoUnload = False
+        if BotConfig().path:
+            Kernel().worker.addFrame(BotFarmPathFrame(True))
+        if BotConfig().party:
+            Kernel().worker.addFrame(BotPartyFrame())
+    
     def process(self, msg: Message) -> bool:
 
         if isinstance(msg, GameContextCreateMessage):
-            Logger().separator("GameContext Created")
+            ctxname = "Fight" if msg.context == GameContextEnum.FIGHT else "Roleplay"
+            Logger().separator(f"{ctxname} Game Context Created")
             self.currentContext = msg.context
+            
             if self._delayedAutoUnlaod:
                 self._delayedAutoUnlaod = False
-                self.triggerUnload()
+                self.unloadInventory()
                 return True
 
             if not self._inAutoUnload and not self._inPhenixAutoRevive:
@@ -80,15 +90,23 @@ class BotWorkflowFrame(Frame):
                     if BotConfig().path and not Kernel().worker.contains("BotFarmPathFrame"):
                         Kernel().worker.addFrame(BotFarmPathFrame(True))
                 elif self.currentContext == GameContextEnum.FIGHT:
-                    Kernel().worker.addFrame(BotFightFrame())
+                    if BotConfig().isLeader:
+                        Kernel().worker.addFrame(BotFightFrame())
+                    else:
+                        Kernel().worker.addFrame(BotMuleFightFrame())
             return True
 
         elif isinstance(msg, GameContextDestroyMessage):
-            Logger().separator("GameContext Destroyed")
+            ctxname = "Fight" if self.currentContext == GameContextEnum.FIGHT else "Roleplay"
+            Logger().separator(f"{ctxname} Context Destroyed")
             if self.currentContext == GameContextEnum.FIGHT:
-                Kernel().worker.removeFrameByName("BotFightFrame")
+                if BotConfig().isLeader and Kernel().worker.contains("BotFightFrame"):
+                    Kernel().worker.removeFrameByName("BotFightFrame")
+                elif Kernel().worker.contains("BotMuleFightFrame"):
+                    Kernel().worker.removeFrameByName("BotMuleFightFrame")
             elif self.currentContext == GameContextEnum.ROLE_PLAY:
-                Kernel().worker.removeFrameByName("BotFarmPathFrame")
+                if BotConfig().isLeader:
+                    Kernel().worker.removeFrameByName("BotFarmPathFrame")
             return True
 
         elif isinstance(msg, InventoryWeightMessage):
@@ -98,21 +116,13 @@ class BotWorkflowFrame(Frame):
                     if self.currentContext is None:
                         self._delayedAutoUnlaod = True
                         Logger().debug(
-                            "Inventory full but the context is not created yet, so we will delay the unload."
+                            "[BotWorkflow]  Inventory full but the context is not created yet, so we will delay the unload."
                         )
                         return False
-                    self.triggerUnload()
+                    self.unloadInventory()
                 return True
             else:
                 return False
-
-        elif isinstance(msg, (BankUnloadEndedMessage, SellerCollectedGuestItemsMessage)):
-            self._inAutoUnload = False
-            Logger().debug("Bank unload ended, will resume the workflow...")
-            if BotConfig().path:
-                Kernel().worker.addFrame(BotFarmPathFrame(True))
-            if BotConfig().party:
-                Kernel().worker.addFrame(BotPartyFrame())
 
         elif (
             isinstance(msg, GameRolePlayPlayerLifeStatusMessage)
@@ -121,20 +131,20 @@ class BotWorkflowFrame(Frame):
                 or PlayerLifeStatusEnum(msg.state) == PlayerLifeStatusEnum.STATUS_PHANTOM
             )
         ) or isinstance(msg, GameRolePlayGameOverMessage):
-            Logger().debug(f"Player is dead, auto reviving...")
             self._inPhenixAutoRevive = True
-            Kernel().worker.removeFrameByName("BotFarmPathFrame")
+            if BotConfig().isLeader:
+                Kernel().worker.removeFrameByName("BotFarmPathFrame")
+            Kernel().worker.removeFrameByName("BotPartyFrame")
             PlayedCharacterManager().state = PlayerLifeStatusEnum(msg.state)
+            KernelEventsManager().once(KernelEvent.PHENIX_AUTO_REVIVE_ENDED, self.onPhenixAutoReviveEnded)
             Kernel().worker.addFrame(BotPhenixAutoRevive())
             return False
 
-        elif (
-            isinstance(msg, GameRolePlayPlayerLifeStatusMessage)
-            and PlayerLifeStatusEnum(msg.state) == PlayerLifeStatusEnum.STATUS_ALIVE_AND_KICKING
-        ):
-            Logger().debug(f"Player is alive and kicking, returning to work...")
-            self._inPhenixAutoRevive = False
-            Kernel().worker.removeFrameByName("BotPhenixAutoRevive")
-            if BotConfig().path and not Kernel().worker.contains("BotFarmPathFrame"):
-                Kernel().worker.addFrame(BotFarmPathFrame(True))
-            return True
+    def onPhenixAutoReviveEnded(self, e=None):
+        Logger().debug(f"[BotWorkflow] Phenix auto revive ended.")
+        self._inPhenixAutoRevive = False
+        if BotConfig().path and not Kernel().worker.contains("BotFarmPathFrame"):
+            Kernel().worker.addFrame(BotFarmPathFrame(True))
+        if BotConfig().party and not Kernel().worker.contains("BotPartyFrame"):
+            Kernel().worker.addFrame(BotPartyFrame())
+        return True

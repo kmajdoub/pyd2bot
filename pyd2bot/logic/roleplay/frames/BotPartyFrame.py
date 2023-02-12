@@ -3,8 +3,6 @@ from typing import TYPE_CHECKING
 from pyd2bot.apis.MoveAPI import MoveAPI
 from pyd2bot.logic.common.frames.BotRPCFrame import BotRPCFrame
 from pyd2bot.logic.managers.BotConfig import BotConfig
-from pyd2bot.logic.roleplay.frames.BotAutoTripFrame import BotAutoTripFrame
-from pyd2bot.logic.roleplay.messages.AutoTripEndedMessage import AutoTripEndedMessage
 from pyd2bot.logic.roleplay.messages.LeaderPosMessage import LeaderPosMessage
 from pyd2bot.logic.roleplay.messages.LeaderTransitionMessage import LeaderTransitionMessage
 from pyd2bot.misc.BotEventsmanager import BotEventsManager
@@ -116,19 +114,19 @@ class BotPartyFrame(Frame):
 
     @property
     def movementFrame(self) -> "RoleplayMovementFrame":
-        return Kernel().worker.getFrame("RoleplayMovementFrame")
+        return Kernel().worker.getFrameByName("RoleplayMovementFrame")
 
     @property
     def entitiesFrame(self) -> "RoleplayEntitiesFrame":
-        return Kernel().worker.getFrame("RoleplayEntitiesFrame")
+        return Kernel().worker.getFrameByName("RoleplayEntitiesFrame")
 
     @property
     def farmFrame(self) -> "BotFarmPathFrame":
-        return Kernel().worker.getFrame("BotFarmPathFrame")
+        return Kernel().worker.getFrameByName("BotFarmPathFrame")
 
     @property
     def rpcFrame(self) -> "BotRPCFrame":
-        return Kernel().worker.getFrame("BotRPCFrame")
+        return Kernel().worker.getFrameByName("BotRPCFrame")
 
     @property
     def leader(self) -> Character:
@@ -157,7 +155,7 @@ class BotPartyFrame(Frame):
             raise Exception(f"Error while fetching follower status: {error}")
         self._followerStatus[sender] = result
         if all(status is not None for status in self._followerStatus.values()):
-            nonIdleMemberNames = [name for name, status in self._followerStatus.items() if status != "idle"]
+            nonIdleMemberNames = [f"{name}:{status}" for name, status in self._followerStatus.items() if status != "idle"]
             if nonIdleMemberNames:
                 Logger().info(f"[BotPartyFrame] Waiting for members {nonIdleMemberNames}.")
                 Kernel().worker.terminated.wait(1)
@@ -198,11 +196,11 @@ class BotPartyFrame(Frame):
         for follower in self.followers:
             if int(follower.id) == int(id):
                 return follower
-        if id == self.leader.id:
+        if int(id) == int(self.leader.id):
             return self.leader
         return None
 
-    def getPartyMemberByName(self, name: str) -> dict:
+    def getPartyMemberByName(self, name: str) -> Character:
         for follower in self.followers:
             if follower.name == name:
                 return follower
@@ -359,21 +357,6 @@ class BotPartyFrame(Frame):
             self.checkIfTeamInFight()
             return True
 
-        elif isinstance(msg, AutoTripEndedMessage):
-            self.joiningLeaderVertex = None
-            if self.joiningLeaderVertex is not None:
-                Logger().debug(f"[BotPartyFrame] AutoTrip to join party leader vertex ended.")
-                leaderInfos = self.entitiesFrame.getEntityInfos(self.leader.id)
-                if not leaderInfos:
-                    Logger().warning(
-                        f"[BotPartyFrame] Autotrip ended, was following leader transition {self.joiningLeaderVertex} but the leader {self.leaderName} is not in the current Map!"
-                    )
-                else:
-                    self.leaderCurrVertex = self.joiningLeaderVertex
-            if self._wantsToJoinFight:
-                self.joinFight(self._wantsToJoinFight)
-            return False
-
         elif isinstance(msg, LeaderTransitionMessage):
             if msg.transition.transitionMapId == PlayedCharacterManager().currentMap.mapId:
                 Logger().warning(
@@ -398,8 +381,7 @@ class BotPartyFrame(Frame):
             ):
                 Logger().debug(f"[BotPartyFrame] Leader {self.leaderName} is in vertex {msg.vertex}, will follow it.")
                 self.joiningLeaderVertex = msg.vertex
-                af = BotAutoTripFrame(msg.vertex.mapId, msg.vertex.zoneId)
-                Kernel().worker.pushFrame(af)
+                MoveAPI.moveToVertex(msg.vertex, self.onLeaderPosReached)
             return True
 
         elif isinstance(msg, CompassUpdatePartyMemberMessage):
@@ -407,7 +389,7 @@ class BotPartyFrame(Frame):
                 self.partyMembers[msg.memberId].worldX = msg.coords.worldX
                 self.partyMembers[msg.memberId].worldY = msg.coords.worldY
             else:
-                Logger().warning(f"[BotPartyFrame] Seems ig we are in party but not modeled yet in party frame")
+                Logger().error(f"[BotPartyFrame] Seems ig we are in party but not modeled yet in party frame")
                 self.leaveParty()
             return True
 
@@ -418,10 +400,8 @@ class BotPartyFrame(Frame):
         elif isinstance(msg, PartyMemberInStandardFightMessage):
             if float(msg.memberId) == float(self.leader.id):
                 Logger().debug(f"[BotPartyFrame] member {msg.memberId} started fight {msg.fightId}")
-                if float(msg.fightMap.mapId) != float(PlayedCharacterManager().currentMap.mapId):
-                    af = BotAutoTripFrame(msg.fightMap.mapId)
-                    Kernel().worker.pushFrame(af)
-                    self._wantsToJoinFight = msg.fightId
+                if msg.fightMap.mapId != PlayedCharacterManager().currentMap.mapId:
+                    MoveAPI.moveToMap(msg.fightMap.mapId, lambda _:self.joinFight(msg.fightId))
                 else:
                     self.joinFight(msg.fightId)
             return True
@@ -470,3 +450,17 @@ class BotPartyFrame(Frame):
         mirmsg = MapInformationsRequestMessage()
         mirmsg.init(mapId_=MapDisplayManager().currentMapPoint.mapId)
         ConnectionsHandler().send(mirmsg)
+
+    def onLeaderPosReached(self, evt=None):
+        self.joiningLeaderVertex = None
+        if self.joiningLeaderVertex is not None:
+            Logger().info(f"[BotPartyFrame] AutoTrip to join party leader vertex ended.")
+            leaderInfos = self.entitiesFrame.getEntityInfos(self.leader.id)
+            if not leaderInfos:
+                Logger().warning(
+                    f"[BotPartyFrame] Autotrip ended, was following leader transition {self.joiningLeaderVertex} but the leader {self.leaderName} is not in the current Map!"
+                )
+            else:
+                self.leaderCurrVertex = self.joiningLeaderVertex
+        if self._wantsToJoinFight:
+            self.joinFight(self._wantsToJoinFight)

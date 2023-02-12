@@ -1,17 +1,16 @@
 import threading
 from enum import Enum
 from typing import TYPE_CHECKING
+from pyd2bot.apis.MoveAPI import MoveAPI
 
 from pyd2bot.logic.common.frames.BotRPCFrame import BotRPCFrame
 from pyd2bot.logic.managers.BotConfig import BotConfig
-from pyd2bot.logic.roleplay.frames.BotAutoTripFrame import BotAutoTripFrame
 from pyd2bot.logic.roleplay.frames.BotExchangeFrame import BotExchangeFrame, ExchangeDirectionEnum
-from pyd2bot.logic.roleplay.messages.AutoTripEndedMessage import AutoTripEndedMessage
 from pyd2bot.logic.roleplay.messages.ExchangeConcludedMessage import ExchangeConcludedMessage
-from pyd2bot.logic.roleplay.messages.SellerCollectedGuestItemsMessage import SellerCollectedGuestItemsMessage
 from pyd2bot.misc.Localizer import Localizer
 from pyd2bot.misc.Watcher import Watcher
 from pyd2bot.thriftServer.pyd2botService.ttypes import Character
+from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import KernelEvent, KernelEventsManager
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import PlayedCharacterManager
 from pydofus2.com.ankamagames.dofus.network.messages.game.context.roleplay.MapComplementaryInformationsDataMessage import (
@@ -46,7 +45,6 @@ class BotUnloadInSellerFrame(Frame):
         self.stopWaitingForSeller = threading.Event()
 
     def pushed(self) -> bool:
-        Logger().debug("BotUnloadInSellerFrame pushed")
         self.state = UnloadInSellerStatesEnum.IDLE
         self.stopWaitingForSeller.clear()
         if PlayedCharacterManager().currentMap is not None:
@@ -56,9 +54,12 @@ class BotUnloadInSellerFrame(Frame):
         return True
 
     def pulled(self) -> bool:
-        Logger().debug("BotUnloadInSellerFrame pulled")
         self.stopWaitingForSeller.set()
+        KernelEventsManager().onceFramePulled("BotUnloadInSellerFrame", self.onpulled)
         return True
+
+    def onpulled(self):
+        KernelEventsManager().send(KernelEvent.INVENTORY_UNLOADED)
 
     @property
     def priority(self) -> int:
@@ -66,7 +67,7 @@ class BotUnloadInSellerFrame(Frame):
 
     @property
     def entitiesFrame(self) -> "RoleplayEntitiesFrame":
-        return Kernel().worker.getFrame("RoleplayEntitiesFrame")
+        return Kernel().worker.getFrameByName("RoleplayEntitiesFrame")
 
     def waitForSellerToComme(self):
         self.stopWaitingForSeller.clear()
@@ -85,15 +86,15 @@ class BotUnloadInSellerFrame(Frame):
 
     def waitForSellerIdleStatus(self):
         currentMapId = PlayedCharacterManager().currentMap.mapId
-        rpcFrame: BotRPCFrame = Kernel().worker.getFrame("BotRPCFrame")
+        rpcFrame: BotRPCFrame = Kernel().worker.getFrameByName("BotRPCFrame")
         while not self.stopWaitingForSeller.is_set():
             sellerStatus = rpcFrame.askForStatusSync(self.seller.login)
             Logger().debug("Seller status: %s", sellerStatus)
             if sellerStatus == "idle":
                 rpcFrame.askComeToCollect(self.seller.login, self.bankInfos, BotConfig().character)
                 if currentMapId != self.bankInfos.npcMapId:
-                    Kernel().worker.addFrame(BotAutoTripFrame(self.bankInfos.npcMapId))
                     self.state = UnloadInSellerStatesEnum.WALKING_TO_BANK
+                    MoveAPI.moveToMap(self.bankInfos.npcMapId, self.onTripEnded)
                 else:
                     Watcher(target=self.waitForSellerToComme).start()
                     self.state = UnloadInSellerStatesEnum.WAITING_FOR_SELLER
@@ -108,19 +109,18 @@ class BotUnloadInSellerFrame(Frame):
         self._startRpZone = PlayedCharacterManager().currentZoneRp
         Watcher(target=self.waitForSellerIdleStatus).start()
 
+    def onTripEnded(self, e=None):
+        if self.state == UnloadInSellerStatesEnum.RETURNING_TO_START_POINT:
+            Logger().info("[UnloadInSellerFrame] Trip ended, returning to start point")
+            Kernel().worker.removeFrame(self)
+        elif self.state == UnloadInSellerStatesEnum.WALKING_TO_BANK:
+            Logger().info("[UnloadInSellerFrame] Trip ended, waiting for seller to come")
+            self.state = UnloadInSellerStatesEnum.WAITING_FOR_SELLER
+            Watcher(target=self.waitForSellerToComme).start()
+
     def process(self, msg: Message) -> bool:
 
-        if isinstance(msg, AutoTripEndedMessage):
-            Logger().debug("AutoTripEndedMessage received")
-            if self.state == UnloadInSellerStatesEnum.RETURNING_TO_START_POINT:
-                Kernel().worker.removeFrame(self)
-                Kernel().worker.process(SellerCollectedGuestItemsMessage())
-            elif self.state == UnloadInSellerStatesEnum.WALKING_TO_BANK:
-                Watcher(target=self.waitForSellerToComme).start()
-                self.state = UnloadInSellerStatesEnum.WAITING_FOR_SELLER
-            return True
-
-        elif isinstance(msg, MapComplementaryInformationsDataMessage):
+        if isinstance(msg, MapComplementaryInformationsDataMessage):
             if self.state == UnloadInSellerStatesEnum.WAITING_FOR_MAP:
                 self.state = UnloadInSellerStatesEnum.IDLE
                 self.start()
@@ -128,7 +128,6 @@ class BotUnloadInSellerFrame(Frame):
         elif isinstance(msg, ExchangeConcludedMessage):
             if not self.return_to_start:
                 Kernel().worker.removeFrame(self)
-                Kernel().worker.process(SellerCollectedGuestItemsMessage())
             else:
                 self.state = UnloadInSellerStatesEnum.RETURNING_TO_START_POINT
-                Kernel().worker.addFrame(BotAutoTripFrame(self._startMapId, self._startRpZone))
+                MoveAPI.moveToMap(self._startMapId, self.onTripEnded, zoneId=self._startRpZone)

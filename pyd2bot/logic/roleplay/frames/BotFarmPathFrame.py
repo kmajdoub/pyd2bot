@@ -5,7 +5,6 @@ from pyd2bot.apis.MoveAPI import MoveAPI
 from pyd2bot.apis.PlayerAPI import PlayerAPI
 from pyd2bot.logic.managers.BotConfig import BotConfig
 from pyd2bot.logic.roleplay.frames.BotPartyFrame import BotPartyFrame
-from pyd2bot.logic.roleplay.messages.AutoTripEndedMessage import AutoTripEndedMessage
 from pyd2bot.misc.BotEventsmanager import BotEventsManager
 from pyd2bot.models.enums.ServerNotificationTitlesEnum import ServerNotificationTitlesEnum
 from pydofus2.com.ankamagames.atouin.managers.MapDisplayManager import MapDisplayManager
@@ -86,36 +85,32 @@ class BotFarmPathFrame(Frame):
 
     @property
     def entitiesFrame(self) -> "RoleplayEntitiesFrame":
-        return self._worker.getFrame("RoleplayEntitiesFrame")
+        return self._worker.getFrameByName("RoleplayEntitiesFrame")
 
     @property
     def interactivesFrame(self) -> "RoleplayInteractivesFrame":
-        return self._worker.getFrame("RoleplayInteractivesFrame")
+        return self._worker.getFrameByName("RoleplayInteractivesFrame")
 
     @property
     def movementFrame(self) -> "RoleplayMovementFrame":
-        return self._worker.getFrame("RoleplayMovementFrame")
+        return self._worker.getFrameByName("RoleplayMovementFrame")
 
     @property
     def partyFrame(self) -> "BotPartyFrame":
-        return self._worker.getFrame("BotPartyFrame")
+        return self._worker.getFrameByName("BotPartyFrame")
 
     @property
     def worldFrame(self) -> "RoleplayWorldFrame":
-        return self._worker.getFrame("RoleplayWorldFrame")
+        return self._worker.getFrameByName("RoleplayWorldFrame")
 
     def pushed(self) -> bool:
-        Logger().info("BotFarmPathFrame pushed")
         self._followinMonsterGroup = None
+        self._pulled = False
         if self._autoStart:
-            if not self.entitiesFrame or not self.entitiesFrame.mcidm_processessed:
-                KernelEventsManager().once(KernelEvent.MAPPROCESSED, self.doFarm)
-            else:
-                self.doFarm()
+            KernelEventsManager().onceFramePushed("BotFarmPathFrame", self.doFarm)
         return True
 
     def pulled(self) -> bool:
-        Logger().info("BotFarmPathFrame pulled")
         self._pulled = True
         if BotEventsManager().has_listeners(BotEventsManager.MEMBERS_READY):
             BotEventsManager().remove_listener(BotEventsManager.MEMBERS_READY, self.doFarm)
@@ -151,13 +146,7 @@ class BotFarmPathFrame(Frame):
 
     def process(self, msg: Message) -> bool:
 
-        if isinstance(msg, AutoTripEndedMessage):
-            Logger().info("[BotFarmFrame] Auto trip ended calling doFarm")
-            if msg.mapId is None:
-                raise Exception("Auto trip was Unable to reach destination")
-            self.doFarm()
-
-        elif isinstance(msg, InteractiveUseErrorMessage):
+        if isinstance(msg, InteractiveUseErrorMessage):
             Logger().error(
                 f"[BotFarmFrame] Error unable to use interactive element '{msg.elemId}' with the skill '{msg.skillInstanceUid}'"
             )
@@ -177,6 +166,7 @@ class BotFarmPathFrame(Frame):
             ConnectionsHandler().closeConnection(
                 DisconnectionReasonEnum.RESTARTING, "Restart due to Map change failed"
             )
+            return True
 
         elif isinstance(msg, FightRequestFailed):
             self._followinMonsterGroup = None
@@ -251,7 +241,13 @@ class BotFarmPathFrame(Frame):
         return tgtRpZone == PlayedCharacterManager().currentZoneRp
 
     def doFarm(self, e=None):
+        if self._pulled:
+            return
         Logger().debug("[BotFarmFrame] doFarm called")
+        if PlayerAPI().isProcessingMapData():
+            KernelEventsManager().once(KernelEvent.MAPPROCESSED, self.doFarm)
+            Logger().debug("Waiting for map to be processes...")
+            return
         if self.partyFrame:
             if not self.partyFrame.allMembersJoinedParty:
                 BotEventsManager().onceAllMembersJoinedParty(self.doFarm)
@@ -263,8 +259,11 @@ class BotFarmPathFrame(Frame):
         self.doFarm2()
 
     def doFarm2(self, e=None):
+        if WorldPathFinder().currPlayerVertex is None:
+            KernelEventsManager().once(KernelEvent.MAPPROCESSED, self.doFarm)
+            return
         if WorldPathFinder().currPlayerVertex not in self.farmPath:
-            MoveAPI.moveToVertex(self.farmPath.startVertex)
+            MoveAPI.moveToVertex(self.farmPath.startVertex, self.doFarm)
             if self.partyFrame:
                 self.partyFrame.askMembersToMoveToVertex(self.farmPath.startVertex)
             return

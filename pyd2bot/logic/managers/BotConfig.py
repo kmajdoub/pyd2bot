@@ -31,7 +31,14 @@ class BotConfig(metaclass=Singleton):
         self.unloadType: UnloadType = None
         self.monsterLvlCoefDiff = float("inf")
         self.fightOptionsSent = False
+        self.lastFightTime = 0
+        self.fightOptions = []
+        self.followersIds = []
+        self.fightPartyMembers = list[Character]()
 
+    def getPrimarySpellId(self, breedId: int) -> int:
+        return self.defaultBreedConfig[breedId]["primarySpellId"]
+    
     @property
     def primarySpellId(self) -> int:
         return self.defaultBreedConfig[self.character.breedId]["primarySpellId"]
@@ -56,19 +63,29 @@ class BotConfig(metaclass=Singleton):
     def isFightSession(self) -> bool:
         return self.sessionType == SessionType.FIGHT
 
+    def getPlayerById(self, playerId: int) -> Character:
+        if playerId == self.character.id:
+            return self.character
+        for follower in self.followers:
+            if follower.id == playerId:
+                return follower
+        return None
+    
     def initFromSession(self, session: Session, role: CharacterRoleEnum, character: Character):
         self.id = session.id
         self.sessionType = session.type
         self.unloadType = session.unloadType
         self.followers = session.followers
+        self.followersIds = [follower.id for follower in self.followers]
         self.party = self.followers is not None and len(self.followers) > 0
         self.character = character
-        self.isLeader = role == CharacterRoleEnum.LEADER
+        self.isLeader = (role == CharacterRoleEnum.LEADER)
         self.seller = session.seller
         if self.isFightSession and self.isLeader:
             self.path = PathFactory.from_thriftObj(session.path)
             self.monsterLvlCoefDiff = (
                 session.monsterLvlCoefDiff if session.monsterLvlCoefDiff is not None else float("inf")
             )
+            self.fightPartyMembers = self.followers + [self.character]
         else:
             self.leader = session.leader

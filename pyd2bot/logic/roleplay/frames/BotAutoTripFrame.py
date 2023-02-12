@@ -1,8 +1,11 @@
 import threading
 from pyd2bot.apis.PlayerAPI import PlayerAPI
+from pydofus2.com.ankamagames.atouin.managers.MapDisplayManager import MapDisplayManager
 from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import KernelEventsManager, KernelEvent
+from pydofus2.com.ankamagames.dofus.kernel.net.ConnectionsHandler import ConnectionsHandler
 from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.astar.AStar import AStar
 from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Edge import Edge
+from pydofus2.com.ankamagames.dofus.network.messages.game.context.roleplay.MapInformationsRequestMessage import MapInformationsRequestMessage
 from pydofus2.com.ankamagames.jerakine.messages.Frame import Frame
 from pydofus2.com.ankamagames.jerakine.messages.Message import Message
 from pyd2bot.apis.MoveAPI import FollowTransitionError, MoveAPI
@@ -19,12 +22,6 @@ from pydofus2.com.ankamagames.dofus.network.messages.game.context.roleplay.MapCo
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 from pydofus2.com.ankamagames.jerakine.types.enums.Priority import Priority
 from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from pydofus2.com.ankamagames.dofus.logic.game.roleplay.frames.RoleplayEntitiesFrame import RoleplayEntitiesFrame
-
-from pyd2bot.logic.roleplay.messages.AutoTripEndedMessage import AutoTripEndedMessage
-
 
 class BotAutoTripFrame(Frame):
     
@@ -50,30 +47,43 @@ class BotAutoTripFrame(Frame):
         self._computed.clear()
 
     def pushed(self) -> bool:
-        Logger().debug("Auto trip frame pushed")
         self._worker = Kernel().worker
         self._computed.clear()
         self.changeMapFails.clear()
         self.path = None
         KernelEventsManager().onceFramePushed("BotAutoTripFrame", self.walkToNextStep)
+        Logger().info(f"[AutoTrip] Autotrip Frame pushed.")
         return True
 
     def pulled(self) -> bool:
         self.reset()
-        Logger().debug("[AutoTrip] Auto trip frame pulled")
-        self._pulled = True
+        KernelEventsManager().onceFramePulled("BotAutoTripFrame", self.onPulled)
         return True
 
+    def onPulled(self):
+        Logger().info(f"[AutoTrip] Autotrip Frame pulled.")
+        PlayerAPI().inAutoTrip.clear()
+        KernelEventsManager().send(KernelEvent.AUTO_TRIP_ENDED)
+        
     def process(self, msg: Message) -> bool:
+        
         if self._pulled:
             return
+        
         if isinstance(msg, MapComplementaryInformationsDataMessage):
-            if self._computed:
+            if self._computed.is_set():
                 self.walkToNextStep()
             return True
 
         if isinstance(msg, MapChangeFailedMessage):
-            raise Exception(f"[AutoTrip] Autotrip received map change failed for reason: {msg.reason}")
+            Logger.warning(f"[AutoTrip] Autotrip received map change failed for reason: {msg.reason}")
+            if msg.reasonId == MapChangeFailedMessage.UNREACHABLE_TRANSIT_CELL:
+                self._computed.clear()
+                nextEdge = self.path[self.currentEdgeIndex]
+                AStar().addForbidenEdge(nextEdge)
+                WorldPathFinder().findPath(self.dstMapId, self.onComputeOver, self.dstRpZone)
+            else:
+                raise Exception(msg.reason)
 
     @property
     def currentEdgeIndex(self):
@@ -94,23 +104,21 @@ class BotAutoTripFrame(Frame):
             dstMapId = self.path[-1].dst.mapId
             Logger().debug(f"[AutoTrip] Player current mapId {currMapId} and dst mapId {dstMapId}")
             if currMapId == dstMapId:
-                Logger().debug(f"[AutoTrip] Trip reached destination Map : {dstMapId}")
+                Logger().info(f"[AutoTrip] Trip reached destination Map : {dstMapId}")
                 Kernel().worker.removeFrame(self)
-                Kernel().worker.process(AutoTripEndedMessage(self.dstMapId))
-                PlayerAPI().inAutoTrip.clear()
+                self._pulled = True
                 return True
             Logger().debug(f"[AutoTrip] Current step index: {self.currentEdgeIndex + 1}/{len(self.path)}")
-            e = self.path[self.currentEdgeIndex]
+            nextEdge = self.path[self.currentEdgeIndex]
             Logger().debug(f"[AutoTrip] Moving using next edge :")
-            Logger().debug(f"\t|- src {e.src.mapId} -> dst {e.dst.mapId}")
-            for tr in e.transitions:
+            Logger().debug(f"\t|- src {nextEdge.src.mapId} -> dst {nextEdge.dst.mapId}")
+            for tr in nextEdge.transitions:
                 Logger().debug(f"\t\t|- direction : {tr.direction}, skill : {tr.skillId}, cell : {tr.cell}")
             try:
-                MoveAPI.followEdge(e)
-            except FollowTransitionError as e:
-                Logger().debug(f"[AutoTrip] Follow transition error: {e}, will recompute path ignoring this edge.")
+                MoveAPI.followEdge(nextEdge)
+            except FollowTransitionError as ex:
                 self._computed.clear()
-                AStar().addForbidenEdge(e)
+                AStar().addForbidenEdge(nextEdge)
                 WorldPathFinder().findPath(self.dstMapId, self.onComputeOver, self.dstRpZone)
         else:
             WorldPathFinder().findPath(self.dstMapId, self.onComputeOver, self.dstRpZone)
@@ -121,13 +129,10 @@ class BotAutoTripFrame(Frame):
             if isinstance(arg, list):
                 path = arg
                 break
-        if path is None:
+        if path is None or len(path) == 0:
             Kernel().worker.removeFrame(self)
-            Kernel().worker.process(AutoTripEndedMessage(None))
-            return True
-        if len(path) == 0:
-            Kernel().worker.removeFrame(self)
-            Kernel().worker.process(AutoTripEndedMessage(self.dstMapId))
+            self._pulled = True
+            Logger().info(f"[AutoTrip] Start map and destination map are the same.")
             return True
         Logger().debug(f"\n[AutoTrip] Path found: ")
         for e in path:

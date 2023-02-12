@@ -117,7 +117,7 @@ class BotRPCFrame(Frame):
         self.send(msg)
 
     def send(self, msg: RPCMessage, callback=None, timeout=20) -> None:
-        inst = Kernel.getThreadInstance(msg.dest)
+        inst = Kernel.getInstance(msg.dest)
         if not inst:
             return
         if not msg.oneway and msg.uid not in self._waitingForResp:
@@ -137,7 +137,7 @@ class BotRPCFrame(Frame):
             }
             self._waitingForResp[msg.uid]["timeout"].start()
         resw = self._waitingForResp[msg.uid]
-        inst = Kernel.getThreadInstance(msg.dest)
+        inst = Kernel.getInstance(msg.dest)
         inst.worker.process(msg)
         if not resw["event"].wait(10):
             raise TimeoutError("RPC call timeout")

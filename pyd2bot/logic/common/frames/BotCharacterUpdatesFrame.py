@@ -8,6 +8,7 @@ from pydofus2.com.ankamagames.dofus.network.messages.game.achievement.Achievemen
 from pydofus2.com.ankamagames.dofus.network.messages.game.achievement.AchievementRewardRequestMessage import (
     AchievementRewardRequestMessage,
 )
+from pydofus2.com.ankamagames.dofus.network.messages.game.character.stats.CharacterLevelUpInformationMessage import CharacterLevelUpInformationMessage
 from pydofus2.com.ankamagames.dofus.network.messages.game.character.stats.CharacterLevelUpMessage import (
     CharacterLevelUpMessage,
 )
@@ -74,9 +75,10 @@ class BotCharacterUpdatesFrame(Frame):
             points -= additional_boost * current_floor_cost
             current_floor_cost = stat_floors[i + 1][1] if i + 1 < len(stat_floors) else 4
         if boost > 0:
-            sumsg = StatsUpgradeRequestMessage()
-            sumsg.init(False, statId, boost)
-            connh.ConnectionsHandler().send(sumsg)
+            Logger().info("Boosting stat {} by {}".format(statId, boost))
+            # sumsg = StatsUpgradeRequestMessage()
+            # sumsg.init(False, statId, boost)
+            # connh.ConnectionsHandler().send(sumsg)
 
     def process(self, msg: Message) -> bool:
 
@@ -87,12 +89,13 @@ class BotCharacterUpdatesFrame(Frame):
             connh.ConnectionsHandler().send(arrmsg)
             return False
 
-        elif isinstance(msg, CharacterLevelUpMessage):
-            if BotConfig().primaryStatId:
+        if isinstance(msg, CharacterLevelUpInformationMessage):
+            if msg.id == PlayedCharacterManager().id:
                 previousLevel = PlayedCharacterManager().infos.level
                 PlayedCharacterManager().infos.level = msg.newLevel
-                pointsEarned = (msg.newLevel - previousLevel) * 5
-                self.boostStat(BotConfig().primaryStatId, pointsEarned)
+                if BotConfig().primaryStatId:
+                    pointsEarned = (msg.newLevel - previousLevel) * 5
+                    self.boostStat(BotConfig().primaryStatId, pointsEarned)
             return True
 
         elif isinstance(msg, CharacterStatsListMessage):

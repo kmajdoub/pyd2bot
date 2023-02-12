@@ -41,11 +41,7 @@ class RandomSubAreaFarmPath(AbstractFarmPath):
         from pydofus2.com.ankamagames.atouin.utils.DataMapProvider import DataMapProvider
         outgoingEdges = WorldGraph().getOutgoingEdgesFromVertex(self.currentVertex)
         transitions = []
-        if all([edge.dst in self.recentVisitedVerticies() for edge in outgoingEdges]):
-            self._recent_visited = [(v, _) for (v, _) in self._recent_visited if v not in [e.dst for e in outgoingEdges]]
         for edge in outgoingEdges:
-            if edge.dst in self.recentVisitedVerticies():
-                continue
             if edge.dst.mapId in self.subArea.mapIds:
                 if AStar.hasValidTransition(edge):
                     for tr in edge.transitions:
@@ -58,7 +54,11 @@ class RandomSubAreaFarmPath(AbstractFarmPath):
                                     transitions.append((edge, tr))
                             else:
                                 transitions.append((edge, tr))
-        edge, tr = random.choice(transitions)
+        notrecent = [tr for edge, tr in transitions if edge.dst not in self.recentVisitedVerticies()]
+        if notrecent:
+            tr = random.choice(notrecent)
+        else:
+            _, tr = random.choice(transitions)
         self._recent_visited.append((self.currentVertex, time.time()))
         return tr
 

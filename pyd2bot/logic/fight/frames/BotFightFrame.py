@@ -3,125 +3,130 @@ from queue import PriorityQueue
 from time import perf_counter
 from types import FunctionType
 from typing import TYPE_CHECKING, Tuple
-from pyd2bot.misc.BotEventsmanager import BotEventsManager
-from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import KernelEventsManager, KernelEvent
-from pydofus2.com.ankamagames.dofus.internalDatacenter.stats.EntityStats import EntityStats
-from pydofus2.com.ankamagames.dofus.network.messages.game.context.GameMapNoMovementMessage import GameMapNoMovementMessage
-from pydofus2.com.ankamagames.dofus.network.messages.game.context.fight.GameFightTurnResumeMessage import (
-    GameFightTurnResumeMessage,
-)
-from pydofus2.com.ankamagames.dofus.network.messages.game.context.fight.GameFightTurnReadyMessage import (
-    GameFightTurnReadyMessage,
-)
-from pydofus2.com.ankamagames.dofus.network.messages.game.context.fight.GameFightTurnReadyRequestMessage import (
-    GameFightTurnReadyRequestMessage,
-)
+
 from pyd2bot.logic.managers.BotConfig import BotConfig
+from pyd2bot.misc.BotEventsmanager import BotEventsManager
 from pydofus2.com.ankamagames.atouin.AtouinConstants import AtouinConstants
-from pydofus2.com.ankamagames.atouin.messages.MapLoadedMessage import MapLoadedMessage
-from pydofus2.com.ankamagames.atouin.utils.DataMapProvider import DataMapProvider
-from pydofus2.com.ankamagames.dofus.datacenter.communication.InfoMessage import InfoMessage
-from pydofus2.com.ankamagames.dofus.datacenter.effects.EffectInstance import EffectInstance
-from pydofus2.com.ankamagames.dofus.internalDatacenter.spells.SpellWrapper import SpellWrapper
+from pydofus2.com.ankamagames.atouin.messages.MapLoadedMessage import \
+    MapLoadedMessage
+from pydofus2.com.ankamagames.atouin.utils.DataMapProvider import \
+    DataMapProvider
+from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import (
+    KernelEvent, KernelEventsManager)
+from pydofus2.com.ankamagames.dofus.datacenter.communication.InfoMessage import \
+    InfoMessage
+from pydofus2.com.ankamagames.dofus.datacenter.effects.EffectInstance import \
+    EffectInstance
+from pydofus2.com.ankamagames.dofus.internalDatacenter.spells.SpellWrapper import \
+    SpellWrapper
+from pydofus2.com.ankamagames.dofus.internalDatacenter.stats.EntityStats import \
+    EntityStats
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
-from pydofus2.com.ankamagames.dofus.kernel.net.ConnectionsHandler import ConnectionsHandler
-from pydofus2.com.ankamagames.dofus.logic.common.managers.StatsManager import StatsManager
-from pydofus2.com.ankamagames.dofus.logic.game.common.frames.SpellInventoryManagementFrame import (
-    SpellInventoryManagementFrame,
-)
-from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import PlayedCharacterManager
-from pydofus2.com.ankamagames.dofus.logic.game.fight.frames.FightEntitiesFrame import FightEntitiesFrame
-from pydofus2.com.ankamagames.dofus.logic.game.fight.managers.BuffManager import BuffManager
-from pydofus2.com.ankamagames.dofus.logic.game.fight.managers.CurrentPlayedFighterManager import (
-    CurrentPlayedFighterManager,
-)
-from pydofus2.com.ankamagames.dofus.logic.game.fight.miscs.FightReachableCellsMaker import FightReachableCellsMaker
-from pydofus2.com.ankamagames.dofus.network.enums.FightOptionsEnum import FightOptionsEnum
-from pydofus2.com.ankamagames.dofus.network.enums.TextInformationTypeEnum import TextInformationTypeEnum
-from pydofus2.com.ankamagames.dofus.network.messages.game.actions.fight.GameActionFightCastRequestMessage import (
-    GameActionFightCastRequestMessage,
-)
-from pydofus2.com.ankamagames.dofus.network.messages.game.actions.fight.GameActionFightNoSpellCastMessage import (
-    GameActionFightNoSpellCastMessage,
-)
-from pydofus2.com.ankamagames.dofus.network.messages.game.actions.sequence.SequenceEndMessage import SequenceEndMessage
-from pydofus2.com.ankamagames.dofus.network.messages.game.actions.sequence.SequenceStartMessage import (
-    SequenceStartMessage,
-)
-from pydofus2.com.ankamagames.dofus.network.messages.game.basic.TextInformationMessage import TextInformationMessage
-from pydofus2.com.ankamagames.dofus.network.messages.game.context.GameMapMovementRequestMessage import (
-    GameMapMovementRequestMessage,
-)
-from pydofus2.com.ankamagames.dofus.network.messages.game.context.fight.GameFightTurnFinishMessage import (
-    GameFightTurnFinishMessage,
-)
-from pydofus2.com.ankamagames.dofus.network.messages.game.context.fight.GameFightOptionStateUpdateMessage import (
-    GameFightOptionStateUpdateMessage,
-)
-from pydofus2.com.ankamagames.dofus.network.messages.game.context.fight.GameFightTurnStartMessage import (
-    GameFightTurnStartMessage,
-)
-from pydofus2.com.ankamagames.dofus.network.messages.game.context.fight.character.GameFightShowFighterMessage import (
-    GameFightShowFighterMessage,
-)
-from pydofus2.com.ankamagames.dofus.network.messages.game.context.fight.GameFightEndMessage import GameFightEndMessage
-from pydofus2.com.ankamagames.dofus.network.messages.game.context.fight.GameFightJoinMessage import (
-    GameFightJoinMessage,
-)
-from pydofus2.com.ankamagames.dofus.network.messages.game.context.fight.GameFightOptionToggleMessage import (
-    GameFightOptionToggleMessage,
-)
-from pydofus2.com.ankamagames.dofus.network.messages.game.context.fight.GameFightReadyMessage import (
-    GameFightReadyMessage,
-)
-from pydofus2.com.ankamagames.dofus.network.messages.game.context.fight.GameFightTurnStartPlayingMessage import (
-    GameFightTurnStartPlayingMessage,
-)
-from pydofus2.com.ankamagames.dofus.network.messages.game.context.roleplay.CurrentMapMessage import CurrentMapMessage
-from pydofus2.com.ankamagames.dofus.network.messages.game.context.roleplay.MapComplementaryInformationsDataMessage import (
-    MapComplementaryInformationsDataMessage,
-)
-from pydofus2.com.ankamagames.dofus.network.types.game.character.status.PlayerStatus import PlayerStatus
-from pydofus2.com.ankamagames.dofus.network.types.game.context.fight.GameFightFighterInformations import (
-    GameFightFighterInformations,
-)
-from pydofus2.com.ankamagames.dofus.network.types.game.context.fight.GameFightMonsterInformations import (
-    GameFightMonsterInformations,
-)
+from pydofus2.com.ankamagames.dofus.kernel.net.ConnectionsHandler import \
+    ConnectionsHandler
+from pydofus2.com.ankamagames.dofus.logic.common.managers.StatsManager import \
+    StatsManager
+from pydofus2.com.ankamagames.dofus.logic.game.common.frames.SpellInventoryManagementFrame import \
+    SpellInventoryManagementFrame
+from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import \
+    PlayedCharacterManager
+from pydofus2.com.ankamagames.dofus.logic.game.fight.frames.FightEntitiesFrame import \
+    FightEntitiesFrame
+from pydofus2.com.ankamagames.dofus.logic.game.fight.managers.BuffManager import \
+    BuffManager
+from pydofus2.com.ankamagames.dofus.logic.game.fight.managers.CurrentPlayedFighterManager import \
+    CurrentPlayedFighterManager
+from pydofus2.com.ankamagames.dofus.logic.game.fight.miscs.FightReachableCellsMaker import \
+    FightReachableCellsMaker
+from pydofus2.com.ankamagames.dofus.network.enums.FightOptionsEnum import \
+    FightOptionsEnum
+from pydofus2.com.ankamagames.dofus.network.enums.TextInformationTypeEnum import \
+    TextInformationTypeEnum
+from pydofus2.com.ankamagames.dofus.network.messages.game.actions.fight.GameActionFightCastRequestMessage import \
+    GameActionFightCastRequestMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.actions.fight.GameActionFightNoSpellCastMessage import \
+    GameActionFightNoSpellCastMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.actions.sequence.SequenceEndMessage import \
+    SequenceEndMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.actions.sequence.SequenceStartMessage import \
+    SequenceStartMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.basic.TextInformationMessage import \
+    TextInformationMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.context.fight.character.GameFightShowFighterMessage import \
+    GameFightShowFighterMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.context.fight.GameFightEndMessage import \
+    GameFightEndMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.context.fight.GameFightJoinMessage import \
+    GameFightJoinMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.context.fight.GameFightOptionStateUpdateMessage import \
+    GameFightOptionStateUpdateMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.context.fight.GameFightOptionToggleMessage import \
+    GameFightOptionToggleMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.context.fight.GameFightReadyMessage import \
+    GameFightReadyMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.context.fight.GameFightTurnEndMessage import \
+    GameFightTurnEndMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.context.fight.GameFightTurnFinishMessage import \
+    GameFightTurnFinishMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.context.fight.GameFightTurnReadyMessage import \
+    GameFightTurnReadyMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.context.fight.GameFightTurnReadyRequestMessage import \
+    GameFightTurnReadyRequestMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.context.fight.GameFightTurnResumeMessage import \
+    GameFightTurnResumeMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.context.fight.GameFightTurnStartMessage import \
+    GameFightTurnStartMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.context.fight.GameFightTurnStartPlayingMessage import \
+    GameFightTurnStartPlayingMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.context.GameMapMovementRequestMessage import \
+    GameMapMovementRequestMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.context.GameMapNoMovementMessage import \
+    GameMapNoMovementMessage
+from pydofus2.com.ankamagames.dofus.network.types.game.context.fight.GameFightFighterInformations import \
+    GameFightFighterInformations
+from pydofus2.com.ankamagames.dofus.network.types.game.context.fight.GameFightMonsterInformations import \
+    GameFightMonsterInformations
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 from pydofus2.com.ankamagames.jerakine.map.LosDetector import LosDetector
 from pydofus2.com.ankamagames.jerakine.messages.Frame import Frame
 from pydofus2.com.ankamagames.jerakine.messages.Message import Message
 from pydofus2.com.ankamagames.jerakine.types.enums.Priority import Priority
 from pydofus2.com.ankamagames.jerakine.types.positions.MapPoint import MapPoint
-from pydofus2.com.ankamagames.jerakine.types.positions.MovementPath import MovementPath
+from pydofus2.com.ankamagames.jerakine.types.positions.MovementPath import \
+    MovementPath
 from pydofus2.com.ankamagames.jerakine.types.zones.Cross import Cross
 from pydofus2.com.ankamagames.jerakine.types.zones.IZone import IZone
 from pydofus2.com.ankamagames.jerakine.types.zones.Lozenge import Lozenge
-from pydofus2.com.ankamagames.jerakine.utils.display.spellZone.SpellShapeEnum import SpellShapeEnum
+from pydofus2.com.ankamagames.jerakine.utils.display.spellZone.SpellShapeEnum import \
+    SpellShapeEnum
 from pydofus2.damageCalculation.tools.StatIds import StatIds
 from pydofus2.mapTools import MapTools
 
 lock = threading.Lock()
 if TYPE_CHECKING:
     from pyd2bot.logic.roleplay.frames.BotPartyFrame import BotPartyFrame
-    from pydofus2.com.ankamagames.dofus.logic.game.fight.frames.FightBattleFrame import FightBattleFrame
-    from pydofus2.com.ankamagames.dofus.logic.game.fight.frames.FightContextFrame import FightContextFrame
-    from pydofus2.com.ankamagames.dofus.logic.game.fight.frames.FightTurnFrame import FightTurnFrame
-
+    from pydofus2.com.ankamagames.dofus.logic.game.fight.frames.FightBattleFrame import \
+        FightBattleFrame
+    from pydofus2.com.ankamagames.dofus.logic.game.fight.frames.FightContextFrame import \
+        FightContextFrame
+    from pydofus2.com.ankamagames.dofus.logic.game.fight.frames.FightTurnFrame import \
+        FightTurnFrame
 
 class Target:
-    def __init__(self, entityId: float, pos: MapPoint) -> None:
-        self.pos: MapPoint = pos
-        self.entityId = entityId
+    
+    def __init__(self, entity: GameFightMonsterInformations, cellId: int) -> None:
+        self.entity = entity
+        self.pos = MapPoint.fromCellId(entity.disposition.cellId)
+        self.entityId = entity.contextualId
+        self.distFromPlayer = self.pos.distanceToCellId(cellId)
 
     def __str__(self) -> str:
-        return f"({self.entityId} at {self.pos.cellId})"
-
+        return f"({self.entity.contextualId}, { self.entity.disposition.cellId}, {self.distFromPlayer})"
 
 class BotFightFrame(Frame):
     VERBOSE = True
     ACTION_TIMEOUT = 7
+    CONSECUTIVE_MOVEMENT_DELAY: int = 0.25
     _average_time_to_find_path = 0
     _number_of_path_calculations = 0
     _total_time_to_find_path = 0
@@ -154,7 +159,9 @@ class BotFightFrame(Frame):
         self.fightReadySent = False
         self._confirmTurnEnd = False
         self._moveRequestFails = 0
+        self._lastMoveRequestTime = None
         self._forbidenCells = set()
+        self._turnStartPlaying = False
 
     def pushed(self) -> bool:
         self.init()
@@ -236,7 +243,7 @@ class BotFightFrame(Frame):
                 if cellId not in hasLosToTargets:
                     hasLosToTargets[cellId] = list[Target]()
                 hasLosToTargets[cellId].append(target)
-                maxRangeFromFighter = max(maxRangeFromFighter, MapTools.getDistance(self.fighterPos.cellId, cellId))
+                maxRangeFromFighter = max(maxRangeFromFighter, target.distFromPlayer)
         return maxRangeFromFighter, hasLosToTargets
 
     def findPathToTarget(self, spellw: SpellWrapper, targets: list[Target]) -> Tuple[Target, list[int]]:
@@ -285,8 +292,10 @@ class BotFightFrame(Frame):
                         bestAlternative = nextCellId
                         BtestAlternativeCost = heuristic
                     queue.put((heuristic, usedPms + 1, nextCellId))
-        path = self.buildPath(parentOfCell, bestAlternative)
-        return None, path
+        if bestAlternative is not None:
+            path = self.buildPath(parentOfCell, bestAlternative)
+            return None, path
+        return None, None
 
     @classmethod
     def updateAveragePathTime(cls, time: float):
@@ -304,9 +313,9 @@ class BotFightFrame(Frame):
         self.nextTurnAction("Invisible mob blocking way")
 
     def playTurn(self):
-        if not self.turnFrame.myTurn:
+        if not self.turnFrame.myTurn or not self.currentPlayer:
             return
-        Logger().info(f"[FightAlgo] Turn playing - {self.currentPlayer.name}")
+        Logger().info(f"[FightBot] Turn playing - {self.currentPlayer.name}")
         targets = self.getTargetableEntities(self.spellw, targetSum=False)
         if not targets:
             targets = self.getTargetableEntities(self.spellw, targetSum=True)
@@ -314,23 +323,30 @@ class BotFightFrame(Frame):
                 self.addTurnAction(self.turnEnd, [])
                 self.nextTurnAction("play turn no targets")
                 return
-        Logger().info(f"[FightAlgo] MP : {self.movementPoints}, AP : {self.actionPoints}")
-        Logger().info(f"[FightAlgo] Current attack spell : {self.spellw.spell.name}")
+        Logger().info(f"[FightBot] MP : {self.movementPoints}, AP : {self.actionPoints}.")
+        Logger().info(f"[FightBot] Current attack spell : {self.spellw.spell.name}.")
+        Logger().info(f"[FightBot] Current spell range : {self.getActualSpellRange(self.spellw)}.")
+        Logger().info(f"[FightBot] Found targets : {[str(tgt) for tgt in targets]}.")
         target, path = self.findPathToTarget(self.spellw, targets)
         if path is not None:
-            self._currentPath = path
+            reachableCells = FightReachableCellsMaker(self.fighterInfos, self.fighterPos.cellId, int(self.movementPoints)).reachableCells
+            correctedPath = []
+            targetInRange = True
+            for cellId in path:
+                if cellId not in reachableCells:
+                    targetInRange = False
+                    break
+                correctedPath.append(cellId)
+            self._currentPath = correctedPath
             self._currentTarget = target
-            if len(path) <= self.movementPoints + 1:
-                if path:
-                    self.addTurnAction(self.askMove, [path])
-                if target:
-                    self.addTurnAction(self.castSpell, [self.spellId, target.pos.cellId])
-                if not target:
-                    self.addTurnAction(self.turnEnd, [])
-            else:
-                self.addTurnAction(self.askMove, [path[: int(self.movementPoints) + 1]])
+            if self._currentPath:
+                self.addTurnAction(self.askMove, [self._currentPath])
+            if target and targetInRange:
+                self.addTurnAction(self.castSpell, [self.spellId, target.pos.cellId])
+            if not target:
                 self.addTurnAction(self.turnEnd, [])
         else:
+            Logger().info("[FightBot] No path found.")
             self.addTurnAction(self.turnEnd, [])
         self.nextTurnAction("play turn")
 
@@ -359,12 +375,12 @@ class BotFightFrame(Frame):
         return self._spellShape
 
     def getSpellZone(self, spellw: SpellWrapper) -> IZone:
-        range: int = self.getActualSpellRange(spellw)
-        minRange: int = spellw["minRange"]
+        range = self.getActualSpellRange(spellw)
+        minRange = spellw["minRange"]
         if range is None or minRange is None:
             raise Exception(f"Spell range is None, {minRange} {range}")
-        spellShape: int = self.getSpellShape(spellw)
-        castInLine: bool = spellw["castInLine"] or spellShape == SpellShapeEnum.l
+        spellShape = self.getSpellShape(spellw)
+        castInLine = spellw["castInLine"] or (spellShape == SpellShapeEnum.l)
         if castInLine:
             if spellw["castInDiagonal"]:
                 shapePlus = Cross(minRange, range, DataMapProvider())
@@ -426,6 +442,7 @@ class BotFightFrame(Frame):
             self._fightCount += 1
             self._spellCastFails = 0
             self._inFight = True
+            self.fightReadySent = False 
             if BotConfig().isLeader:
                 if FightOptionsEnum.FIGHT_OPTION_SET_SECRET not in BotConfig().fightOptions:
                     gfotmsg = GameFightOptionToggleMessage()
@@ -455,7 +472,7 @@ class BotFightFrame(Frame):
 
         elif isinstance(msg, GameMapNoMovementMessage):
             Logger().error(f"[FightBot] Failed to move")
-            if self._isRequestingMovement:
+            if self._isRequestingMovement and self.turnFrame and self.turnFrame.myTurn:
                 self._turnAction.clear()
                 self._isRequestingMovement = False
                 if self._moveRequestFails > 2:
@@ -465,29 +482,21 @@ class BotFightFrame(Frame):
                 self.playTurn()
             return True
 
-        elif isinstance(msg, MapComplementaryInformationsDataMessage):
-            self._wait = False
-            return False
-
-        elif isinstance(msg, MapLoadedMessage):
-            self._wait = True
-            return False
-
         elif isinstance(msg, GameFightShowFighterMessage):
-            fighterId = msg.informations.contextualId
-            self._turnPlayed = 0
-            self._myTurn = False
-            player = BotConfig().getPlayerById(fighterId)
-            if player:
-                Logger().info(f"[FightBot] Party member {player.name} joined fight")
-                startFightMsg = GameFightReadyMessage()
-                startFightMsg.init(True)
-                ConnectionsHandler.getInstance(player.login).send(startFightMsg)
-            elif fighterId > 0:
-                Logger().error(f"[FightBot] Unknown Player {fighterId} joined fight.")
-            else:
-                Logger().info(f"[FightBot] Monster {fighterId} appeared.")
             if BotConfig().isLeader:
+                fighterId = msg.informations.contextualId
+                self._turnPlayed = 0
+                self._myTurn = False
+                player = BotConfig().getPlayerById(fighterId)
+                if player and player.id != BotConfig().character.id:
+                    Logger().info(f"[FightBot] Party member {player.name} joined fight.")
+                    startFightMsg = GameFightReadyMessage()
+                    startFightMsg.init(True)
+                    ConnectionsHandler.getInstance(player.login).send(startFightMsg)
+                elif fighterId > 0 and fighterId != BotConfig().character.id:
+                    Logger().error(f"[FightBot] Unknown Player {fighterId} joined fight.")
+                else:
+                    Logger().info(f"[FightBot] Monster {fighterId} appeared.")
                 notjoined = [
                     m.name for m in BotConfig().fightPartyMembers if not self.entitiesFrame.getEntityInfos(m.id)
                 ]
@@ -534,11 +543,23 @@ class BotFightFrame(Frame):
             self.currentPlayer = BotConfig().getPlayerById(self._currentPlayerId)
             if self.currentPlayer:
                 self.onPlayer()
+            if self._turnStartPlaying:
+                self.checkCanPlay()
+            return True
+        
+        elif isinstance(msg, GameFightTurnEndMessage):
+            if self._myTurn:
+                self._isRequestingMovement = False
+                self._requestingCastSpell
+                self._lastPlayerId = msg.id
+                self._myTurn = False
             return True
 
         elif isinstance(msg, GameFightTurnStartPlayingMessage):
             if self._myTurn:
                 self.checkCanPlay()
+            else:
+                self._turnStartPlaying = True
 
         elif isinstance(msg, TextInformationMessage):
             msgInfo = InfoMessage.getInfoMessageById(msg.msgType * 10000 + msg.msgId)
@@ -564,10 +585,11 @@ class BotFightFrame(Frame):
 
         elif isinstance(msg, GameFightTurnReadyRequestMessage):
             if self.battleFrame._executingSequence:
-                Logger().warn("[BotFight] Delaying turn end acknowledgement because we're still in a sequence.")
+                Logger().warn("[FightBot] Delaying turn end acknowledgement because we're still in a sequence.")
                 self._confirmTurnEnd = True
             else:
                 self.confirmTurnEnd()
+                self._turnStartPlaying = False
             return True
 
         return False
@@ -605,13 +627,14 @@ class BotFightFrame(Frame):
             self.nextTurnAction("checkCanPlay")
                     
     def turnEnd(self) -> None:
-        self._spellCastFails = 0
-        self._myTurn = False
-        self._seqQueue.clear()
-        self._turnAction.clear()
-        gftfmsg: GameFightTurnFinishMessage = GameFightTurnFinishMessage()
-        gftfmsg.init(False)
-        ConnectionsHandler.getInstance(self.currentPlayer.login).send(gftfmsg)
+        if self.currentPlayer is not None:
+            self._spellCastFails = 0
+            self._myTurn = False
+            self._seqQueue.clear()
+            self._turnAction.clear()
+            gftfmsg: GameFightTurnFinishMessage = GameFightTurnFinishMessage()
+            gftfmsg.init(False)
+            ConnectionsHandler.getInstance(self.currentPlayer.login).send(gftfmsg)
 
     @property
     def fighterInfos(self) -> "GameFightFighterInformations":
@@ -633,28 +656,35 @@ class BotFightFrame(Frame):
                 if (
                     monster.spawnInfo.teamId != self.fighterInfos.spawnInfo.teamId
                     and float(entity.contextualId) not in self.battleFrame._deadTurnsList
+                    and entity.contextualId not in self.fightContextFrame.hiddenEntites
                     and (targetSum or not monster.stats.summoned)
                     and self.canCastSpell(spellw, entity.contextualId)
                     and entity.disposition.cellId != -1
                 ):
-                    result.append(Target(entity.contextualId, MapPoint.fromCellId(entity.disposition.cellId)))
-        if self.VERBOSE:
-            Logger().info(f"[FightBot] Found targets : {[str(tgt) for tgt in result]}.")
+                    result.append(Target(entity, self.fighterInfos.disposition.cellId))
         return result
 
     def castSpell(self, spellId: int, cellId: bool) -> None:
-        self._requestingCastSpell = True
-        BotEventsManager().onceFighterCastedSpell(self._currentPlayerId, cellId, self.onSpellCasted)
-        gafcrmsg = GameActionFightCastRequestMessage()
-        gafcrmsg.init(spellId, cellId)
-        ConnectionsHandler.getInstance(self.currentPlayer.login).send(gafcrmsg)
+        if not self._requestingCastSpell:
+            if self.canCastSpell(self.spellw, cellId):
+                self._requestingCastSpell = True
+                BotEventsManager().onceFighterCastedSpell(self._currentPlayerId, cellId, self.onSpellCasted)
+                gafcrmsg = GameActionFightCastRequestMessage()
+                gafcrmsg.init(spellId, cellId)
+                ConnectionsHandler.getInstance(self.currentPlayer.login).send(gafcrmsg)
 
     def onSpellCasted(self) -> None:
-        Logger().info(f"[FightBot] Spell casted.")
-        self._requestingCastSpell = False
-        self.checkCanPlay()
+        if self._requestingCastSpell:
+            Logger().info(f"[FightBot] Spell casted.")
+            self._requestingCastSpell = False
+            self.checkCanPlay()
 
     def askMove(self, cells: list[int] = []) -> bool:
+        if not self._lastMoveRequestTime:
+            self._lastMoveRequestTime = perf_counter()
+        elif perf_counter() - self._lastMoveRequestTime  < self.CONSECUTIVE_MOVEMENT_DELAY:
+            Logger().warning(f"[FightBot] too soon to request movement again.")
+            Kernel().worker.terminated.wait(self.CONSECUTIVE_MOVEMENT_DELAY - (perf_counter() - self._lastMoveRequestTime))
         self._isRequestingMovement = True
         path: MovementPath = MovementPath()
         path.fillFromCellIds(cells[0:-1])
@@ -667,12 +697,14 @@ class BotFightFrame(Frame):
         gmmrmsg.init(keyMovements, currMapId)
         BotEventsManager().onceFighterMoved(self._currentPlayerId, self.onMovementApplied)
         ConnectionsHandler.getInstance(self.currentPlayer.login).send(gmmrmsg)
+        self._lastMoveRequestTime = perf_counter()
         return True
 
     def onMovementApplied(self) -> None:
-        Logger().info(f"[FightBot] Movement applied.")
-        self._isRequestingMovement = False
-        self.checkCanPlay()
+        if self._isRequestingMovement:
+            Logger().info(f"[FightBot] Movement applied.")
+            self._isRequestingMovement = False
+            self.checkCanPlay()
 
     def confirmTurnEnd(self) -> None:
         if self.currentPlayer:
@@ -690,14 +722,14 @@ class BotFightFrame(Frame):
         turnEnd.init(True)
         ConnectionsHandler().send(turnEnd)
 
-    def preparePlayableCharacter(self) -> None:                
+    def preparePlayableCharacter(self) -> None:            
         self._spellCastFails = False
         self._requestingCastSpell = False
         self._isRequestingMovement = False
+        CurrentPlayedFighterManager().playerManager = PlayedCharacterManager.getInstance(self.currentPlayer.login)
         CurrentPlayedFighterManager().currentFighterId = self._currentPlayerId
-        CurrentPlayedFighterManager().playerManager = self.playerManager
-        CurrentPlayedFighterManager().resetPlayerSpellList()
         CurrentPlayedFighterManager.conn = ConnectionsHandler.getInstance(self.currentPlayer.login)
+        CurrentPlayedFighterManager().resetPlayerSpellList()
         SpellWrapper.refreshAllPlayerSpellHolder(self._currentPlayerId)
         SpellInventoryManagementFrame().applySpellGlobalCoolDownInfo(self._currentPlayerId)
         self.spellw = self.playerManager.getSpellById(self.spellId)

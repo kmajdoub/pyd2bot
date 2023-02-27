@@ -49,6 +49,6 @@ class BotMuleFightFrame(Frame):
             ConnectionsHandler().send(gcrmsg)
             return True
         
-        elif isinstance(msg, (GameMapMovementMessage, GameMapNoMovementMessage, GameActionFightNoSpellCastMessage, GameFightTurnStartPlayingMessage, TextInformationMessage)):
+        elif isinstance(msg, (GameMapNoMovementMessage, GameActionFightNoSpellCastMessage, GameFightTurnStartPlayingMessage, TextInformationMessage)):
             Kernel.getInstance(BotConfig().leader.login).worker.process(msg)
             return True

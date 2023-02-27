@@ -1,82 +1,75 @@
 from typing import TYPE_CHECKING
 
-from pyd2bot.apis.MoveAPI import MoveAPI
 from pyd2bot.logic.common.frames.BotRPCFrame import BotRPCFrame
 from pyd2bot.logic.managers.BotConfig import BotConfig
+from pyd2bot.logic.roleplay.behaviors.AutoTrip import AutoTrip
+from pyd2bot.logic.roleplay.behaviors.ChangeMap import ChangeMap
 from pyd2bot.logic.roleplay.messages.LeaderPosMessage import LeaderPosMessage
-from pyd2bot.logic.roleplay.messages.LeaderTransitionMessage import LeaderTransitionMessage
+from pyd2bot.logic.roleplay.messages.LeaderTransitionMessage import \
+    LeaderTransitionMessage
 from pyd2bot.misc.BotEventsmanager import BotEventsManager
 from pyd2bot.thriftServer.pyd2botService.ttypes import Character
-from pydofus2.com.ankamagames.atouin.managers.MapDisplayManager import MapDisplayManager
-from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import KernelEvent, KernelEventsManager
+from pydofus2.com.ankamagames.atouin.managers.MapDisplayManager import \
+    MapDisplayManager
+from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import (
+    KernelEvent, KernelEventsManager)
+from pydofus2.com.ankamagames.dofus.datacenter.communication.InfoMessage import \
+    InfoMessage
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
-from pydofus2.com.ankamagames.dofus.kernel.net.ConnectionsHandler import ConnectionsHandler
-from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import PlayedCharacterManager
-from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Transition import Transition
-from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Vertex import Vertex
-from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.WorldPathFinder import WorldPathFinder
-from pydofus2.com.ankamagames.dofus.network.enums.PartyJoinErrorEnum import PartyJoinErrorEnum
-from pydofus2.com.ankamagames.dofus.network.messages.game.atlas.compass.CompassUpdatePartyMemberMessage import (
-    CompassUpdatePartyMemberMessage,
-)
-from pydofus2.com.ankamagames.dofus.network.messages.game.context.roleplay.MapChangeFailedMessage import (
-    MapChangeFailedMessage,
-)
-from pydofus2.com.ankamagames.dofus.network.messages.game.context.roleplay.MapComplementaryInformationsDataMessage import (
-    MapComplementaryInformationsDataMessage,
-)
-from pydofus2.com.ankamagames.dofus.network.messages.game.context.roleplay.MapInformationsRequestMessage import (
-    MapInformationsRequestMessage,
-)
-from pydofus2.com.ankamagames.dofus.network.messages.game.context.roleplay.party.PartyAcceptInvitationMessage import (
-    PartyAcceptInvitationMessage,
-)
-from pydofus2.com.ankamagames.dofus.network.messages.game.context.roleplay.party.PartyCancelInvitationMessage import (
-    PartyCancelInvitationMessage,
-)
-from pydofus2.com.ankamagames.dofus.network.messages.game.context.roleplay.party.PartyCannotJoinErrorMessage import (
-    PartyCannotJoinErrorMessage,
-)
-from pydofus2.com.ankamagames.dofus.network.messages.game.context.roleplay.party.PartyDeletedMessage import (
-    PartyDeletedMessage,
-)
-from pydofus2.com.ankamagames.dofus.network.messages.game.context.roleplay.party.PartyFollowMemberRequestMessage import (
-    PartyFollowMemberRequestMessage,
-)
-from pydofus2.com.ankamagames.dofus.network.messages.game.context.roleplay.party.PartyInvitationMessage import (
-    PartyInvitationMessage,
-)
-from pydofus2.com.ankamagames.dofus.network.messages.game.context.roleplay.party.PartyInvitationRequestMessage import (
-    PartyInvitationRequestMessage,
-)
-from pydofus2.com.ankamagames.dofus.network.messages.game.context.roleplay.party.PartyJoinMessage import (
-    PartyJoinMessage,
-)
-from pydofus2.com.ankamagames.dofus.network.messages.game.context.roleplay.party.PartyLeaveRequestMessage import (
-    PartyLeaveRequestMessage,
-)
-from pydofus2.com.ankamagames.dofus.network.messages.game.context.roleplay.party.PartyMemberInStandardFightMessage import (
-    PartyMemberInStandardFightMessage,
-)
-from pydofus2.com.ankamagames.dofus.network.messages.game.context.roleplay.party.PartyMemberRemoveMessage import (
-    PartyMemberRemoveMessage,
-)
-from pydofus2.com.ankamagames.dofus.network.messages.game.context.roleplay.party.PartyNewGuestMessage import (
-    PartyNewGuestMessage,
-)
-from pydofus2.com.ankamagames.dofus.network.messages.game.context.roleplay.party.PartyNewMemberMessage import (
-    PartyNewMemberMessage,
-)
-from pydofus2.com.ankamagames.dofus.network.messages.game.context.roleplay.party.PartyRefuseInvitationMessage import (
-    PartyRefuseInvitationMessage,
-)
-from pydofus2.com.ankamagames.dofus.network.types.common.PlayerSearchCharacterNameInformation import (
-    PlayerSearchCharacterNameInformation,
-)
-from pydofus2.com.ankamagames.dofus.network.types.game.context.roleplay.party.PartyMemberInformations import (
-    PartyMemberInformations,
-)
-from pydofus2.com.ankamagames.jerakine.benchmark.BenchmarkTimer import BenchmarkTimer
+from pydofus2.com.ankamagames.dofus.kernel.net.ConnectionsHandler import \
+    ConnectionsHandler
+from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import \
+    PlayedCharacterManager
+from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Transition import \
+    Transition
+from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Vertex import \
+    Vertex
+from pydofus2.com.ankamagames.dofus.network.enums.PartyJoinErrorEnum import \
+    PartyJoinErrorEnum
+from pydofus2.com.ankamagames.dofus.network.enums.TextInformationTypeEnum import \
+    TextInformationTypeEnum
+from pydofus2.com.ankamagames.dofus.network.messages.game.atlas.compass.CompassUpdatePartyMemberMessage import \
+    CompassUpdatePartyMemberMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.basic.TextInformationMessage import \
+    TextInformationMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.context.fight.GameFightJoinRequestMessage import \
+    GameFightJoinRequestMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.context.roleplay.MapInformationsRequestMessage import \
+    MapInformationsRequestMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.context.roleplay.party.PartyAcceptInvitationMessage import \
+    PartyAcceptInvitationMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.context.roleplay.party.PartyCancelInvitationMessage import \
+    PartyCancelInvitationMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.context.roleplay.party.PartyCannotJoinErrorMessage import \
+    PartyCannotJoinErrorMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.context.roleplay.party.PartyDeletedMessage import \
+    PartyDeletedMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.context.roleplay.party.PartyFollowMemberRequestMessage import \
+    PartyFollowMemberRequestMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.context.roleplay.party.PartyInvitationMessage import \
+    PartyInvitationMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.context.roleplay.party.PartyInvitationRequestMessage import \
+    PartyInvitationRequestMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.context.roleplay.party.PartyJoinMessage import \
+    PartyJoinMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.context.roleplay.party.PartyLeaveRequestMessage import \
+    PartyLeaveRequestMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.context.roleplay.party.PartyMemberInStandardFightMessage import \
+    PartyMemberInStandardFightMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.context.roleplay.party.PartyMemberRemoveMessage import \
+    PartyMemberRemoveMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.context.roleplay.party.PartyNewGuestMessage import \
+    PartyNewGuestMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.context.roleplay.party.PartyNewMemberMessage import \
+    PartyNewMemberMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.context.roleplay.party.PartyRefuseInvitationMessage import \
+    PartyRefuseInvitationMessage
+from pydofus2.com.ankamagames.dofus.network.types.common.PlayerSearchCharacterNameInformation import \
+    PlayerSearchCharacterNameInformation
+from pydofus2.com.ankamagames.dofus.network.types.game.context.roleplay.party.PartyMemberInformations import \
+    PartyMemberInformations
+from pydofus2.com.ankamagames.jerakine.benchmark.BenchmarkTimer import \
+    BenchmarkTimer
 from pydofus2.com.ankamagames.jerakine.data.I18n import I18n
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 from pydofus2.com.ankamagames.jerakine.messages.Frame import Frame
@@ -84,9 +77,11 @@ from pydofus2.com.ankamagames.jerakine.messages.Message import Message
 from pydofus2.com.ankamagames.jerakine.types.enums.Priority import Priority
 
 if TYPE_CHECKING:
-    from pyd2bot.logic.roleplay.frames.BotFarmPathFrame import BotFarmPathFrame
-    from pydofus2.com.ankamagames.dofus.logic.game.roleplay.frames.RoleplayEntitiesFrame import RoleplayEntitiesFrame
-    from pydofus2.com.ankamagames.dofus.logic.game.roleplay.frames.RoleplayMovementFrame import RoleplayMovementFrame
+    from pyd2bot.logic.roleplay.behaviors.FarmPath import FarmPath
+    from pydofus2.com.ankamagames.dofus.logic.game.roleplay.frames.RoleplayEntitiesFrame import \
+        RoleplayEntitiesFrame
+    from pydofus2.com.ankamagames.dofus.logic.game.roleplay.frames.RoleplayMovementFrame import \
+        RoleplayMovementFrame
 
 
 class BotPartyFrame(Frame):
@@ -121,7 +116,7 @@ class BotPartyFrame(Frame):
         return Kernel().worker.getFrameByName("RoleplayEntitiesFrame")
 
     @property
-    def farmFrame(self) -> "BotFarmPathFrame":
+    def farmFrame(self) -> "FarmPath":
         return Kernel().worker.getFrameByName("BotFarmPathFrame")
 
     @property
@@ -145,8 +140,7 @@ class BotPartyFrame(Frame):
 
     def checkAllMembersIdle(self):
         self.allMembersIdle = False
-        self._followerStatus = {follower.login: None for follower in self.followers if follower.id != 287553421606}
-        self._followerStatus[287553421606] = "idle"
+        self._followerStatus = {follower.login: None for follower in self.followers}
         for member in self.followers:
             self.rpcFrame.askForStatus(member.login, self.onFollowerStatus)
 
@@ -182,7 +176,8 @@ class BotPartyFrame(Frame):
         self.currentPartyId = None
         self.partyMembers = dict[int, PartyMemberInformations]()
         self.joiningLeaderVertex: Vertex = None
-        self._wantsToJoinFight = None
+        self.JoinFightRequestTimer = None
+        self.joiningFightId = None
         self.followingLeaderTransition = None
         self._followerStatus = {follower.login: None for follower in self.followers}
         return True
@@ -238,13 +233,20 @@ class BotPartyFrame(Frame):
         ConnectionsHandler().send(pfmrm)
 
     def joinFight(self, fightId: int):
-        if self.movementFrame._isMoving:
-            self.movementFrame._wantsToJoinFight = {
-                "fightId": fightId,
-                "fighterId": self.leader.id,
-            }
-        else:
-            self.movementFrame.joinFight(self.leader.id, fightId)
+        def ontimeout() -> None:
+            Logger().error("Join fight request timeout")
+        self.JoinFightRequestTimer = BenchmarkTimer(10, ontimeout)
+        def onfight(event_id) -> None:
+            if self.JoinFightRequestTimer:
+                self.JoinFightRequestTimer.cancel()
+            self.JoinFightRequestTimer = None
+            self.joiningFightId = None
+        KernelEventsManager().once(KernelEvent.FIGHT_STARTED, onfight)
+        gfjrmsg = GameFightJoinRequestMessage()
+        gfjrmsg.init(self.leader.id, fightId)
+        self.JoinFightRequestTimer.start()
+        self.joiningFightId = fightId
+        ConnectionsHandler().send(gfjrmsg)
 
     def checkIfTeamInFight(self):
         if not PlayedCharacterManager().isFighting and self.entitiesFrame:
@@ -270,9 +272,6 @@ class BotPartyFrame(Frame):
 
         if isinstance(msg, PartyNewGuestMessage):
             return True
-
-        elif isinstance(msg, MapChangeFailedMessage):
-            Logger().error(f"[BotPartyFrame] received map change failed for reason: {msg.reason}")
 
         elif isinstance(msg, PartyMemberRemoveMessage):
             member = self.getPartyMemberById(msg.leavingPlayerId)
@@ -363,25 +362,34 @@ class BotPartyFrame(Frame):
                     f"[BotPartyFrame] Leader '{self.leader.name}' is heading to my current map '{msg.transition.transitionMapId}', nothing to do."
                 )
             else:
-                Logger().debug(f"[BotPartyFrame] Will follow '{self.leader.name}'")
+                Logger().info(f"[BotPartyFrame] Will follow '{self.leader.name}'")
                 self.followingLeaderTransition = msg.transition
-                MoveAPI.followTransition(msg.transition)
+                def onresp(status, error):
+                    self.followingLeaderTransition = None
+                    if error is not None:
+                        raise Exception(f"[BotPartyFrame] Error while following leader: {error}")
+                ChangeMap().start(transition=msg.transition, dstMapId=msg.dstMapId, callback=onresp)
             return True
 
         elif isinstance(msg, LeaderPosMessage):
             self.leaderCurrVertex = msg.vertex
-            if self.joiningLeaderVertex is not None:
-                if msg.vertex.UID != self.joiningLeaderVertex.UID:
-                    Logger().error(
-                        f"[BotPartyFrame] Received another leader pos {msg.vertex} while still following leader pos {self.joiningLeaderVertex}."
-                    )
+            if self.joiningLeaderVertex is not None and msg.vertex.UID != self.joiningLeaderVertex.UID:
+                Logger().error(
+                    f"[BotPartyFrame] Still following leader pos."
+                )
             elif (
-                WorldPathFinder().currPlayerVertex is not None
-                and WorldPathFinder().currPlayerVertex.UID != msg.vertex.UID
+                PlayedCharacterManager().currVertex is not None
+                and PlayedCharacterManager().currVertex.UID != msg.vertex.UID
             ):
-                Logger().debug(f"[BotPartyFrame] Leader {self.leaderName} is in vertex {msg.vertex}, will follow it.")
+                Logger().info(f"[BotPartyFrame] Leader {self.leaderName} is in vertex {msg.vertex}, will follow it.")
                 self.joiningLeaderVertex = msg.vertex
-                MoveAPI.moveToVertex(msg.vertex, self.onLeaderPosReached)
+                def onLeaderPosReached(status, error):
+                    if error is not None:
+                        raise Exception(f"[BotPartyFrame] Error while following leader: {error}")
+                    self.joiningLeaderVertex = None
+                AutoTrip().start(msg.vertex.mapId, msg.vertex.zoneId, onLeaderPosReached)
+            else:
+                Logger().warning(f"[BotPartyFrame] Leader {self.leaderName} is in vertex {msg.vertex}, nothing to do.")
             return True
 
         elif isinstance(msg, CompassUpdatePartyMemberMessage):
@@ -393,15 +401,15 @@ class BotPartyFrame(Frame):
                 self.leaveParty()
             return True
 
-        elif isinstance(msg, MapComplementaryInformationsDataMessage):
-            if not self.isLeader:
-                self.followingLeaderTransition = None
-
         elif isinstance(msg, PartyMemberInStandardFightMessage):
             if float(msg.memberId) == float(self.leader.id):
-                Logger().debug(f"[BotPartyFrame] member {msg.memberId} started fight {msg.fightId}")
+                Logger().info(f"[BotPartyFrame] member {msg.memberId} started fight {msg.fightId}")
                 if msg.fightMap.mapId != PlayedCharacterManager().currentMap.mapId:
-                    MoveAPI.moveToMap(msg.fightMap.mapId, lambda _:self.joinFight(msg.fightId))
+                    def onmapreached(status, error):
+                        if error:
+                            raise Exception(f"[BotPartyFrame] Error while joining leader fight: {error}")
+                        self.joinFight(msg.fightId)
+                    AutoTrip().start(msg.fightMap.mapId, 1, onmapreached)
                 else:
                     self.joinFight(msg.fightId)
             return True
@@ -437,10 +445,26 @@ class BotPartyFrame(Frame):
                 reasonText = I18n.getUiText("ui.party.cantInvit")
             Logger().warning(f"[BotPartyFrame] Can't join party: {reasonText}")
             return True
-
-    def askMembersToFollowTransit(self, transition: Transition):
+        
+        elif isinstance(msg, TextInformationMessage):
+            msgInfo = InfoMessage.getInfoMessageById(msg.msgType * 10000 + msg.msgId)
+            if msgInfo:
+                textId = msgInfo.textId
+            else:
+                if msg.msgType == TextInformationTypeEnum.TEXT_INFORMATION_ERROR:
+                    textId = InfoMessage.getInfoMessageById(10231).textId
+                else:
+                    textId = InfoMessage.getInfoMessageById(207).textId
+            if textId == 773221:  # Can't join when in state invulnerable
+                if self.JoinFightRequestTimer:
+                    self.JoinFightRequestTimer.cancel()
+                    self.JoinFightRequestTimer = None
+                self.joinFight(self.joiningFightId)
+            return False
+        
+    def askMembersToFollowTransit(self, transition: Transition, dstMapId):
         for follower in self.followers:
-            self.rpcFrame.askFollowTransition(follower.login, transition)
+            self.rpcFrame.askFollowTransition(follower.login, transition, dstMapId)
 
     def askMembersToMoveToVertex(self, vertex: Vertex):
         for follower in self.followers:
@@ -450,17 +474,3 @@ class BotPartyFrame(Frame):
         mirmsg = MapInformationsRequestMessage()
         mirmsg.init(mapId_=MapDisplayManager().currentMapPoint.mapId)
         ConnectionsHandler().send(mirmsg)
-
-    def onLeaderPosReached(self, evt=None):
-        self.joiningLeaderVertex = None
-        if self.joiningLeaderVertex is not None:
-            Logger().info(f"[BotPartyFrame] AutoTrip to join party leader vertex ended.")
-            leaderInfos = self.entitiesFrame.getEntityInfos(self.leader.id)
-            if not leaderInfos:
-                Logger().warning(
-                    f"[BotPartyFrame] Autotrip ended, was following leader transition {self.joiningLeaderVertex} but the leader {self.leaderName} is not in the current Map!"
-                )
-            else:
-                self.leaderCurrVertex = self.joiningLeaderVertex
-        if self._wantsToJoinFight:
-            self.joinFight(self._wantsToJoinFight)

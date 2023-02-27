@@ -1,7 +1,11 @@
 from typing import Iterator
-from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Transition import Transition
-from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Vertex import Vertex
-from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.WorldPathFinder import WorldPathFinder
+
+from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import \
+    PlayedCharacterManager
+from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Transition import \
+    Transition
+from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Vertex import \
+    Vertex
 
 
 class AbstractFarmPath:
@@ -18,7 +22,7 @@ class AbstractFarmPath:
 
     @property
     def currentVertex(self) -> Transition:
-        return WorldPathFinder().currPlayerVertex
+        return PlayedCharacterManager().currVertex
 
     def __next__(self) -> Transition:
         raise NotImplementedError()

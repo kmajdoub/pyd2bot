@@ -1,17 +1,19 @@
+from typing import TYPE_CHECKING
+
 from pyd2bot.logic.managers.BotConfig import BotConfig
-from pydofus2.com.ankamagames.berilia.managers.EventsHandler import EventsHandler
-from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import KernelEventsManager, KernelEvent
+from pydofus2.com.ankamagames.berilia.managers.EventsHandler import \
+    EventsHandler
+from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import (
+    KernelEvent, KernelEventsManager)
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 from pydofus2.com.ankamagames.jerakine.metaclasses.Singleton import Singleton
 
-from typing import TYPE_CHECKING
-
 if TYPE_CHECKING:
-    from pydofus2.com.ankamagames.dofus.logic.game.roleplay.frames.RoleplayEntitiesFrame import RoleplayEntitiesFrame
-    from pydofus2.com.ankamagames.dofus.network.types.game.context.roleplay.GameRolePlayHumanoidInformations import (
-        GameRolePlayHumanoidInformations,
-    )
+    from pydofus2.com.ankamagames.dofus.logic.game.roleplay.frames.RoleplayEntitiesFrame import \
+        RoleplayEntitiesFrame
+    from pydofus2.com.ankamagames.dofus.network.types.game.context.roleplay.GameRolePlayHumanoidInformations import \
+        GameRolePlayHumanoidInformations
 
 
 class BotEventsManager(EventsHandler, metaclass=Singleton):
@@ -22,7 +24,7 @@ class BotEventsManager(EventsHandler, metaclass=Singleton):
     def __init__(self):
         super().__init__()
 
-    def onAllPartyMembersShowed(self, callback, args=[]):
+    def onceAllPartyMembersShowed(self, callback, args=[]):
         Logger().debug("[BotEventsManager] Waiting for party members to show up.")
 
         def onTeamMemberShowed(e, infos: "GameRolePlayHumanoidInformations"):
@@ -40,21 +42,16 @@ class BotEventsManager(EventsHandler, metaclass=Singleton):
             KernelEventsManager().remove_listener(KernelEvent.ACTORSHOWED, onActorShowed)
             KernelEventsManager().remove_listener(KernelEvent.ACTORSHOWED, onTeamMemberShowed)
             callback(*args)
-
         def onActorShowed(e, infos: "GameRolePlayHumanoidInformations"):
             Logger().info(f"[BotEventsManager] Actor {infos.name} showed.")
             for follower in BotConfig().followers:
                 if int(follower.id) == int(infos.contextualId):
                     onTeamMemberShowed(e, infos)
-
         KernelEventsManager().on(KernelEvent.ACTORSHOWED, onActorShowed)
 
-    def onAllPartyMembersIdle(self, callback, args=[]):
-        Logger().debug("[BotEventsManager] Waiting for party members to be idle.")
-
+    def onceAllPartyMembersIdle(self, callback, args=[]):
         def onEvt(e):
             callback(e, *args)
-
         self.once(BotEventsManager.ALL_PARTY_MEMBERS_IDLE, onEvt)
 
     def oncePartyMemberShowed(self, callback, args=[]):
@@ -63,27 +60,25 @@ class BotEventsManager(EventsHandler, metaclass=Singleton):
                 if int(follower.id) == int(infos.contextualId):
                     Logger().info("[BotEventsManager] Party member %s showed" % follower.name)
                     callback(e, *args)
-
         KernelEventsManager().on(KernelEvent.ACTORSHOWED, onActorShowed)
 
     def onceAllMembersJoinedParty(self, callback, args=[]):
-        Logger().debug("[BotEventsManager] Waiting for party members to join party.")
-
         def onEvt(e):
             callback(e, *args)
-
         self.once(BotEventsManager.ALL_MEMBERS_JOINED_PARTY, onEvt)
 
     def onceFighterMoved(self, fighterId, callback, args=[]):
-        def onEvt(e, evt_fighterId):
-            if evt_fighterId == fighterId:
-                KernelEventsManager().remove_listener(KernelEvent.FIGHTER_MOVEMENT_APPLIED, onEvt)
+        def onEvt(event, movedFighterId):
+            if movedFighterId == fighterId:
                 callback(*args)
-        KernelEventsManager().on(KernelEvent.FIGHTER_MOVEMENT_APPLIED, onEvt)
+            else:
+                KernelEventsManager().once(KernelEvent.FIGHTER_MOVEMENT_APPLIED, onEvt)
+        KernelEventsManager().once(KernelEvent.FIGHTER_MOVEMENT_APPLIED, onEvt)
     
     def onceFighterCastedSpell(self, fighterId, cellId, callback, args=[]):
         def onEvt(e, sourceId, destinationCellId, sourceCellId, spellId):
             if sourceId == fighterId and cellId == destinationCellId:
-                KernelEventsManager().remove_listener(KernelEvent.FIGHTER_CASTED_SPELL, onEvt)
                 callback(*args)
-        KernelEventsManager().on(KernelEvent.FIGHTER_CASTED_SPELL, onEvt)
+            else:
+                KernelEventsManager().once(KernelEvent.FIGHTER_CASTED_SPELL, onEvt)
+        KernelEventsManager().once(KernelEvent.FIGHTER_CASTED_SPELL, onEvt)

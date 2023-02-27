@@ -49,8 +49,9 @@ class BankUnloadStateEnum:
 class BotBankInteractionFrame(Frame):
     PHENIX_MAPID = None
 
-    def __init__(self, bankInfos: BankInfos):
+    def __init__(self, bankInfos: BankInfos, callback):
         super().__init__()
+        self.callback = callback
         self.infos = bankInfos
         self.requestTimer = None
 
@@ -87,13 +88,13 @@ class BotBankInteractionFrame(Frame):
                 return True
 
         elif isinstance(msg, ExchangeStartedWithStorageMessage):
-            Logger().debug("Bank storage opened")
+            Logger().info("Bank storage opened")
             if self.requestTimer:
                 self.requestTimer.cancel()
             self.requestTimer = BenchmarkTimer(7, self.leaveBank)
             self.requestTimer.start()
             self.putAllItemsInBank()
-            Logger().debug("unload items in bank request sent")
+            Logger().info("unload items in bank request sent")
             return True
 
         elif isinstance(msg, InventoryWeightMessage):
@@ -106,12 +107,12 @@ class BotBankInteractionFrame(Frame):
             return True
 
         elif isinstance(msg, ExchangeLeaveMessage):
-            Logger().debug("Bank storage closed")
+            Logger().info("Bank storage closed")
             if self.requestTimer:
                 self.requestTimer.cancel()
             if self.state == BankUnloadStateEnum.LEAVE_BANK_REQUESTED:
                 Kernel().worker.removeFrame(self)
-                Kernel().worker.process(BankInteractionEndedMessage())
+                self.callback(True, None)
                 return True
 
     def leaveBank(self):

@@ -1,18 +1,19 @@
 import json
 import os
-from pydofus2.com.ankamagames.atouin.managers.MapDisplayManager import MapDisplayManager
+
+from pydofus2.com.ankamagames.atouin.managers.MapDisplayManager import \
+    MapDisplayManager
 from pydofus2.com.ankamagames.dofus.datacenter.world.SubArea import SubArea
-from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import (
-    PlayedCharacterManager,
-)
-from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.astar.AStar import AStar
-from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.WorldGraph import WorldGraph
-from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.WorldPathFinder import (
-    WorldPathFinder,
-)
+from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import \
+    PlayedCharacterManager
+from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.astar.AStar import \
+    AStar
+from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.WorldGraph import \
+    WorldGraph
 
 
 class BankInfos:
+
     def __init__(
         self,
         npcActionId: int,
@@ -35,7 +36,6 @@ class BankInfos:
             "openBankReplyId": self.openBankReplyId,
         }
 
-
 class Localizer:
     _phenixesByAreaId = dict[int, list]()
     base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -48,7 +48,7 @@ class Localizer:
         subarea = SubArea.getSubAreaById(subareaId)
         areaId = subarea._area.id
         minDist = float("inf")
-        srcV = WorldPathFinder().currPlayerVertex
+        srcV = PlayedCharacterManager().currVertex
         closestBank = cls.AREAINFOS[str(areaId)]["bank"][0]
         rpZ = 1
         for bank in cls.AREAINFOS[str(areaId)]["bank"][1:]:
@@ -72,7 +72,7 @@ class Localizer:
         return BankInfos(**closestBank)
 
     @classmethod
-    def getPhenixMapId(cls) -> float:
+    def phenixMapId(cls) -> float:
         subareaId = MapDisplayManager().currentDataMap.subareaId
         subarea = SubArea.getSubAreaById(subareaId)
         areaId = subarea._area.id

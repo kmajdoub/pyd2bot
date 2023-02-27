@@ -48,6 +48,7 @@ from pydofus2.com.ankamagames.dofus.network.messages.game.inventory.exchanges.Ex
 from pydofus2.com.ankamagames.dofus.network.messages.game.inventory.items.ExchangeKamaModifiedMessage import (
     ExchangeKamaModifiedMessage,
 )
+from pydofus2.com.ankamagames.dofus.network.messages.game.inventory.items.ObjectDeleteMessage import ObjectDeleteMessage
 from pydofus2.com.ankamagames.jerakine.benchmark.BenchmarkTimer import BenchmarkTimer
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 from pydofus2.com.ankamagames.jerakine.messages.Frame import Frame
@@ -76,10 +77,11 @@ class ExchangeStateEnum(Enum):
 class BotExchangeFrame(Frame):
     PHENIX_MAPID = None
 
-    def __init__(self, direction: str, target: Character, items: list = None):
+    def __init__(self, direction: str, target: Character, callback, items: list = None):
         self.direction = direction
         self.target = target
         self.items = items
+        self.callback = callback
         self.state = ExchangeStateEnum.NOT_STARTED
         if items is None:
             self.giveAll = True
@@ -131,8 +133,9 @@ class BotExchangeFrame(Frame):
                     for iw in InventoryManager().realInventory:
                         if not iw.isEquipment and iw.isDestructible:
                             Logger().debug(f"delete {iw.name} x 1")
-                            doa = DeleteObjectAction.create(iw.objectUID, 1)
-                            Kernel().worker.process(doa)
+                            odmsg2 = ObjectDeleteMessage()
+                            odmsg2.init(iw.objectUID, 1)
+                            ConnectionsHandler().send(odmsg2)
                             return True
 
         elif isinstance(msg, ExchangeStartedWithPodsMessage):
@@ -187,17 +190,16 @@ class BotExchangeFrame(Frame):
             return True
 
         elif isinstance(msg, ExchangeLeaveMessage):
+            Kernel().worker.removeFrame(self)
             if msg.success == True:
                 if self.giveAll:
                     if (PlayedCharacterManager().inventoryWeight / PlayedCharacterManager().inventoryWeightMax) > 0.9:
-                        raise Exception("Inventory still full when i am supposed to have given all items")
-
-                Logger().debug("Exchange ended successfully.")
+                        return self.callback(False, "Inventory still full when i am supposed to have given all items")
+                Logger().info("Exchange ended successfully.")
                 self.state = ExchangeStateEnum.TERMINATED
-                Kernel().worker.removeFrame(self)
-                Kernel().worker.process(ExchangeConcludedMessage())
+                self.callback(True, None)
             else:
-                raise Exception("Exchange failed")
+                self.callback(False, "Exchange failed")
             return True
 
     def sendExchangeRequest(self):

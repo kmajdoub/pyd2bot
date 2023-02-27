@@ -1,19 +1,28 @@
 import threading
-from pyd2bot.apis.PlayerAPI import PlayerAPI
-from pyd2bot.logic.common.rpcMessages.ComeToCollectMessage import ComeToCollectMessage
-from pyd2bot.logic.common.rpcMessages.FollowTransitionMessage import FollowTransitionMessage
-from pyd2bot.logic.common.rpcMessages.GetCurrentVertexMessage import GetCurrentVertexMessage
+
+from pyd2bot.logic.common.rpcMessages.ComeToCollectMessage import \
+    ComeToCollectMessage
+from pyd2bot.logic.common.rpcMessages.FollowTransitionMessage import \
+    FollowTransitionMessage
+from pyd2bot.logic.common.rpcMessages.GetCurrentVertexMessage import \
+    GetCurrentVertexMessage
 from pyd2bot.logic.common.rpcMessages.GetStatusMessage import GetStatusMessage
-from pyd2bot.logic.common.rpcMessages.MoveToVertexMessage import MoveToVertexMessage
-from pyd2bot.logic.common.rpcMessages.RCPResponseMessage import RPCResponseMessage
+from pyd2bot.logic.common.rpcMessages.MoveToVertexMessage import \
+    MoveToVertexMessage
+from pyd2bot.logic.common.rpcMessages.RCPResponseMessage import \
+    RPCResponseMessage
 from pyd2bot.logic.common.rpcMessages.RPCMessage import RPCMessage
-from pyd2bot.logic.roleplay.frames.BotSellerCollectFrame import BotSellerCollectFrame
+from pyd2bot.logic.roleplay.behaviors.CollectItems import CollectItems
 from pyd2bot.logic.roleplay.messages.LeaderPosMessage import LeaderPosMessage
-from pyd2bot.logic.roleplay.messages.LeaderTransitionMessage import LeaderTransitionMessage
+from pyd2bot.logic.roleplay.messages.LeaderTransitionMessage import \
+    LeaderTransitionMessage
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
-from pydofus2.com.ankamagames.dofus.kernel.net.ConnectionsHandler import ConnectionsHandler
-from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.WorldPathFinder import WorldPathFinder
-from pydofus2.com.ankamagames.jerakine.benchmark.BenchmarkTimer import BenchmarkTimer
+from pydofus2.com.ankamagames.dofus.kernel.net.ConnectionsHandler import \
+    ConnectionsHandler
+from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import \
+    PlayedCharacterManager
+from pydofus2.com.ankamagames.jerakine.benchmark.BenchmarkTimer import \
+    BenchmarkTimer
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 from pydofus2.com.ankamagames.jerakine.messages.Frame import Frame
 from pydofus2.com.ankamagames.jerakine.types.enums.Priority import Priority
@@ -53,12 +62,14 @@ class BotRPCFrame(Frame):
                 return True
 
             if isinstance(msg, GetStatusMessage):
+                from pyd2bot.apis.PlayerAPI import PlayerAPI
+
                 rsp = RPCResponseMessage(msg, data=PlayerAPI().status)
                 self.send(rsp)
                 return True
 
             elif isinstance(msg, GetCurrentVertexMessage):
-                rsp = RPCResponseMessage(msg, data=WorldPathFinder().currPlayerVertex)
+                rsp = RPCResponseMessage(msg, data=PlayedCharacterManager().currVertex)
                 self.send(rsp)
                 return True
 
@@ -67,11 +78,14 @@ class BotRPCFrame(Frame):
                 return True
 
             elif isinstance(msg, FollowTransitionMessage):
-                Kernel().worker.process(LeaderTransitionMessage(msg.transition))
+                Kernel().worker.process(LeaderTransitionMessage(msg.transition, msg.dstMapId))
                 return True
 
             elif isinstance(msg, ComeToCollectMessage):
-                Kernel().worker.addFrame(BotSellerCollectFrame(msg.bankInfos, msg.guestInfos))
+                def onresponse(result, error):
+                    if error:
+                        Logger().error("Error while trying to meet guest to collect resources: {}".format(error))
+                CollectItems().start(msg.bankInfos, msg.guestInfos, None, onresponse)
                 return True
 
         return False
@@ -82,7 +96,7 @@ class BotRPCFrame(Frame):
             respw = self._waitingForResp[msg.uid]
             if "callback" in respw:
                 self._waitingForResp.pop(msg.uid)
-                respw["callback"](result=None, error="call timeout")
+                respw["callback"](result=None, error="call timeout", sender=msg.sender)
             if "event" in respw:
                 respw["event"].set()
                 respw["result"] = None
@@ -108,8 +122,8 @@ class BotRPCFrame(Frame):
         msg = MoveToVertexMessage(dst, vertex)
         self.send(msg)
 
-    def askFollowTransition(self, dst, transition):
-        msg = FollowTransitionMessage(dst, transition)
+    def askFollowTransition(self, dst, transition, dstMapId):
+        msg = FollowTransitionMessage(dst, transition, dstMapId)
         self.send(msg)
 
     def askComeToCollect(self, dst, bankInfo, guestInfo):

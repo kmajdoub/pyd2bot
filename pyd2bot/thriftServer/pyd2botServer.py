@@ -19,6 +19,7 @@ from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.InventoryManager import (
     InventoryManager,
 )
+from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import PlayedCharacterManager
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 from pydofus2.com.DofusClient import DofusClient
 import sys
@@ -32,9 +33,7 @@ def getTrace(e):
     error_trace = "\n".join([str(e), str(exc_type), str(exc_value), "\n".join(traceback_in_var)])
     return error_trace
 
-
 lock = threading.Lock()
-
 
 def sendTrace(func):
     @functools.wraps(func)
@@ -45,12 +44,9 @@ def sendTrace(func):
             raise DofusError(0, getTrace(e))
 
     return wrapped
-
-
 class Pyd2botServer:
     def __init__(self, id: str):
         self.id = id
-        self.
 
     @sendTrace
     def fetchUsedServers(self, token: str) -> list[Server]:
@@ -179,18 +175,15 @@ class Pyd2botServer:
 
     def comeToBankToCollectResources(self, bankInfos: str, guestInfos: str):
         from pyd2bot.misc.Localizer import BankInfos
-        from pyd2bot.logic.roleplay.frames.BotSellerCollectFrame import BotSellerCollectFrame
+        from pyd2bot.logic.roleplay.behaviors.CollectItems import CollectItems
 
         with lock:
             bankInfos = BankInfos(**json.loads(bankInfos))
             guestInfos = json.loads(guestInfos)
-            Kernel().worker.addFrame(BotSellerCollectFrame(bankInfos, guestInfos))
+            CollectItems(bankInfos, guestInfos, None, lambda r, err: Logger().info(f"CollectItems finished: {r} {err}"))
 
     def getCurrentVertex(self) -> str:
-        from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.WorldPathFinder import (
-            WorldPathFinder,
-        )
-        return json.dumps(WorldPathFinder().currPlayerVertex.to_json())
+        return json.dumps(PlayedCharacterManager().currVertex.to_json())
 
     def getInventoryKamas(self) -> int:
         kamas = int(InventoryManager().inventory.kamas)

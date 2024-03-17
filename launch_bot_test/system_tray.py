@@ -1,5 +1,6 @@
 from PyQt5 import QtWidgets
 
+
 class SystemTrayIcon(QtWidgets.QSystemTrayIcon):
     
     def __init__(self, icon, bot, parent=None):
@@ -16,4 +17,5 @@ class SystemTrayIcon(QtWidgets.QSystemTrayIcon):
         print("Stopping the bot...")
         # Add your bot stopping logic here
         self.bot.shutdown()
+        self.bot.join()
         QtWidgets.QApplication.quit()

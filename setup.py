@@ -1,4 +1,4 @@
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
 setup(
     # Application name:
@@ -13,10 +13,10 @@ setup(
     # Include additional files into the package
     include_package_data=True,
     # Details
-    url="https://github.com/kmajdoub/pyd2bot",
+    url="https://github.com/hadamrd/pyd2bot",
     #
     # license="LICENSE.txt",
-    description="Light python client for dofus2 offi.",
+    description="Python bot that uses pydofus2 as a background client.",
     long_description=open("README.md").read(),
     # Dependent packages (distributions)
     install_requires=open("./requirements.txt").readlines(),

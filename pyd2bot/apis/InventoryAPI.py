@@ -1,13 +1,10 @@
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
-from pydofus2.com.ankamagames.dofus.logic.game.common.managers.InventoryManager import (
-    InventoryManager,
-)
-from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import (
-    PlayedCharacterManager,
-)
-from pydofus2.com.ankamagames.dofus.logic.game.roleplay.actions.DeleteObjectAction import (
-    DeleteObjectAction,
-)
+from pydofus2.com.ankamagames.dofus.logic.game.common.managers.InventoryManager import \
+    InventoryManager
+from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import \
+    PlayedCharacterManager
+from pydofus2.com.ankamagames.dofus.logic.game.roleplay.actions.DeleteObjectAction import \
+    DeleteObjectAction
 
 
 class InventoryAPI:

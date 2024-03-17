@@ -36,6 +36,7 @@ pyd2bot/logic/roleplay/behaviors/AbstractBehavior.py
 pyd2bot/logic/roleplay/behaviors/AbstractFarmBehavior.py
 pyd2bot/logic/roleplay/behaviors/BehaviorApi.py
 pyd2bot/logic/roleplay/behaviors/__init__.py
+pyd2bot/logic/roleplay/behaviors/special_destinations.json
 pyd2bot/logic/roleplay/behaviors/quest/ClassicTreasureHunt.py
 pyd2bot/logic/roleplay/behaviors/quest/FindHintNpc.py
 pyd2bot/logic/roleplay/behaviors/quest/__init__.py
@@ -69,6 +70,7 @@ pyd2bot/models/farmPaths/AbstractFarmPath.py
 pyd2bot/models/farmPaths/RandomAreaFarmPath.py
 pyd2bot/models/farmPaths/RandomSubAreaFarmPath.py
 pyd2bot/models/farmPaths/__init__.py
+pyd2bot/persistence/accounts.json
 pyd2bot/thriftServer/HttpRequestHandler.py
 pyd2bot/thriftServer/__init__.py
 pyd2bot/thriftServer/pyd2botServer.py

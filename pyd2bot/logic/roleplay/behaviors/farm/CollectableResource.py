@@ -1,5 +1,6 @@
 
-from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
+from typing import TYPE_CHECKING
+
 from pyd2bot.logic.roleplay.behaviors.skill.UseSkill import UseSkill
 from pydofus2.com.ankamagames.atouin.managers.MapDisplayManager import \
     MapDisplayManager
@@ -7,11 +8,13 @@ from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterMa
     PlayedCharacterManager
 from pydofus2.com.ankamagames.dofus.logic.game.roleplay.frames.RoleplayInteractivesFrame import \
     CollectableElement
+from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 from pydofus2.com.ankamagames.jerakine.pathfinding.Pathfinding import \
     Pathfinding
-from  typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
-    from pyd2bot.logic.roleplay.behaviors.AbstractFarmBehavior import AbstractFarmBehavior
+    from pyd2bot.logic.roleplay.behaviors.AbstractFarmBehavior import \
+        AbstractFarmBehavior
 
 class CollectableResource:
     def __init__(self, it: CollectableElement):

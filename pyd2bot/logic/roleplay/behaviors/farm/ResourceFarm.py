@@ -7,15 +7,19 @@ from pyd2bot.logic.roleplay.behaviors.farm.CollectableResource import \
     CollectableResource
 from pyd2bot.logic.roleplay.behaviors.skill.UseSkill import UseSkill
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
-from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import KernelEventsManager
-from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import PlayedCharacterManager
-from pydofus2.com.ankamagames.dofus.network.enums.PlayerStatusEnum import PlayerStatusEnum
+from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import \
+    KernelEventsManager
 from pydofus2.com.ankamagames.dofus.internalDatacenter.items.ItemWrapper import \
     ItemWrapper
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
+from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import \
+    PlayedCharacterManager
 from pydofus2.com.ankamagames.dofus.logic.game.roleplay.types.MovementFailError import \
     MovementFailError
-from pydofus2.com.ankamagames.dofus.network.types.game.context.roleplay.GuildInformations import GuildInformations
+from pydofus2.com.ankamagames.dofus.network.enums.PlayerStatusEnum import \
+    PlayerStatusEnum
+from pydofus2.com.ankamagames.dofus.network.types.game.context.roleplay.GuildInformations import \
+    GuildInformations
 from pydofus2.com.ankamagames.jerakine.benchmark.BenchmarkTimer import \
     BenchmarkTimer
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger

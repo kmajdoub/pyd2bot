@@ -1,11 +1,14 @@
-from collections import namedtuple
 import random
-import numpy as np
+from collections import namedtuple
 from typing import TYPE_CHECKING
+
+import numpy as np
+
 from pyd2bot.logic.roleplay.behaviors.farm.DQNAgent.SumTree import SumTree
 
 if TYPE_CHECKING:
-    from pyd2bot.logic.roleplay.behaviors.farm.DQNAgent.DQNAgent import DQNAgent
+    from pyd2bot.logic.roleplay.behaviors.farm.DQNAgent.DQNAgent import \
+        DQNAgent
 
 Transition = namedtuple('Transition', ('state', 'action', 'reward', 'next_state'))
 

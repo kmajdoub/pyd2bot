@@ -1,11 +1,12 @@
 import threading
 from enum import Enum
+from typing import TYPE_CHECKING
 
 from pyd2bot.logic.managers.PathFactory import PathFactory
-from pyd2bot.thriftServer.pyd2botService.ttypes import Character, Path, Session, SessionType, UnloadType
+from pyd2bot.thriftServer.pyd2botService.ttypes import (Character, Path,
+                                                        Session, SessionType,
+                                                        UnloadType)
 from pydofus2.com.ankamagames.jerakine.metaclasses.Singleton import Singleton
-
-from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from pyd2bot.models.farmPaths.AbstractFarmPath import AbstractFarmPath

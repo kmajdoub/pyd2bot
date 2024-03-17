@@ -1,6 +1,7 @@
 from pyd2bot.models.farmPaths.RandomAreaFarmPath import RandomAreaFarmPath
-from pyd2bot.models.farmPaths.RandomSubAreaFarmPath import RandomSubAreaFarmPath
-from pyd2bot.thriftServer.pyd2botService.ttypes import PathType, Path
+from pyd2bot.models.farmPaths.RandomSubAreaFarmPath import \
+    RandomSubAreaFarmPath
+from pyd2bot.thriftServer.pyd2botService.ttypes import Path, PathType
 
 
 class PathFactory:

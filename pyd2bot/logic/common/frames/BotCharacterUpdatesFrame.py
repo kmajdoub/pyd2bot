@@ -4,19 +4,23 @@ import threading
 
 from pyd2bot.logic.managers.BotConfig import BotConfig
 from pydofus2.com.ankamagames.atouin.Haapi import Haapi
+from pydofus2.com.ankamagames.atouin.HaapiEventsManager import \
+    HaapiEventsManager
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
-from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import KernelEventsManager
+from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import \
+    KernelEventsManager
 from pydofus2.com.ankamagames.dofus.datacenter.breeds.Breed import Breed
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
-from pydofus2.com.ankamagames.dofus.kernel.net.ConnectionsHandler import ConnectionsHandler
-from pydofus2.com.ankamagames.dofus.logic.common.managers.PlayerManager import PlayerManager
-from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import PlayedCharacterManager
-from pydofus2.com.ankamagames.dofus.network.messages.game.achievement.AchievementRewardRequestMessage import (
-    AchievementRewardRequestMessage,
-)
-from pydofus2.com.ankamagames.dofus.network.messages.game.context.roleplay.stats.StatsUpgradeRequestMessage import (
-    StatsUpgradeRequestMessage,
-)
+from pydofus2.com.ankamagames.dofus.kernel.net.ConnectionsHandler import \
+    ConnectionsHandler
+from pydofus2.com.ankamagames.dofus.logic.common.managers.PlayerManager import \
+    PlayerManager
+from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import \
+    PlayedCharacterManager
+from pydofus2.com.ankamagames.dofus.network.messages.game.achievement.AchievementRewardRequestMessage import \
+    AchievementRewardRequestMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.context.roleplay.stats.StatsUpgradeRequestMessage import \
+    StatsUpgradeRequestMessage
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 from pydofus2.com.ankamagames.jerakine.messages.Frame import Frame
 from pydofus2.com.ankamagames.jerakine.messages.Message import Message
@@ -45,40 +49,25 @@ class BotCharacterUpdatesFrame(Frame):
     def priority(self) -> int:
         return Priority.VERY_LOW
 
-    def getEventData(self, button_id, button_name):
-        return json.dumps({
-            "character_level": PlayedCharacterManager().limitedLevel,
-            "button_id": button_id,
-            "button_name": button_name,
-            "server_id": PlayerManager().server.id,
-            "character_id": PlayedCharacterManager().id,
-            "account_id": PlayerManager().accountId,
-        })
-        
     def onItemObtained(self, event, iw, qty):
         if random.random() < 0.05:
-            data = self.getEventData(3, "Inventory")
-            Haapi().send_event(1, Haapi()._session_id, 730, data)
+            HaapiEventsManager().sendInventoryOpenEvent()
         if random.random() < 0.05:
-            data = self.getEventData(6, "Social")
-            Haapi().send_event(1, Haapi()._session_id, 730, data)
+            HaapiEventsManager().sendSocialOpenEvent()
         if random.random() < 0.05:
-            data = self.getEventData(4, "Quests")
-            Haapi().send_event(1, Haapi()._session_id, 730, data)
-            
+            HaapiEventsManager().sendQuestsOpenEvent()
+
     def onMapDataProcessed(self, event, map):
         if random.random() < 0.05:
-            data = self.getEventData(5, "World Map")
-            Haapi().send_event(1, Haapi()._session_id, 730, data)
-    
+            HaapiEventsManager().sendMapOpenEvent()
+
     def onBotStats(self, event):
         unusedStatPoints = PlayedCharacterManager().stats.getStatBaseValue(StatIds.STATS_POINTS)
         if unusedStatPoints > 0 and not self.waitingForCharactsBoost.is_set():
             boost, usedCapital = self.getBoost(unusedStatPoints)
             if boost > 0:
                 Logger().info(f"can boost point with {boost}")
-                data = self.getEventData(1, "Characteristics")
-                Haapi().send_event(1, Haapi()._session_id, 730, data)
+                HaapiEventsManager().sendCharacteristicsOpenEvent()
                 self.waitingForCharactsBoost.set()
                 self.boostCharacs(usedCapital, BotConfig().primaryStatId)
 

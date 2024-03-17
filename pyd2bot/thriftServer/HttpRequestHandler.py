@@ -1,6 +1,6 @@
 from six.moves import BaseHTTPServer
-from thrift.Thrift import TMessageType
 from thrift.server import THttpServer
+from thrift.Thrift import TMessageType
 from thrift.transport import TTransport
 
 

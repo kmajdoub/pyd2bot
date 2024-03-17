@@ -6,98 +6,98 @@ from typing import TYPE_CHECKING, Tuple
 
 from prettytable import PrettyTable
 
-from pyd2bot.logic.fight.messages.MuleSwitchedToCombatContext import MuleSwitchedToCombatContext
+from pyd2bot.logic.fight.messages.MuleSwitchedToCombatContext import \
+    MuleSwitchedToCombatContext
 from pyd2bot.logic.managers.BotConfig import BotConfig
 from pyd2bot.misc.BotEventsmanager import BotEventsManager
 from pyd2bot.thriftServer.pyd2botService.ttypes import Character
 from pydofus2.com.ankamagames.atouin.AtouinConstants import AtouinConstants
-from pydofus2.com.ankamagames.atouin.managers.EntitiesManager import EntitiesManager
-from pydofus2.com.ankamagames.atouin.utils.DataMapProvider import DataMapProvider
+from pydofus2.com.ankamagames.atouin.managers.EntitiesManager import \
+    EntitiesManager
+from pydofus2.com.ankamagames.atouin.utils.DataMapProvider import \
+    DataMapProvider
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
-from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import KernelEventsManager
-from pydofus2.com.ankamagames.dofus.datacenter.effects.EffectInstance import EffectInstance
+from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import \
+    KernelEventsManager
+from pydofus2.com.ankamagames.dofus.datacenter.effects.EffectInstance import \
+    EffectInstance
 from pydofus2.com.ankamagames.dofus.datacenter.monsters.Monster import Monster
 from pydofus2.com.ankamagames.dofus.datacenter.spells.Spell import Spell
-from pydofus2.com.ankamagames.dofus.internalDatacenter.spells.SpellWrapper import SpellWrapper
-from pydofus2.com.ankamagames.dofus.internalDatacenter.stats.EntityStats import EntityStats
+from pydofus2.com.ankamagames.dofus.internalDatacenter.spells.SpellWrapper import \
+    SpellWrapper
+from pydofus2.com.ankamagames.dofus.internalDatacenter.stats.EntityStats import \
+    EntityStats
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
-from pydofus2.com.ankamagames.dofus.kernel.net.ConnectionsHandler import ConnectionsHandler
-from pydofus2.com.ankamagames.dofus.logic.common.managers.StatsManager import StatsManager
-from pydofus2.com.ankamagames.dofus.logic.game.common.frames.SpellInventoryManagementFrame import (
-    SpellInventoryManagementFrame,
-)
-from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import PlayedCharacterManager
-from pydofus2.com.ankamagames.dofus.logic.game.fight.managers.BuffManager import BuffManager
-from pydofus2.com.ankamagames.dofus.logic.game.fight.managers.CurrentPlayedFighterManager import (
-    CurrentPlayedFighterManager,
-)
-from pydofus2.com.ankamagames.dofus.logic.game.fight.managers.FightersStateManager import FightersStateManager
-from pydofus2.com.ankamagames.dofus.logic.game.fight.miscs.FightReachableCellsMaker import FightReachableCellsMaker
-from pydofus2.com.ankamagames.dofus.logic.game.fight.miscs.TackleUtil import TackleUtil
-from pydofus2.com.ankamagames.dofus.network.enums.FightOptionsEnum import FightOptionsEnum
-from pydofus2.com.ankamagames.dofus.network.messages.game.actions.fight.GameActionFightCastRequestMessage import (
-    GameActionFightCastRequestMessage,
-)
-from pydofus2.com.ankamagames.dofus.network.messages.game.actions.fight.GameActionFightNoSpellCastMessage import (
-    GameActionFightNoSpellCastMessage,
-)
-from pydofus2.com.ankamagames.dofus.network.messages.game.actions.sequence.SequenceEndMessage import SequenceEndMessage
-from pydofus2.com.ankamagames.dofus.network.messages.game.actions.sequence.SequenceStartMessage import (
-    SequenceStartMessage,
-)
-from pydofus2.com.ankamagames.dofus.network.messages.game.context.fight.GameFightEndMessage import GameFightEndMessage
-from pydofus2.com.ankamagames.dofus.network.messages.game.context.fight.GameFightOptionStateUpdateMessage import (
-    GameFightOptionStateUpdateMessage,
-)
-from pydofus2.com.ankamagames.dofus.network.messages.game.context.fight.GameFightOptionToggleMessage import (
-    GameFightOptionToggleMessage,
-)
-from pydofus2.com.ankamagames.dofus.network.messages.game.context.fight.GameFightReadyMessage import (
-    GameFightReadyMessage,
-)
-from pydofus2.com.ankamagames.dofus.network.messages.game.context.fight.GameFightTurnEndMessage import (
-    GameFightTurnEndMessage,
-)
-from pydofus2.com.ankamagames.dofus.network.messages.game.context.fight.GameFightTurnFinishMessage import (
-    GameFightTurnFinishMessage,
-)
-from pydofus2.com.ankamagames.dofus.network.messages.game.context.fight.GameFightTurnReadyMessage import (
-    GameFightTurnReadyMessage,
-)
-from pydofus2.com.ankamagames.dofus.network.messages.game.context.fight.GameFightTurnReadyRequestMessage import (
-    GameFightTurnReadyRequestMessage,
-)
-from pydofus2.com.ankamagames.dofus.network.messages.game.context.fight.GameFightTurnResumeMessage import (
-    GameFightTurnResumeMessage,
-)
-from pydofus2.com.ankamagames.dofus.network.messages.game.context.fight.GameFightTurnStartMessage import (
-    GameFightTurnStartMessage,
-)
-from pydofus2.com.ankamagames.dofus.network.messages.game.context.fight.GameFightTurnStartPlayingMessage import (
-    GameFightTurnStartPlayingMessage,
-)
-from pydofus2.com.ankamagames.dofus.network.messages.game.context.GameMapMovementRequestMessage import (
-    GameMapMovementRequestMessage,
-)
-from pydofus2.com.ankamagames.dofus.network.messages.game.context.GameMapNoMovementMessage import (
-    GameMapNoMovementMessage,
-)
-from pydofus2.com.ankamagames.dofus.network.types.game.context.fight.GameFightFighterInformations import (
-    GameFightFighterInformations,
-)
-from pydofus2.com.ankamagames.dofus.network.types.game.context.fight.GameFightMonsterInformations import (
-    GameFightMonsterInformations,
-)
+from pydofus2.com.ankamagames.dofus.kernel.net.ConnectionsHandler import \
+    ConnectionsHandler
+from pydofus2.com.ankamagames.dofus.logic.common.managers.StatsManager import \
+    StatsManager
+from pydofus2.com.ankamagames.dofus.logic.game.common.frames.SpellInventoryManagementFrame import \
+    SpellInventoryManagementFrame
+from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import \
+    PlayedCharacterManager
+from pydofus2.com.ankamagames.dofus.logic.game.fight.managers.BuffManager import \
+    BuffManager
+from pydofus2.com.ankamagames.dofus.logic.game.fight.managers.CurrentPlayedFighterManager import \
+    CurrentPlayedFighterManager
+from pydofus2.com.ankamagames.dofus.logic.game.fight.managers.FightersStateManager import \
+    FightersStateManager
+from pydofus2.com.ankamagames.dofus.logic.game.fight.miscs.FightReachableCellsMaker import \
+    FightReachableCellsMaker
+from pydofus2.com.ankamagames.dofus.logic.game.fight.miscs.TackleUtil import \
+    TackleUtil
+from pydofus2.com.ankamagames.dofus.network.enums.FightOptionsEnum import \
+    FightOptionsEnum
+from pydofus2.com.ankamagames.dofus.network.messages.game.actions.fight.GameActionFightCastRequestMessage import \
+    GameActionFightCastRequestMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.actions.fight.GameActionFightNoSpellCastMessage import \
+    GameActionFightNoSpellCastMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.actions.sequence.SequenceEndMessage import \
+    SequenceEndMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.actions.sequence.SequenceStartMessage import \
+    SequenceStartMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.context.fight.GameFightEndMessage import \
+    GameFightEndMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.context.fight.GameFightOptionStateUpdateMessage import \
+    GameFightOptionStateUpdateMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.context.fight.GameFightOptionToggleMessage import \
+    GameFightOptionToggleMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.context.fight.GameFightReadyMessage import \
+    GameFightReadyMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.context.fight.GameFightTurnEndMessage import \
+    GameFightTurnEndMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.context.fight.GameFightTurnFinishMessage import \
+    GameFightTurnFinishMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.context.fight.GameFightTurnReadyMessage import \
+    GameFightTurnReadyMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.context.fight.GameFightTurnReadyRequestMessage import \
+    GameFightTurnReadyRequestMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.context.fight.GameFightTurnResumeMessage import \
+    GameFightTurnResumeMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.context.fight.GameFightTurnStartMessage import \
+    GameFightTurnStartMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.context.fight.GameFightTurnStartPlayingMessage import \
+    GameFightTurnStartPlayingMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.context.GameMapMovementRequestMessage import \
+    GameMapMovementRequestMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.context.GameMapNoMovementMessage import \
+    GameMapNoMovementMessage
+from pydofus2.com.ankamagames.dofus.network.types.game.context.fight.GameFightFighterInformations import \
+    GameFightFighterInformations
+from pydofus2.com.ankamagames.dofus.network.types.game.context.fight.GameFightMonsterInformations import \
+    GameFightMonsterInformations
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 from pydofus2.com.ankamagames.jerakine.messages.Frame import Frame
 from pydofus2.com.ankamagames.jerakine.messages.Message import Message
 from pydofus2.com.ankamagames.jerakine.types.enums.Priority import Priority
 from pydofus2.com.ankamagames.jerakine.types.positions.MapPoint import MapPoint
-from pydofus2.com.ankamagames.jerakine.types.positions.MovementPath import MovementPath
+from pydofus2.com.ankamagames.jerakine.types.positions.MovementPath import \
+    MovementPath
 from pydofus2.com.ankamagames.jerakine.types.zones.Cross import Cross
 from pydofus2.com.ankamagames.jerakine.types.zones.IZone import IZone
 from pydofus2.com.ankamagames.jerakine.types.zones.Lozenge import Lozenge
-from pydofus2.com.ankamagames.jerakine.utils.display.spellZone.SpellShapeEnum import SpellShapeEnum
+from pydofus2.com.ankamagames.jerakine.utils.display.spellZone.SpellShapeEnum import \
+    SpellShapeEnum
 from pydofus2.damageCalculation.tools.StatIds import StatIds
 from pydofus2.mapTools import MapTools
 

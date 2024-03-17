@@ -5,20 +5,20 @@ from pyd2bot.logic.roleplay.behaviors.movement.AutoTrip import AutoTrip
 from pyd2bot.logic.roleplay.behaviors.skill.UseSkill import UseSkill
 from pyd2bot.logic.roleplay.behaviors.teleport.UseZaap import UseZaap
 from pyd2bot.misc.Localizer import Localizer
-from pydofus2.com.ankamagames.atouin.managers.MapDisplayManager import MapDisplayManager
+from pydofus2.com.ankamagames.atouin.managers.MapDisplayManager import \
+    MapDisplayManager
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
-from pydofus2.com.ankamagames.dofus.logic.common.managers.PlayerManager import (
-    PlayerManager,
-)
-from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import (
-    PlayedCharacterManager,
-)
-from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.astar.AStar import AStar
-from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Vertex import Vertex
-from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.WorldGraph import (
-    WorldGraph,
-)
+from pydofus2.com.ankamagames.dofus.logic.common.managers.PlayerManager import \
+    PlayerManager
+from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import \
+    PlayedCharacterManager
+from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.astar.AStar import \
+    AStar
+from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Vertex import \
+    Vertex
+from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.WorldGraph import \
+    WorldGraph
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 from pydofus2.com.ankamagames.jerakine.types.positions.MapPoint import MapPoint
 from pydofus2.mapTools import MapTools

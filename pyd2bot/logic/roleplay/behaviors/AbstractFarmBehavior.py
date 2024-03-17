@@ -23,7 +23,8 @@ from pydofus2.com.ankamagames.dofus.logic.game.roleplay.types.MovementFailError 
     MovementFailError
 from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Vertex import \
     Vertex
-from pydofus2.com.ankamagames.dofus.network.types.game.context.roleplay.GuildInformations import GuildInformations
+from pydofus2.com.ankamagames.dofus.network.types.game.context.roleplay.GuildInformations import \
+    GuildInformations
 from pydofus2.com.ankamagames.dofus.network.types.game.context.roleplay.job.JobExperience import \
     JobExperience
 from pydofus2.com.ankamagames.dofus.uiApi.PlayedCharacterApi import \

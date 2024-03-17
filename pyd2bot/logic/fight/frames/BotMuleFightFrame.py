@@ -1,16 +1,27 @@
-from pyd2bot.logic.fight.messages.MuleSwitchedToCombatContext import MuleSwitchedToCombatContext
+from pyd2bot.logic.fight.messages.MuleSwitchedToCombatContext import \
+    MuleSwitchedToCombatContext
 from pyd2bot.logic.managers.BotConfig import BotConfig
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
-from pydofus2.com.ankamagames.dofus.kernel.net.ConnectionsHandler import ConnectionsHandler
-from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import PlayedCharacterManager
-from pydofus2.com.ankamagames.dofus.network.messages.game.actions.fight.GameActionFightNoSpellCastMessage import GameActionFightNoSpellCastMessage
-from pydofus2.com.ankamagames.dofus.network.messages.game.basic.TextInformationMessage import TextInformationMessage
-from pydofus2.com.ankamagames.dofus.network.messages.game.context.GameContextReadyMessage import GameContextReadyMessage
-from pydofus2.com.ankamagames.dofus.network.messages.game.context.GameMapNoMovementMessage import GameMapNoMovementMessage
-from pydofus2.com.ankamagames.dofus.network.messages.game.context.fight.GameFightTurnReadyMessage import GameFightTurnReadyMessage
-from pydofus2.com.ankamagames.dofus.network.messages.game.context.fight.GameFightTurnReadyRequestMessage import GameFightTurnReadyRequestMessage
-from pydofus2.com.ankamagames.dofus.network.messages.game.context.fight.GameFightTurnStartPlayingMessage import GameFightTurnStartPlayingMessage
-from pydofus2.com.ankamagames.dofus.network.messages.game.context.roleplay.CurrentMapMessage import CurrentMapMessage
+from pydofus2.com.ankamagames.dofus.kernel.net.ConnectionsHandler import \
+    ConnectionsHandler
+from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import \
+    PlayedCharacterManager
+from pydofus2.com.ankamagames.dofus.network.messages.game.actions.fight.GameActionFightNoSpellCastMessage import \
+    GameActionFightNoSpellCastMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.basic.TextInformationMessage import \
+    TextInformationMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.context.fight.GameFightTurnReadyMessage import \
+    GameFightTurnReadyMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.context.fight.GameFightTurnReadyRequestMessage import \
+    GameFightTurnReadyRequestMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.context.fight.GameFightTurnStartPlayingMessage import \
+    GameFightTurnStartPlayingMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.context.GameContextReadyMessage import \
+    GameContextReadyMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.context.GameMapNoMovementMessage import \
+    GameMapNoMovementMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.context.roleplay.CurrentMapMessage import \
+    CurrentMapMessage
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 from pydofus2.com.ankamagames.jerakine.messages.Frame import Frame
 from pydofus2.com.ankamagames.jerakine.messages.Message import Message

@@ -62,7 +62,7 @@ class MapMove(AbstractBehavior):
         MapMove.clear()
 
     def move(self) -> bool:
-        rpmframe: "RoleplayMovementFrame" = Kernel().movementFrame
+        rpmframe = Kernel().movementFrame
         
         if not rpmframe:
             return self.onceFramePushed("RoleplayMovementFrame", self.move)

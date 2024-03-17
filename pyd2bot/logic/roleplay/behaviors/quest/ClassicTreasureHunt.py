@@ -4,29 +4,47 @@ from time import sleep
 
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
 from pyd2bot.logic.roleplay.behaviors.quest.FindHintNpc import FindHintNpc
-from pyd2bot.logic.roleplay.behaviors.teleport.UseTeleportItem import UseTeleportItem
+from pyd2bot.logic.roleplay.behaviors.teleport.UseTeleportItem import \
+    UseTeleportItem
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
-from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import KernelEventsManager
+from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import \
+    KernelEventsManager
 from pydofus2.com.ankamagames.dofus.datacenter.npcs.Npc import Npc
-from pydofus2.com.ankamagames.dofus.datacenter.quest.treasureHunt.PointOfInterest import PointOfInterest
-from pydofus2.com.ankamagames.dofus.datacenter.world.MapPosition import MapPosition
-from pydofus2.com.ankamagames.dofus.internalDatacenter.items.ItemWrapper import ItemWrapper
-from pydofus2.com.ankamagames.dofus.internalDatacenter.quests.TreasureHuntStepWrapper import TreasureHuntStepWrapper
-from pydofus2.com.ankamagames.dofus.internalDatacenter.quests.TreasureHuntWrapper import TreasureHuntWrapper
+from pydofus2.com.ankamagames.dofus.datacenter.quest.treasureHunt.PointOfInterest import \
+    PointOfInterest
+from pydofus2.com.ankamagames.dofus.datacenter.world.MapPosition import \
+    MapPosition
+from pydofus2.com.ankamagames.dofus.internalDatacenter.items.ItemWrapper import \
+    ItemWrapper
+from pydofus2.com.ankamagames.dofus.internalDatacenter.quests.TreasureHuntStepWrapper import \
+    TreasureHuntStepWrapper
+from pydofus2.com.ankamagames.dofus.internalDatacenter.quests.TreasureHuntWrapper import \
+    TreasureHuntWrapper
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
-from pydofus2.com.ankamagames.dofus.logic.common.managers.PlayerManager import PlayerManager
-from pydofus2.com.ankamagames.dofus.logic.game.common.managers.InventoryManager import InventoryManager
-from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import PlayedCharacterManager
-from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.WorldGraph import WorldGraph
-from pydofus2.com.ankamagames.dofus.network.enums.TreasureHuntFlagRequestEnum import TreasureHuntFlagRequestEnum
-from pydofus2.com.ankamagames.dofus.network.enums.TreasureHuntFlagStateEnum import TreasureHuntFlagStateEnum
-from pydofus2.com.ankamagames.dofus.network.enums.TreasureHuntRequestEnum import TreasureHuntRequestEnum
-from pydofus2.com.ankamagames.dofus.network.enums.TreasureHuntTypeEnum import TreasureHuntTypeEnum
-from pydofus2.com.ankamagames.dofus.types.enums.TreasureHuntStepTypeEnum import TreasureHuntStepTypeEnum
-from pydofus2.com.ankamagames.dofus.uiApi.PlayedCharacterApi import PlayedCharacterApi
+from pydofus2.com.ankamagames.dofus.logic.common.managers.PlayerManager import \
+    PlayerManager
+from pydofus2.com.ankamagames.dofus.logic.game.common.managers.InventoryManager import \
+    InventoryManager
+from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import \
+    PlayedCharacterManager
+from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.WorldGraph import \
+    WorldGraph
+from pydofus2.com.ankamagames.dofus.network.enums.TreasureHuntFlagRequestEnum import \
+    TreasureHuntFlagRequestEnum
+from pydofus2.com.ankamagames.dofus.network.enums.TreasureHuntFlagStateEnum import \
+    TreasureHuntFlagStateEnum
+from pydofus2.com.ankamagames.dofus.network.enums.TreasureHuntRequestEnum import \
+    TreasureHuntRequestEnum
+from pydofus2.com.ankamagames.dofus.network.enums.TreasureHuntTypeEnum import \
+    TreasureHuntTypeEnum
+from pydofus2.com.ankamagames.dofus.types.enums.TreasureHuntStepTypeEnum import \
+    TreasureHuntStepTypeEnum
+from pydofus2.com.ankamagames.dofus.uiApi.PlayedCharacterApi import \
+    PlayedCharacterApi
 from pydofus2.com.ankamagames.jerakine.data.I18n import I18n
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
-from pydofus2.com.ankamagames.jerakine.types.enums.DirectionsEnum import DirectionsEnum
+from pydofus2.com.ankamagames.jerakine.types.enums.DirectionsEnum import \
+    DirectionsEnum
 from pydofus2.mapTools import MapTools
 
 CURR_DIR = os.path.dirname(os.path.abspath(__file__))

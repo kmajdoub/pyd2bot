@@ -6,7 +6,6 @@ from ankalauncher.pythonversion.CryptoHelper import CryptoHelper
 from pyd2bot.thriftServer.pyd2botServer import Pyd2botServer
 from pyd2bot.thriftServer.pyd2botService.ttypes import (Certificate, Character,
                                                         D2BotError)
-from pydofus2.com.ankamagames.atouin.BrowserRequests import HttpError
 from pydofus2.com.ankamagames.atouin.Haapi import Haapi
 
 __dir__ = os.path.dirname(os.path.abspath(__file__))
@@ -96,7 +95,8 @@ class AccountManager:
     def fetch_account(cls, game, apikey, certid="", certhash="", with_characters_fetch=True):
         print(f"Fetching account for game {game}, apikey {apikey}, certid {certid}, certhash {certhash}")
         if not cls._haapi_client:
-            cls._haapi_client = Haapi(apikey)
+            cls._haapi_client = Haapi()
+            cls._haapi_client.api_key = apikey
         r = cls._haapi_client.signOnWithApikey(game)
         print(f"Got account {r}")
         accountId = r["id"]
@@ -115,7 +115,8 @@ class AccountManager:
         acc = cls.get_account(accountId)
         apikey = acc["apikey"]
         if not cls._haapi_client:
-            cls._haapi_client = Haapi(apikey)
+            cls._haapi_client = Haapi()
+            cls._haapi_client.api_key = apikey
         if not cls._session_id:
             cls._session_id = cls._haapi_client.startSessionWithApiKey(accountId)
             print(f"Got session id {cls._session_id}")
@@ -170,8 +171,6 @@ class AccountManager:
                         break
             try:
                 AccountManager.fetch_account(1, apikey, certid, certhash, with_characters_fetch)
-            except HttpError as e:
-                raise Exception(f"Failed to get login token for reason: {e.body}")
             except D2BotError as e:
                 raise Exception(f"Failed to fetch characters from game server:\n{e.message}")
         return cls.accounts

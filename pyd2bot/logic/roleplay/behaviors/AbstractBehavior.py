@@ -1,5 +1,4 @@
 import threading
-import traceback
 from enum import Enum
 
 from pyd2bot.logic.roleplay.behaviors.BehaviorApi import BehaviorApi
@@ -149,4 +148,3 @@ class AbstractBehavior(BehaviorApi, metaclass=Singleton):
         while self.children:
             child = self.children.pop()
             child.stop()
-    

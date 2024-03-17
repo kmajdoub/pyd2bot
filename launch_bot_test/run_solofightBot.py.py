@@ -1,15 +1,9 @@
 from pyd2bot.logic.managers.AccountManager import AccountManager
 from pyd2bot.Pyd2Bot import Pyd2Bot
-from pyd2bot.thriftServer.pyd2botService.ttypes import (
-    Path,
-    PathType,
-    Session,
-    SessionType,
-    UnloadType,
-    Vertex,
-    TransitionType,
-)
-
+from pyd2bot.thriftServer.pyd2botService.ttypes import (Path, PathType,
+                                                        Session, SessionType,
+                                                        TransitionType,
+                                                        UnloadType, Vertex)
 
 # ankarnam 154010883
 # village astrub 191106048
@@ -25,7 +19,7 @@ if __name__ == "__main__":
         unloadType=UnloadType.BANK,
         type=SessionType.FIGHT,
         path=Path(
-            id="ankarnam",
+            id="test_path",
             type=PathType.RandomSubAreaFarmPath,
             startVertex=Vertex(mapId=191106048.0, zoneId=1),
             transitionTypeWhitelist=[TransitionType.SCROLL, TransitionType.SCROLL_ACTION],

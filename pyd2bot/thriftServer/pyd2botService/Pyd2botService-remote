@@ -7,17 +7,18 @@
 #  options string: py
 #
 
-import sys
 import pprint
+import sys
+
 if sys.version_info[0] > 2:
     from urllib.parse import urlparse
 else:
     from urlparse import urlparse
-from thrift.transport import TTransport, TSocket, TSSLSocket, THttpClient
-from thrift.protocol.TBinaryProtocol import TBinaryProtocol
 
 from pyd2botService import Pyd2botService
 from pyd2botService.ttypes import *
+from thrift.protocol.TBinaryProtocol import TBinaryProtocol
+from thrift.transport import THttpClient, TSocket, TSSLSocket, TTransport
 
 if len(sys.argv) <= 1 or sys.argv[1] == '--help':
     print('')

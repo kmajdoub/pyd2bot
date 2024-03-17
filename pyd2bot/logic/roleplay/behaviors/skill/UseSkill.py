@@ -8,7 +8,8 @@ from pydofus2.com.ankamagames.dofus.kernel.net.ConnectionsHandler import \
     ConnectionsHandler
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import \
     PlayedCharacterManager
-from pydofus2.com.ankamagames.dofus.logic.game.roleplay.frames.InteractiveElementData import InteractiveElementData
+from pydofus2.com.ankamagames.dofus.logic.game.roleplay.frames.InteractiveElementData import \
+    InteractiveElementData
 from pydofus2.com.ankamagames.dofus.network.messages.game.interactive.InteractiveElementUpdatedMessage import \
     InteractiveElementUpdatedMessage
 from pydofus2.com.ankamagames.dofus.network.messages.game.interactive.InteractiveUseRequestMessage import \
@@ -16,7 +17,8 @@ from pydofus2.com.ankamagames.dofus.network.messages.game.interactive.Interactiv
 from pydofus2.com.ankamagames.dofus.network.messages.game.interactive.skill.InteractiveUseWithParamRequestMessage import \
     InteractiveUseWithParamRequestMessage
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
-from pydofus2.com.ankamagames.jerakine.pathfinding.Pathfinding import Pathfinding
+from pydofus2.com.ankamagames.jerakine.pathfinding.Pathfinding import \
+    Pathfinding
 
 
 class UseSkill(AbstractBehavior):

@@ -2,7 +2,6 @@ from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
 from pydofus2.com.ankamagames.berilia.managers.Listener import Listener
 
 
-
 class CraftItem(AbstractBehavior):
 
     def __init__(self):

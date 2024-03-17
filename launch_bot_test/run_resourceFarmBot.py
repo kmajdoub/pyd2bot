@@ -1,22 +1,15 @@
 import os
 import sys
 
-from launch_bot_test.system_tray import SystemTrayIcon
 from PyQt5 import QtGui, QtWidgets
+from system_tray import SystemTrayIcon
 
 from pyd2bot.logic.managers.AccountManager import AccountManager
-from pyd2bot.logic.managers.BotConfig import CharacterRoleEnum
 from pyd2bot.Pyd2Bot import Pyd2Bot
-from pyd2bot.thriftServer.pyd2botService.ttypes import (
-    Certificate,
-    JobFilter,
-    Path,
-    PathType,
-    Session,
-    SessionType,
-    UnloadType,
-    Vertex,
-)
+from pyd2bot.thriftServer.pyd2botService.ttypes import (Certificate, JobFilter,
+                                                        Path, PathType,
+                                                        Session, SessionType,
+                                                        UnloadType, Vertex)
 
 # ankarnam 154010883
 # village astrub 191106048
@@ -30,7 +23,7 @@ if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
     app.setQuitOnLastWindowClosed(False)
 
-    account_key = "244588168071629885"
+    account_key = "244588168224523828"
     creds = AccountManager.get_credentials(account_key)
     session = Session(
         id="test",
@@ -38,9 +31,9 @@ if __name__ == "__main__":
         unloadType=UnloadType.BANK,
         type=SessionType.FARM,
         path=Path(
-            id="coin_bouftou",
+            id="test",
             type=PathType.RandomAreaFarmPath,
-            startVertex=Vertex(mapId=88082704.0, zoneId=1), # Ankama coin bouftou 
+            startVertex=Vertex(mapId=154010883.0, zoneId=1), # Ankama coin bouftou 
             subAreaBlacklist=[6, 482, 276, 277],  # exclude astrub cimetery, Milicluster, Bwork village
         ),
         jobFilters=[
@@ -56,7 +49,7 @@ if __name__ == "__main__":
     )
     bot = Pyd2Bot(session)
     bot.start()
-    bot.addShutDownListener(lambda: QtWidgets.QApplication.quit())
+    bot.addShutDownListener(lambda name, message, reason: QtWidgets.QApplication.quit())
 
     # Setting up the system tray icon
     icon = QtGui.QIcon(os.path.join(__dir__, "icon.png"))

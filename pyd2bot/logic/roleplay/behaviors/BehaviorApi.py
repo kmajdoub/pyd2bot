@@ -4,17 +4,23 @@ import os
 from typing import TYPE_CHECKING
 
 from pyd2bot.misc.Localizer import Localizer
-from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import KernelEventsManager
-from pydofus2.com.ankamagames.dofus.datacenter.world.MapPosition import MapPosition
+from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import \
+    KernelEventsManager
+from pydofus2.com.ankamagames.dofus.datacenter.world.MapPosition import \
+    MapPosition
 from pydofus2.com.ankamagames.dofus.datacenter.world.SubArea import SubArea
-from pydofus2.com.ankamagames.dofus.logic.game.common.managers.InventoryManager import InventoryManager
-from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import PlayedCharacterManager
+from pydofus2.com.ankamagames.dofus.logic.game.common.managers.InventoryManager import \
+    InventoryManager
+from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import \
+    PlayedCharacterManager
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 
 if TYPE_CHECKING:
     from pyd2bot.thriftServer.pyd2botService.ttypes import Character
-    from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Edge import Edge
-    from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Transition import Transition
+    from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Edge import \
+        Edge
+    from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Transition import \
+        Transition
 
 __dir__ = os.path.dirname(os.path.abspath(__file__))
 SPECIAL_DESTINATIONS_PATH = os.path.join(__dir__, "special_destinations.json")
@@ -43,7 +49,8 @@ class BehaviorApi:
         return None
 
     def autotripUseZaap(self, dstMapId, dstZoneId=1, withSaveZaap=False, maxCost=None, excludeMaps=[], callback=None):
-        from pyd2bot.logic.roleplay.behaviors.movement.AutoTripUseZaap import AutoTripUseZaap
+        from pyd2bot.logic.roleplay.behaviors.movement.AutoTripUseZaap import \
+            AutoTripUseZaap
 
         if not maxCost:
             maxCost = InventoryManager().inventory.kamas
@@ -165,7 +172,8 @@ class BehaviorApi:
         )
 
     def changeMap(self, transition: "Transition" = None, edge: "Edge" = None, dstMapId=None, callback=None):
-        from pyd2bot.logic.roleplay.behaviors.movement.ChangeMap import ChangeMap
+        from pyd2bot.logic.roleplay.behaviors.movement.ChangeMap import \
+            ChangeMap
 
         ChangeMap().start(transition, edge, dstMapId, callback=callback, parent=self)
 
@@ -191,7 +199,8 @@ class BehaviorApi:
         )
 
     def requestMapData(self, mapId=None, callback=None):
-        from pyd2bot.logic.roleplay.behaviors.movement.RequestMapData import RequestMapData
+        from pyd2bot.logic.roleplay.behaviors.movement.RequestMapData import \
+            RequestMapData
 
         RequestMapData().start(mapId, callback=callback, parent=self)
 
@@ -201,17 +210,20 @@ class BehaviorApi:
         AutoRevive().start(callback=callback, parent=self)
 
     def attackMonsters(self, entityId, callback=None):
-        from pyd2bot.logic.roleplay.behaviors.fight.AttackMonsters import AttackMonsters
+        from pyd2bot.logic.roleplay.behaviors.fight.AttackMonsters import \
+            AttackMonsters
 
         AttackMonsters().start(entityId, callback=callback, parent=self)
 
     def farmFights(self, timeout=None, callback=None):
-        from pyd2bot.logic.roleplay.behaviors.fight.FarmFights import FarmFights
+        from pyd2bot.logic.roleplay.behaviors.fight.FarmFights import \
+            FarmFights
 
         FarmFights().start(timeout=timeout, callback=callback, parent=self)
 
     def muleFighter(self, leader: "Character", callback=None):
-        from pyd2bot.logic.roleplay.behaviors.fight.MuleFighter import MuleFighter
+        from pyd2bot.logic.roleplay.behaviors.fight.MuleFighter import \
+            MuleFighter
 
         MuleFighter().start(leader, callback=callback, parent=self)
 
@@ -242,27 +254,32 @@ class BehaviorApi:
         )
 
     def soloFarmFights(self, timeout=None, callback=None):
-        from pyd2bot.logic.roleplay.behaviors.fight.SoloFarmFights import SoloFarmFights
+        from pyd2bot.logic.roleplay.behaviors.fight.SoloFarmFights import \
+            SoloFarmFights
 
         SoloFarmFights().start(timeout=timeout, callback=callback, parent=self)
 
     def resourceFarm(self, timeout=None, callback=None):
-        from pyd2bot.logic.roleplay.behaviors.farm.ResourceFarm import ResourceFarm
+        from pyd2bot.logic.roleplay.behaviors.farm.ResourceFarm import \
+            ResourceFarm
 
         ResourceFarm().start(timeout=timeout, callback=callback, parent=self)
 
     def partyLeader(self, callback=None):
-        from pyd2bot.logic.roleplay.behaviors.party.PartyLeader import PartyLeader
+        from pyd2bot.logic.roleplay.behaviors.party.PartyLeader import \
+            PartyLeader
 
         PartyLeader().start(callback=callback, parent=self)
 
     def waitForMembersIdle(self, members, callback=None):
-        from pyd2bot.logic.roleplay.behaviors.party.WaitForMembersIdle import WaitForMembersIdle
+        from pyd2bot.logic.roleplay.behaviors.party.WaitForMembersIdle import \
+            WaitForMembersIdle
 
         WaitForMembersIdle().start(members, callback=callback, parent=self)
 
     def waitForMembersToShow(self, members, callback=None):
-        from pyd2bot.logic.roleplay.behaviors.party.WaitForMembersToShow import WaitForMembersToShow
+        from pyd2bot.logic.roleplay.behaviors.party.WaitForMembersToShow import \
+            WaitForMembersToShow
 
         WaitForMembersToShow().start(members, callback=callback, parent=self)
 
@@ -281,32 +298,38 @@ class BehaviorApi:
             self.autoTrip(npcMapId, 1, callback=onNPCMapReached)
 
     def getOutOfAnkarnam(self, callback=None):
-        from pyd2bot.logic.roleplay.behaviors.movement.GetOutOfAnkarnam import GetOutOfAnkarnam
+        from pyd2bot.logic.roleplay.behaviors.movement.GetOutOfAnkarnam import \
+            GetOutOfAnkarnam
 
         GetOutOfAnkarnam().start(callback=callback, parent=self)
 
     def changeServer(self, newServerId, callback=None):
-        from pyd2bot.logic.roleplay.behaviors.start.ChangeServer import ChangeServer
+        from pyd2bot.logic.roleplay.behaviors.start.ChangeServer import \
+            ChangeServer
 
         ChangeServer().start(newServerId, callback=callback, parent=self)
 
     def createNewCharacter(self, breedId, name=None, sex=False, callback=None):
-        from pyd2bot.logic.roleplay.behaviors.start.CreateNewCharacter import CreateNewCharacter
+        from pyd2bot.logic.roleplay.behaviors.start.CreateNewCharacter import \
+            CreateNewCharacter
 
         CreateNewCharacter().start(breedId, name, sex, callback=callback, parent=self)
 
     def deleteCharacter(self, characterId, callback=None):
-        from pyd2bot.logic.roleplay.behaviors.start.DeleteCharacter import DeleteCharacter
+        from pyd2bot.logic.roleplay.behaviors.start.DeleteCharacter import \
+            DeleteCharacter
 
         DeleteCharacter().start(characterId, callback=callback, parent=self)
 
     def treasureHunt(self, callback=None):
-        from pyd2bot.logic.roleplay.behaviors.quest.ClassicTreasureHunt import TreasureHunt
+        from pyd2bot.logic.roleplay.behaviors.quest.ClassicTreasureHunt import \
+            TreasureHunt
 
         TreasureHunt().start(callback=callback, parent=self)
 
     def botExchange(self, direction, target, items=None, callback=None):
-        from pyd2bot.logic.roleplay.behaviors.exchange.BotExchange import BotExchange
+        from pyd2bot.logic.roleplay.behaviors.exchange.BotExchange import \
+            BotExchange
 
         BotExchange().start(direction, target, items, callback=callback, parent=self)
 
@@ -316,12 +339,14 @@ class BehaviorApi:
         OpenBank().start(bankInfos, callback=callback, parent=self)
 
     def retrieveRecipeFromBank(self, recipe, return_to_start=True, bankInfos=None, callback=None):
-        from pyd2bot.logic.roleplay.behaviors.bank.RetrieveRecipeFromBank import RetrieveRecipeFromBank
+        from pyd2bot.logic.roleplay.behaviors.bank.RetrieveRecipeFromBank import \
+            RetrieveRecipeFromBank
 
         RetrieveRecipeFromBank().start(recipe, return_to_start, bankInfos, callback=callback, parent=self)
 
     def unloadInBank(self, return_to_start=True, bankInfos=None, callback=None):
-        from pyd2bot.logic.roleplay.behaviors.bank.UnloadInBank import UnloadInBank
+        from pyd2bot.logic.roleplay.behaviors.bank.UnloadInBank import \
+            UnloadInBank
 
         UnloadInBank().start(return_to_start, bankInfos, callback=callback, parent=self)
 

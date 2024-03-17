@@ -2,8 +2,8 @@ import collections
 import random
 from time import perf_counter
 from typing import Iterator, Set
-from pyd2bot.misc.Localizer import Localizer
 
+from pyd2bot.misc.Localizer import Localizer
 from pyd2bot.models.farmPaths.AbstractFarmPath import AbstractFarmPath
 from pyd2bot.thriftServer.pyd2botService.ttypes import Path, TransitionType
 from pydofus2.com.ankamagames.dofus.datacenter.world.MapPosition import \

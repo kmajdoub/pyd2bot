@@ -1,13 +1,15 @@
 import time
+
 import numpy as np
-from pyd2bot.logic.roleplay.behaviors.farm.CollectableResource import (
-    CollectableResource,
-)
-from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import (
-    PlayedCharacterManager,
-)
-from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Edge import Edge
-from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Vertex import Vertex
+
+from pyd2bot.logic.roleplay.behaviors.farm.CollectableResource import \
+    CollectableResource
+from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import \
+    PlayedCharacterManager
+from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Edge import \
+    Edge
+from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Vertex import \
+    Vertex
 
 
 class ResourceFarmerState:

@@ -1,9 +1,7 @@
-import json
 import random
 import threading
 
 from pyd2bot.logic.managers.BotConfig import BotConfig
-from pydofus2.com.ankamagames.atouin.Haapi import Haapi
 from pydofus2.com.ankamagames.atouin.HaapiEventsManager import \
     HaapiEventsManager
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
@@ -13,8 +11,6 @@ from pydofus2.com.ankamagames.dofus.datacenter.breeds.Breed import Breed
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
 from pydofus2.com.ankamagames.dofus.kernel.net.ConnectionsHandler import \
     ConnectionsHandler
-from pydofus2.com.ankamagames.dofus.logic.common.managers.PlayerManager import \
-    PlayerManager
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import \
     PlayedCharacterManager
 from pydofus2.com.ankamagames.dofus.network.messages.game.achievement.AchievementRewardRequestMessage import \
@@ -33,13 +29,22 @@ class BotCharacterUpdatesFrame(Frame):
         super().__init__()
 
     def pushed(self) -> bool:
-        KernelEventsManager().on(KernelEvent.PlayerLeveledUp, self.onBotLevelUp)
-        KernelEventsManager().on(KernelEvent.CharacterStats, self.onBotStats)
-        KernelEventsManager().on(KernelEvent.AchievementFinished, self.onAchievementFinished)
-        KernelEventsManager().on(KernelEvent.ObtainedItem, self.onItemObtained)
-        KernelEventsManager().on(KernelEvent.MapDataProcessed, self.onMapDataProcessed)
+        KernelEventsManager().onMultiple(
+            [
+                (KernelEvent.PlayerLeveledUp, self.onBotLevelUp), 
+                (KernelEvent.CharacterStats, self.onBotStats),
+                (KernelEvent.AchievementFinished, self.onAchievementFinished),
+                (KernelEvent.ObtainedItem, self.onItemObtained),
+                (KernelEvent.MapDataProcessed, self.onMapDataProcessed),
+                (KernelEvent.JobLevelUp, self.onJobLevelUp)
+            ],
+            originator=self
+        )
         self.waitingForCharactsBoost = threading.Event()
         return True
+    
+    def onJobLevelUp(self, event, jobId, jobName, lastJobLevel, newLevel, podsBonus):
+        HaapiEventsManager().sendProfessionsOpenEvent()
 
     def pulled(self) -> bool:
         KernelEventsManager().clearAllByOrigin(self)
@@ -50,15 +55,15 @@ class BotCharacterUpdatesFrame(Frame):
         return Priority.VERY_LOW
 
     def onItemObtained(self, event, iw, qty):
-        if random.random() < 0.05:
+        if random.random() < 0.2:
             HaapiEventsManager().sendInventoryOpenEvent()
-        if random.random() < 0.05:
+        if random.random() < 0.1:
             HaapiEventsManager().sendSocialOpenEvent()
         if random.random() < 0.05:
             HaapiEventsManager().sendQuestsOpenEvent()
 
     def onMapDataProcessed(self, event, map):
-        if random.random() < 0.05:
+        if random.random() < 0.1:
             HaapiEventsManager().sendMapOpenEvent()
 
     def onBotStats(self, event):
@@ -72,7 +77,8 @@ class BotCharacterUpdatesFrame(Frame):
                 self.boostCharacs(usedCapital, BotConfig().primaryStatId)
 
     def onBotLevelUp(self, event, previousLevel, newLevel):
-        pass
+        HaapiEventsManager().sendInventoryOpenEvent()
+        HaapiEventsManager().sendSocialOpenEvent()
 
     def getStatFloor(self, statId: int):
         breed = Breed.getBreedById(PlayedCharacterManager().infos.breed)

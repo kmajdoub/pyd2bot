@@ -272,7 +272,7 @@ class AbstractFarmBehavior(AbstractBehavior):
             if PlayedCharacterManager().limitedLevel < 10 and BotConfig().unloadInBank:
                 Logger().warning(f"Player level is too low to unload in bank, ending behavior")
                 return KernelEventsManager().send(
-                    KernelEvent.ClientShutdown, message="Player level is too low to unload in bank"
+                    KernelEvent.ClientShutdown, "Player level is too low to unload in bank"
                 )
             return self.unloadInBank(callback=self.onBotUnloaded)
         if not self.initialized:

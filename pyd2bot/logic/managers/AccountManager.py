@@ -96,7 +96,7 @@ class AccountManager:
         print(f"Fetching account for game {game}, apikey {apikey}, certid {certid}, certhash {certhash}")
         if not cls._haapi_client:
             cls._haapi_client = Haapi()
-            cls._haapi_client.api_key = apikey
+            cls._haapi_client.zaap_apikey = apikey
         r = cls._haapi_client.signOnWithApikey(game)
         print(f"Got account {r}")
         accountId = r["id"]
@@ -116,11 +116,11 @@ class AccountManager:
         apikey = acc["apikey"]
         if not cls._haapi_client:
             cls._haapi_client = Haapi()
-            cls._haapi_client.api_key = apikey
+            cls._haapi_client.zaap_apikey = apikey
         if not cls._session_id:
             cls._session_id = cls._haapi_client.startSessionWithApiKey(accountId)
             print(f"Got session id {cls._session_id}")
-        token = cls._haapi_client.getLoginToken(1, certid, certhash)
+        token = cls._haapi_client.createToken(1, certid, certhash)
         srv = Pyd2botServer("test")
         print(f"Fetching characters for token {token}")
         chars = srv.fetchCharacters(token, cls._session_id)

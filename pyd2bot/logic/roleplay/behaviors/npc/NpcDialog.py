@@ -10,6 +10,7 @@ from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import \
 from pydofus2.com.ankamagames.dofus.datacenter.npcs.Npc import Npc
 from pydofus2.com.ankamagames.dofus.kernel.net.ConnectionsHandler import \
     ConnectionsHandler
+from pydofus2.com.ankamagames.dofus.logic.game.common.managers.InactivityManager import InactivityManager
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import \
     PlayedCharacterManager
 from pydofus2.com.ankamagames.dofus.misc.utils.ParamsDecoder import \
@@ -115,6 +116,7 @@ class NpcDialog(AbstractBehavior):
         self.currentNpcQuestionReplyIdx += 1
         self.once(KernelEvent.NpcQuestion, self.onNpcQuestion)
         ConnectionsHandler().send(msg)
+        InactivityManager().activity()
     
     def onNpcDialogleft(self, event):
         self.finish(0, None)

@@ -54,19 +54,35 @@ class BotCharacterUpdatesFrame(Frame):
     def priority(self) -> int:
         return Priority.VERY_LOW
 
-    def onItemObtained(self, event, iw, qty):
-        if random.random() < 0.2:
-            HaapiEventsManager().sendInventoryOpenEvent()
-        if random.random() < 0.1:
-            HaapiEventsManager().sendSocialOpenEvent()
-        if random.random() < 0.05:
-            HaapiEventsManager().sendQuestsOpenEvent()
-
-    def onMapDataProcessed(self, event, map):
+    def randomEvent(self):
         if random.random() < 0.1:
             HaapiEventsManager().sendMapOpenEvent()
+            Kernel().worker.terminated.wait(2)
+        elif random.random() < 0.1:
+            if random.random() < 0.5:
+                HaapiEventsManager().registerShortcutUse('openInventory')
+            else:
+                HaapiEventsManager().sendInventoryOpenEvent()
+            Kernel().worker.terminated.wait(2)
+        elif random.random() < 0.1:
+            HaapiEventsManager().sendSocialOpenEvent()
+            Kernel().worker.terminated.wait(2)
+        elif random.random() < 0.1:
+            HaapiEventsManager().sendQuestsOpenEvent()
+            Kernel().worker.terminated.wait(2)
+        elif random.random() < 0.1:
+            HaapiEventsManager().registerShortcutUse('openCharacterSheet')
+            Kernel().worker.terminated.wait(2)
 
-    def onBotStats(self, event):
+    def onItemObtained(self, event, iw, qty):
+        self.randomEvent()
+        
+    def onMapDataProcessed(self, event, map):
+        self.randomEvent()
+
+    def onBotStats(self, event=None):
+        if not Kernel().roleplayEntitiesFrame or not Kernel().roleplayEntitiesFrame.mcidm_processed:
+            return KernelEventsManager().onceMapProcessed(self.onBotStats, originator=self)
         unusedStatPoints = PlayedCharacterManager().stats.getStatBaseValue(StatIds.STATS_POINTS)
         if unusedStatPoints > 0 and not self.waitingForCharactsBoost.is_set():
             boost, usedCapital = self.getBoost(unusedStatPoints)

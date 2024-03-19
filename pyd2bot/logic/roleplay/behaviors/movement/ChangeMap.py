@@ -13,6 +13,7 @@ from pydofus2.com.ankamagames.dofus.datacenter.interactives.Interactive import \
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
 from pydofus2.com.ankamagames.dofus.kernel.net.ConnectionsHandler import \
     ConnectionsHandler
+from pydofus2.com.ankamagames.dofus.logic.game.common.managers.InactivityManager import InactivityManager
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import \
     PlayedCharacterManager
 from pydofus2.com.ankamagames.dofus.logic.game.roleplay.frames.InteractiveElementData import \
@@ -400,3 +401,4 @@ class ChangeMap(AbstractBehavior):
         cmmsg.init(int(self.transition.transitionMapId), False)
         ConnectionsHandler().send(cmmsg)
         self.mapChangeReqSent = True
+        InactivityManager().activity()

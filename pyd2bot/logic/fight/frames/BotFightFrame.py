@@ -1,3 +1,4 @@
+import random
 import threading
 from queue import PriorityQueue
 from time import perf_counter
@@ -11,7 +12,8 @@ from pyd2bot.logic.fight.messages.MuleSwitchedToCombatContext import \
 from pyd2bot.logic.managers.BotConfig import BotConfig
 from pyd2bot.misc.BotEventsmanager import BotEventsManager
 from pyd2bot.thriftServer.pyd2botService.ttypes import Character
-from pydofus2.com.ankamagames.atouin.AtouinConstants import AtouinConstants
+from pydofus2.com.ankamagames.atouin.HaapiEventsManager import \
+    HaapiEventsManager
 from pydofus2.com.ankamagames.atouin.managers.EntitiesManager import \
     EntitiesManager
 from pydofus2.com.ankamagames.atouin.utils.DataMapProvider import \
@@ -795,6 +797,10 @@ class BotFightFrame(Frame):
             self._confirmTurnEnd = False
             return True
         if self._myTurn and not self._waitingSeqEnd:
+            if Kernel().battleFrame._executingSequence:
+                Logger().warn("Delaying checkCanPlay because we're still in a sequence.")
+                KernelEventsManager().once(KernelEvent.SequenceExecFinished, self.checkCanPlay, originator=self)
+                return False
             self.nextTurnAction("checkCanPlay")
 
     def turnEnd(self) -> None:
@@ -846,6 +852,9 @@ class BotFightFrame(Frame):
                 gafcrmsg = GameActionFightCastRequestMessage()
                 gafcrmsg.init(spellId, cellId)
                 self.connection.send(gafcrmsg)
+                if random.random() < 0.9:
+                    # with probability 0.9 we simulate speel cast with shortcut
+                    HaapiEventsManager().registerShortcutUse('useSpellLine1')
             else:
                 Logger().warning(f"Cant cast spell for reason : {reason}")
 

@@ -234,7 +234,6 @@ class AbstractFarmBehavior(AbstractBehavior):
     def onRoleplayAfterFight(self, event=None):
         Logger().debug(f"Player ended fight and started roleplay")
         self.inFight = False
-
         def onRolePlayMapLoaded():
             if PlayedCharacterManager().isDead():
                 Logger().warning(f"Player is dead.")

@@ -23,8 +23,9 @@ if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
     app.setQuitOnLastWindowClosed(False)
 
-    account_key = "244588168224523828"
+    account_key = "244588168227218920"
     creds = AccountManager.get_credentials(account_key)
+    print(creds)
     session = Session(
         id="test",
         character=creds['character'],

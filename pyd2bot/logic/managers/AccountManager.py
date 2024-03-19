@@ -1,12 +1,26 @@
 import json
 import os
 
-from ankalauncher.pythonversion.CryptoHelper import CryptoHelper
-
 from pyd2bot.thriftServer.pyd2botServer import Pyd2botServer
 from pyd2bot.thriftServer.pyd2botService.ttypes import (Certificate, Character,
                                                         D2BotError)
 from pydofus2.com.ankamagames.atouin.Haapi import Haapi
+from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
+from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import \
+    KernelEventsManager
+from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
+from pydofus2.com.ankamagames.dofus.logic.common.actions.ChangeServerAction import \
+    ChangeServerAction
+from pydofus2.com.ankamagames.dofus.logic.common.managers.PlayerManager import \
+    PlayerManager
+from pydofus2.com.ankamagames.dofus.logic.connection.actions.ServerSelectionAction import \
+    ServerSelectionAction
+from pydofus2.com.ankamagames.dofus.misc.utils.GameID import GameID
+from pydofus2.com.ankamagames.jerakine.benchmark.BenchmarkTimer import BenchmarkTimer
+from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
+from pydofus2.com.DofusClient import DofusClient
+from pydofus2.Zaap.helpers.CryptoHelper import CryptoHelper
+from pydofus2.Zaap.ZaapDecoy import ZaapDecoy
 
 __dir__ = os.path.dirname(os.path.abspath(__file__))
 persistence_dir = "D://botdev//pyd2bot//pyd2bot//persistence"
@@ -23,8 +37,7 @@ class AccountManager:
         with open(accounts_jsonfile, "r") as fp:
             accounts: dict = json.load(fp)
     
-    _haapi_client = None
-    _session_id = None
+    _zaap = None
             
     @classmethod
     def get_cert(cls, accountId):
@@ -94,11 +107,11 @@ class AccountManager:
     @classmethod
     def fetch_account(cls, game, apikey, certid="", certhash="", with_characters_fetch=True):
         print(f"Fetching account for game {game}, apikey {apikey}, certid {certid}, certhash {certhash}")
-        if not cls._haapi_client:
-            cls._haapi_client = Haapi()
-            cls._haapi_client.zaap_apikey = apikey
-        r = cls._haapi_client.signOnWithApikey(game)
-        print(f"Got account {r}")
+        if not cls._zaap:
+            cls._zaap = ZaapDecoy(apikey)
+            r = cls._zaap.mainAccount
+        else:
+            r = ZaapDecoy().fetchAccountData(apikey)
         accountId = r["id"]
         cls.accounts[accountId] = r["account"]
         cls.accounts[accountId]["apikey"] = apikey
@@ -114,33 +127,45 @@ class AccountManager:
     def fetch_characters(cls, accountId, certid, certhash):
         acc = cls.get_account(accountId)
         apikey = acc["apikey"]
-        if not cls._haapi_client:
-            cls._haapi_client = Haapi()
-            cls._haapi_client.zaap_apikey = apikey
-        if not cls._session_id:
-            cls._session_id = cls._haapi_client.startSessionWithApiKey(accountId)
-            print(f"Got session id {cls._session_id}")
-        token = cls._haapi_client.createToken(1, certid, certhash)
-        srv = Pyd2botServer("test")
-        print(f"Fetching characters for token {token}")
-        chars = srv.fetchCharacters(token, cls._session_id)
-        chars_json = [
-            {
-                "name": ch.name,
-                "id": ch.id,
-                "level": ch.level,
-                "breedId": ch.breedId,
-                "breedName": ch.breedName,
-                "serverId": ch.serverId,
-                "serverName": ch.serverName,
-                "login": acc["login"],
-                "accountId": accountId,
-            }
-            for ch in chars
-        ]
-        print(f"Got characters {chars_json}")
-        cls.accounts[accountId]["characters"] = chars_json
-        return chars_json
+        instanceName = "fetchCharactersThread" 
+        charachters = list()
+        client = DofusClient(instanceName)
+        client.setApiKey(apikey)
+        client.setCertificate(certid, certhash)
+        client.start()
+        evtsManager = KernelEventsManager.waitThreadRegister(instanceName, 25)
+        evtsManager.wait(KernelEvent.ServersList, 60)
+        first = True
+        kernel = Kernel.waitThreadRegister(instanceName, 25)
+        playerManager = PlayerManager.waitThreadRegister(instanceName, 25)
+        for server in kernel.serverSelectionFrame.usedServers:
+            if first:
+                first = False
+                kernel.worker.process(ServerSelectionAction.create(server.id))
+            else:
+                playerManager.charactersList.clear()
+                kernel.worker.process(ChangeServerAction.create(server.id))
+            evtsManager.wait(KernelEvent.CharactersList, 60)
+            Logger().info(f"Server : {server.id}, List characters received")
+            charachters += [
+                {
+                    "name": character.name,
+                    "id": character.id,
+                    "level": character.level,
+                    "breedId": character.breedId,
+                    "breedName": character.breed.name,
+                    "serverId": playerManager.server.id,
+                    "serverName": playerManager.server.name,
+                    "login": acc["login"],
+                    "accountId": accountId,
+                }
+                for character in playerManager.charactersList
+            ]
+        client.shutdown()
+        client.join()
+        print(f"Got characters {charachters}")
+        cls.accounts[accountId]["characters"] = charachters
+        return charachters
 
     @classmethod
     def save(cls):

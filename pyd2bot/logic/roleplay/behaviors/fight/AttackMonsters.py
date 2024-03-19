@@ -10,6 +10,7 @@ from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import \
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
 from pydofus2.com.ankamagames.dofus.kernel.net.ConnectionsHandler import \
     ConnectionsHandler
+from pydofus2.com.ankamagames.dofus.logic.game.common.managers.InactivityManager import InactivityManager
 from pydofus2.com.ankamagames.dofus.network.messages.game.context.roleplay.fight.GameRolePlayAttackMonsterRequestMessage import \
     GameRolePlayAttackMonsterRequestMessage
 from pydofus2.com.ankamagames.dofus.network.types.game.context.GameContextActorInformations import \
@@ -119,6 +120,7 @@ class AttackMonsters(AbstractBehavior):
         grpamrmsg = GameRolePlayAttackMonsterRequestMessage()
         grpamrmsg.init(self.entityId)
         ConnectionsHandler().send(grpamrmsg)
+        InactivityManager().activity()
 
     def onCurrentMap(self, event, mapId):
         Logger().warning("Monster moved and was on a Map action cell, we changed to a new map")

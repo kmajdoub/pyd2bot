@@ -39,7 +39,7 @@ class Pyd2Bot(DofusClient):
 
     def __init__(self, session: Session):
         super().__init__(session.character.login)
-        self._apiKey = session.apikey
+        self._apikey = session.apikey
         self._session = session
         self._character = session.character
         self._serverId = session.character.serverId

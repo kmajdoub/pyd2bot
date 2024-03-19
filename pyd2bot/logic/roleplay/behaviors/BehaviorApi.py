@@ -6,8 +6,6 @@ from typing import TYPE_CHECKING
 from pyd2bot.misc.Localizer import Localizer
 from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import \
     KernelEventsManager
-from pydofus2.com.ankamagames.dofus.datacenter.world.MapPosition import \
-    MapPosition
 from pydofus2.com.ankamagames.dofus.datacenter.world.SubArea import SubArea
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.InventoryManager import \
     InventoryManager

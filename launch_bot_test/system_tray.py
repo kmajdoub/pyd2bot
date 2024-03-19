@@ -15,7 +15,6 @@ class SystemTrayIcon(QtWidgets.QSystemTrayIcon):
 
     def stop_bot(self):
         print("Stopping the bot...")
-        # Add your bot stopping logic here
         self.bot.shutdown()
         self.bot.join()
         QtWidgets.QApplication.quit()

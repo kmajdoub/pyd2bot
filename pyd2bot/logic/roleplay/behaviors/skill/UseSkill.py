@@ -6,6 +6,7 @@ from pydofus2.com.ankamagames.dofus.datacenter.jobs.Skill import Skill
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
 from pydofus2.com.ankamagames.dofus.kernel.net.ConnectionsHandler import \
     ConnectionsHandler
+from pydofus2.com.ankamagames.dofus.logic.game.common.managers.InactivityManager import InactivityManager
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import \
     PlayedCharacterManager
 from pydofus2.com.ankamagames.dofus.logic.game.roleplay.frames.InteractiveElementData import \
@@ -188,6 +189,7 @@ class UseSkill(AbstractBehavior):
             iuwprmsg = InteractiveUseWithParamRequestMessage()
             iuwprmsg.init(int(self.elementId), int(self.skillUID), int(additionalParam))
             ConnectionsHandler().send(iuwprmsg)
+        InactivityManager().activity()
 
     def getInteractiveElement(self, elementId, skilluid, callback) -> InteractiveElementData:
         if Kernel().interactivesFrame is None:

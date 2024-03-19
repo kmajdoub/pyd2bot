@@ -2,3 +2,5 @@
 build
 persistence
 __pycache__
+apis.json
+certs.json

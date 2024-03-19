@@ -31,7 +31,7 @@ if __name__ == "__main__":
         path=Path(
             id="test_path",
             type=PathType.RandomSubAreaFarmPath,
-            startVertex=Vertex(mapId=ankarnam_lvl1, zoneId=1),
+            startVertex=Vertex(mapId=village_astrub, zoneId=1),
             transitionTypeWhitelist=[TransitionType.SCROLL, TransitionType.SCROLL_ACTION],
         ),
         monsterLvlCoefDiff=1.5,
@@ -40,10 +40,11 @@ if __name__ == "__main__":
     )
     bot = Pyd2Bot(session)
     bot.start()
-    bot.addShutDownListener(lambda name, message, reason: print(f"Shutting down {name} because {reason}, details:\n{message}"))
-
-    # Setting up the system tray icon
     icon = QtGui.QIcon(os.path.join(currdir, "icon.png"))
     trayIcon = SystemTrayIcon(icon, bot)
+    def onShutdown(name, message, reason):
+        print(f"Shutting down {name} because {reason}, details:\n{message}")
+        QtWidgets.QApplication.quit()
+    bot.addShutDownListener(onShutdown)
     trayIcon.show()
     sys.exit(app.exec_())

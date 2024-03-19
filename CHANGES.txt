@@ -1,0 +1,30 @@
+MAJ 16.01.2024 :
+- Update des repos après la mise à jour
+- Ajout d'un outil pour extraire les données de vos comptes depuis le launcher : voir ankalauncher hackerino
+
+MAJ 18.01.2024
+- Une appli Flask modeste a été ajouté sous le dossier app. J'invite les experts en frontend d'aider le projet sur cette partie. Il faut ajouter des fonctionnalité pour remplir les formulaires de lancement des activités, pour créer les paths, un button pour importer les comptes depuis le launcher .... Pour le moment l'appli est très rudimentaire.
+- J'ai commencé à traduire les modules responsables de la collecte de statistiques sur l'activité su joeur. Ajouter ces modules à pydofus2 lui permettrait de passer la détection de bots. Pour ceux qui ne le savent pas Ankama traque tout bit d'activité que vous faites sur le jeu et l'envoie. Si vous utiliser donc un bot full socket qui n'implémente pas cette collecte de statistics il se fait ban sauf si vous vous connectez dessus de temps en temps.
+
+MAJ 21.01.2024:
+- Ajout de button pour importer les comptes depuis le launcher sur l'app
+- L'implémentation des modules de collecte de statistics avance très bien.
+- J'ai apporté pas mal de fix par ci par là.
+- Les bots se font généralement ban assez rapidement du coup il y'a un travail énorme nécessaire pour inclure l'envoie des stats et la signature aussi des calls api avec les cookies.
+
+MAJ 22.01.2024:
+- Update de l'interface de sniffing
+
+MAJ 17.03.2024:
+- Je continue de travailler sur le système de mimic de l'envoi de stats
+- J'ai fait une petite mise à jour de forme de l'interface de sniffing
+- Haapi maintenant implémente beaucoup plus d'Endpoint et enregistre les cookies
+- Les tests sont en cours pour voir si les bots se font moins ban grâce à l'envoie des events
+
+MAJ 19.03.2024:
+- Ajout de latence entre l'envoie de certains messages
+- Ajout d'un module qui simule le launcher : ZaapDecoy
+- Amélioration de fetch characters du AccountManager
+- Le bon maintenant envoie aussi des events de usage de shortcut lors des combats et en déplacement
+- Tests montrent que les bots se font de moins en spot, j'ai réussi à en faire tourner un de fight pendant plus d'une heure avec le stup actuel des latences et des envois d'events
+- J'ai créé un serveur discord pour essayer de rassembler les gens passionnés par ce projet : https://cadernis.fr/TC2AeJOY83hK6jINUIVHGJyVR7mS

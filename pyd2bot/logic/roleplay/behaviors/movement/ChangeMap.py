@@ -397,6 +397,8 @@ class ChangeMap(AbstractBehavior):
         return self.trType == TransitionTypeEnum.INTERACTIVE
 
     def sendMapChangeRequest(self):
+        if PlayedCharacterManager().isFighting:
+            return
         cmmsg = ChangeMapMessage()
         cmmsg.init(int(self.transition.transitionMapId), False)
         ConnectionsHandler().send(cmmsg)

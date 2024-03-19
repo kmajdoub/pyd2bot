@@ -126,6 +126,8 @@ class MapMove(AbstractBehavior):
         RequestMapData().start(callback=lambda code, error: self.move())
 
     def sendMoveRequest(self):
+        if PlayedCharacterManager().isFighting:
+            return
         gmmrmsg = GameMapMovementRequestMessage()
         gmmrmsg.init(self.movePath.keyMoves(), MapDisplayManager().currentMapPoint.mapId)
         ConnectionsHandler().send(gmmrmsg)

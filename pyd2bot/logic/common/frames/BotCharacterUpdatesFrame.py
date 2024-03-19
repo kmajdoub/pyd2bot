@@ -155,6 +155,8 @@ class BotCharacterUpdatesFrame(Frame):
             return KernelEventsManager().onceMapProcessed(self.boostCharacs, [boost, statId], originator=self)
         sumsg = StatsUpgradeRequestMessage()
         sumsg.init(False, statId, boost)
+        if PlayedCharacterManager().isFighting:
+                return
         ConnectionsHandler().send(sumsg)
         KernelEventsManager().once(KernelEvent.StatsUpgradeResult, self.onStatUpgradeResult, originator=self)
 
@@ -167,5 +169,7 @@ class BotCharacterUpdatesFrame(Frame):
     def onAchievementFinished(self, event, achievementId, finishedlevel):
         arrmsg = AchievementRewardRequestMessage()
         arrmsg.init(achievementId)
+        if PlayedCharacterManager().isFighting:
+                return
         ConnectionsHandler().send(arrmsg)
         return True

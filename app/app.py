@@ -74,7 +74,7 @@ class BotManagerApp:
                     session.path = Path(
                         id="astrub",
                         type=PathType.RandomSubAreaFarmPath,
-                        startVertex=Vertex(mapId=191106048.0, zoneId=1),
+                        startVertex=Vertex(mapId=154010883.0, zoneId=1),
                         transitionTypeWhitelist=[TransitionType.SCROLL, TransitionType.SCROLL_ACTION],
                     )
                     session.monsterLvlCoefDiff = 1.4

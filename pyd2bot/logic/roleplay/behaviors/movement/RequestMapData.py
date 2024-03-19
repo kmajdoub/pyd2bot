@@ -6,6 +6,7 @@ from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import \
 from pydofus2.com.ankamagames.berilia.managers.Listener import Listener
 from pydofus2.com.ankamagames.dofus.kernel.net.ConnectionsHandler import \
     ConnectionsHandler
+from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import PlayedCharacterManager
 from pydofus2.com.ankamagames.dofus.network.messages.common.basic.BasicPingMessage import \
     BasicPingMessage
 from pydofus2.com.ankamagames.dofus.network.messages.game.context.roleplay.MapInformationsRequestMessage import \
@@ -41,6 +42,8 @@ class RequestMapData(AbstractBehavior):
         self.sendRequest()
 
     def onMapDataRequestTimeout(self, listener: Listener):
+        if PlayedCharacterManager().isFighting:
+            return
         Logger().warning("Map data request timeout")
         pingMsg = BasicPingMessage()
         pingMsg.init(True)

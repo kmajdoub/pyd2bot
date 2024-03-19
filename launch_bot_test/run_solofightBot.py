@@ -1,24 +1,27 @@
-import sys
 import os
+import sys
+
+from PyQt5 import QtGui, QtWidgets
+from system_tray import SystemTrayIcon
+
 from pyd2bot.logic.managers.AccountManager import AccountManager
 from pyd2bot.Pyd2Bot import Pyd2Bot
 from pyd2bot.thriftServer.pyd2botService.ttypes import (Path, PathType,
                                                         Session, SessionType,
                                                         TransitionType,
                                                         UnloadType, Vertex)
-from PyQt5 import QtGui, QtWidgets
-from system_tray import SystemTrayIcon
 
-ankarnam = 154010883
+ankarnam_lvl1 = 154010883
+ankarnal_lvl5 = 154010884
 village_astrub = 191106048
-# ankama coin bouftou 88082704
-# Lac cania - pleines rocheuses : 156240386
+ankama_coin_bouftou = 88082704
+cania_pleines_rocheuses = 156240386
 currdir = os.path.dirname(os.path.abspath(__file__))
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
     app.setQuitOnLastWindowClosed(False)
-    account_key = "244588168227834474"
+    account_key = "244588168229341527"
     creds = AccountManager.get_credentials(account_key)
     session = Session(
         id="test_fight_solo",
@@ -28,7 +31,7 @@ if __name__ == "__main__":
         path=Path(
             id="test_path",
             type=PathType.RandomSubAreaFarmPath,
-            startVertex=Vertex(mapId=village_astrub, zoneId=1),
+            startVertex=Vertex(mapId=ankarnam_lvl1, zoneId=1),
             transitionTypeWhitelist=[TransitionType.SCROLL, TransitionType.SCROLL_ACTION],
         ),
         monsterLvlCoefDiff=1.5,

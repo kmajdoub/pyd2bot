@@ -44,12 +44,10 @@ Pyd2bot utilizes the Pydofus2 client as a background to automate tasks in Dofus.
     python -m venv .venv
     ```
 
-- **Set Up Path Files**:
-  - Create `pydofus2.pth` and `pyd2bot.pth` inside `.venv`.
-  - Write the absolute path to `pydofus2` and `pyd2bot` in their respective files.
-For example if you botdev folder is under `D:\`:
-  - Create `pydofus2.pth` in `D:\botdev\.venv\pydofus2.pth` and put in its first line `D:\botdev\pydofus2`.
-  - Create `pyd2bot.pth` in `D:\botdev\.venv\pyd2bot.pth` and put in its first line `D:\botdev\pyd2bot`.
+- **Intall repos for dev**:
+  - Source the .venv `source .venv`
+  - Navigate to the folder `pydofus2` and run `pip install -e`.
+  - Navigate to the folder `pyd2bot` and run `pip install -e`.
 
 ### 2. Installing Dependencies
 

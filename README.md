@@ -45,9 +45,25 @@ Pyd2bot utilizes the Pydofus2 client as a background to automate tasks in Dofus.
     ```
 
 - **Intall repos for dev**:
-  - Source the .venv `source .venv/Script/activate`
-  - Navigate to the folder `pydofus2` and run `pip install -e`.
-  - Navigate to the folder `pyd2bot` and run `pip install -e`.
+  - Source the .venv :
+
+   ```bash
+   source .venv/Script/activate
+    ```
+
+  - Install pydofus2 in dev mode:
+  Navigate to the folder `pydofus2` and run
+
+  ```bash
+  pip install -e
+  ```
+
+  - Install pyd2bot in dev mode:
+  Navigate to the folder `pyd2bot` and run
+
+  ```bash
+  pip install -e
+  ```
 
 ### 2. Installing Dependencies
 

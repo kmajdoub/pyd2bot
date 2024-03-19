@@ -143,7 +143,7 @@ class FarmFights(AbstractBehavior):
             Logger().info(monster)
             AttackMonsters().start(monster["id"], callback=onResp, parent=self)
         except StopIteration:
-            Logger().warning("No monster to farm")
+            Logger().debug("No monster to farm")
             self.moveToNextStep()
         
     def run(self, event_id=None, error=None):

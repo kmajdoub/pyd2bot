@@ -35,7 +35,7 @@ class SoloFarmFights(AbstractFarmBehavior):
             monster_group = all_monster_groups[0]
             self.attackMonsters(monster_group["id"], self.onFightStarted)
         else:
-            Logger().warning("No monster group found!")
+            Logger().debug("No monster group found!")
             self.moveToNextStep()
         
     def getAvailableResources(self):

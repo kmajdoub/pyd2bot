@@ -31,7 +31,7 @@ if __name__ == "__main__":
             startVertex=Vertex(mapId=village_astrub, zoneId=1),
             transitionTypeWhitelist=[TransitionType.SCROLL, TransitionType.SCROLL_ACTION],
         ),
-        monsterLvlCoefDiff=1.3,
+        monsterLvlCoefDiff=1.5,
         apikey=creds['apikey'],
         cert=creds['cert'],
     )

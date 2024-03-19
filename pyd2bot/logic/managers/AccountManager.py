@@ -1,10 +1,8 @@
 import json
 import os
 
-from pyd2bot.thriftServer.pyd2botServer import Pyd2botServer
 from pyd2bot.thriftServer.pyd2botService.ttypes import (Certificate, Character,
                                                         D2BotError)
-from pydofus2.com.ankamagames.atouin.Haapi import Haapi
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
 from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import \
     KernelEventsManager
@@ -15,8 +13,6 @@ from pydofus2.com.ankamagames.dofus.logic.common.managers.PlayerManager import \
     PlayerManager
 from pydofus2.com.ankamagames.dofus.logic.connection.actions.ServerSelectionAction import \
     ServerSelectionAction
-from pydofus2.com.ankamagames.dofus.misc.utils.GameID import GameID
-from pydofus2.com.ankamagames.jerakine.benchmark.BenchmarkTimer import BenchmarkTimer
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 from pydofus2.com.DofusClient import DofusClient
 from pydofus2.Zaap.helpers.CryptoHelper import CryptoHelper

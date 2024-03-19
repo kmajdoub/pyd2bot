@@ -22,7 +22,10 @@ class BotConfig(metaclass=Singleton):
             "secondarySpellId": 13528,  # ronce
             "primaryStat": 10,  # force
         },
-        4: {"primarySpellId": 12902, "primaryStat": 10},  # sram  # Truanderie  # force
+        4: {
+            "primarySpellId": 12902, 
+            "primaryStat": 10
+        },  # sram  # Truanderie  # force
     }
 
     def __init__(self) -> None:

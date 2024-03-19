@@ -173,7 +173,7 @@ class AbstractFarmBehavior(AbstractBehavior):
         raise NotImplementedError()
 
     def onFight(self, event=None):
-        Logger().warning(f"Player entered in a fight.")
+        Logger().debug(f"Player entered in a fight.")
         self.inFight = True
         self.stopChilds()
         self.once(KernelEvent.RoleplayStarted, self.onRoleplayAfterFight)

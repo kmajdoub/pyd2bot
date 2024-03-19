@@ -21,7 +21,7 @@ currdir = os.path.dirname(os.path.abspath(__file__))
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
     app.setQuitOnLastWindowClosed(False)
-    account_key = "244588168229341527"
+    account_key = "244588168229823334"
     creds = AccountManager.get_credentials(account_key)
     session = Session(
         id="test_fight_solo",

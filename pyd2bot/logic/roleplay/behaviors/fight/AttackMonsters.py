@@ -88,7 +88,7 @@ class AttackMonsters(AbstractBehavior):
             error = "Entity vanished while attacking it"
         return self.finish(self.ENTITY_VANISHED, error)
 
-    def ontargetMonsterReached(self, status, error, landingcell):
+    def ontargetMonsterReached(self, status, error, landingcell=None):
         if error:
             return self.finish(status, error)
         Logger().info(f"[AttackMonsters] Reached monster group cell")
@@ -110,7 +110,10 @@ class AttackMonsters(AbstractBehavior):
         elif self.attackMonsterListener:
             Logger().warning("Entity moved but we already asked server for attack")
             return
-        self.restart()
+        if MapMove().delayed_stop:
+            MapMove().registerStopCallback(self.restart)
+        else:
+            self.restart()
         
     def restart(self):
         KernelEventsManager().clearAllByOrigin(self)

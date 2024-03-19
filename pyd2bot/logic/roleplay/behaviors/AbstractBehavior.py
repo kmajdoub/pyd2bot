@@ -139,9 +139,9 @@ class AbstractBehavior(BehaviorApi, metaclass=Singleton):
         return result
     
     def stop(self):
-        Logger().debug(f"Stopping {type(self).__name__} ...")
+        # Logger().debug(f"Stopping {type(self).__name__} ...")
         self.finish(True, None)
-        Logger().debug(f"{type(self).__name__} has {len(self.children)} children")
+        # Logger().debug(f"{type(self).__name__} has {len(self.children)} children")
         self.stopChilds()
     
     def stopChilds(self):

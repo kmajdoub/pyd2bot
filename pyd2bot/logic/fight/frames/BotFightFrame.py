@@ -440,7 +440,7 @@ class BotFightFrame(Frame):
 
     def playTurn(self):
         if not self.currentPlayer:
-            Logger().warning(f"Play turn called withour defined currentPlayer")
+            Logger().warning(f"/!\ Play turn called without a defined currentPlayer")
         if not self.remainsEnemies():
             return
         self._currentPath = None
@@ -448,9 +448,9 @@ class BotFightFrame(Frame):
         Logger().info(f"Turn playing : {self.currentPlayer.name} ({self.currentPlayer.id}).")
         canCast, reason = self.canCastSpell()
         if not canCast:
-            Logger().info(f"can no more cast spell for reason : {reason}")
+            Logger().info(f"Unable to cast spells for reason : {reason}")
             self.addTurnAction(self.turnEnd, [])
-            self.nextTurnAction("play turn no targets")
+            self.nextTurnAction("Play turn no targets")
             return
         if BotConfig().isTreasureHuntSession:
             targetsFiters = [(self.spellw, True, 2672), (self.spellw, True, 91)]
@@ -511,8 +511,7 @@ class BotFightFrame(Frame):
         self.nextTurnAction("play turn")
 
     def getActualSpellRange(self, spellw: SpellWrapper) -> int:
-        range = spellw.maxRange
-        return range
+        return spellw.maxRange
 
     def getSpellShape(self, spellw: SpellWrapper) -> int:
         if not self._spellShape:

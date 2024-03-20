@@ -70,11 +70,16 @@ class BotManagerApp:
                     session.type = SessionType.TREASURE_HUNT
 
                 elif action == "fight":
+                    ankarnam_lvl1 = 154010883
+                    ankarnal_lvl5 = 154010884
+                    village_astrub = 191106048
+                    ankama_coin_bouftou = 88082704
+                    cania_pleines_rocheuses = 156240386
                     session.type = SessionType.FIGHT
                     session.path = Path(
                         id="astrub",
                         type=PathType.RandomSubAreaFarmPath,
-                        startVertex=Vertex(mapId=154010883.0, zoneId=1),
+                        startVertex=Vertex(mapId=village_astrub, zoneId=1),
                         transitionTypeWhitelist=[TransitionType.SCROLL, TransitionType.SCROLL_ACTION],
                     )
                     session.monsterLvlCoefDiff = 1.4

@@ -124,11 +124,11 @@ class AccountManager:
         acc = cls.get_account(accountId)
         apikey = acc["apikey"]
         instanceName = "fetchCharactersThread" 
-        charachters = list()
         client = DofusClient(instanceName)
         client.setApiKey(apikey)
         client.setCertificate(certid, certhash)
         client.start()
+        charachters = list()
         evtsManager = KernelEventsManager.waitThreadRegister(instanceName, 25)
         evtsManager.wait(KernelEvent.ServersList, 60)
         first = True

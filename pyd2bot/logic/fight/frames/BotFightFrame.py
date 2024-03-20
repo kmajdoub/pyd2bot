@@ -797,7 +797,7 @@ class BotFightFrame(Frame):
             return True
         if self._myTurn and not self._waitingSeqEnd:
             if Kernel().battleFrame._executingSequence:
-                Logger().warn("Delaying checkCanPlay because we're still in a sequence.")
+                Logger().warning("Delaying checkCanPlay because we're still in a sequence.")
                 KernelEventsManager().once(KernelEvent.SequenceExecFinished, self.checkCanPlay, originator=self)
                 return False
             self.nextTurnAction("checkCanPlay")

@@ -69,7 +69,7 @@ class Pyd2Bot(DofusClient):
             BotConfig.SELLER_VACANT.set()
         self.notifyOtherBots()
         KernelEventsManager().on(KernelEvent.KamasUpdate, self.onKamasUpdate)
-        KernelEventsManager().on(KernelEvent.PlayerLeveledUp, self.onLvlUp)
+        KernelEventsManager().on(KernelEvent.PlayerLeveledUp, self.onLvlUpdate)
         self.startSessionMainBehavior()
 
     def notifyOtherBots(self):
@@ -89,7 +89,7 @@ class Pyd2Bot(DofusClient):
         Kernel().worker.addFrame(BotFightFrame())
         self._nbrFightsDone += 1
     
-    def onLvlUp(self, event, previousLevel, newLevel):
+    def onLvlUpdate(self, event, previousLevel, newLevel):
         self._earnedLevels += (newLevel - previousLevel)
     
     def onMainBehaviorFinish(self, code, err):

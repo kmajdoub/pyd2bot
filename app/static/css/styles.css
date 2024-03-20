@@ -200,18 +200,25 @@ h2 {
     top: 0;
     width: 100%;
     height: 100%;
-    overflow: auto;
     background-color: rgb(0, 0, 0);
     background-color: rgba(0, 0, 0, 0.4);
-    padding-top: 60px;
+    padding-top: 20px;
 }
 
 .modal-content {
     background-color: #fefefe;
     margin: 5% auto;
-    padding: 20px;
+    padding: 10px;
     border: 1px solid #888;
-    width: 80%;
+    width: 95%;
+    /* Ensure modal content itself does not overflow */
+    max-height: 95vh; /* Example height, adjust as needed */
+}
+
+#logDetails {
+    background-color: #2c2b2b;
+    max-height: 700px; /* Example fixed height */
+    overflow-y: auto; /* Enable vertical scrolling */
 }
 
 .close-button {

@@ -4,9 +4,11 @@
 <head>
     <title>Account Interface</title>
     <!-- Add CSS and JavaScript as needed -->
+    
+    <script src="https://cdn.jsdelivr.net/npm/ansi_up@5.0.0/ansi_up.js"></script>
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
     <script src="{{ url_for('static', filename='js/scripts.js') }}"></script>
-    <script src="https://cdn.jsdelivr.net/npm/ansi_up@5.0.0/ansi_up.js"></script>
 </head>
 
 <body>
@@ -28,8 +30,9 @@
                             <button
                                 onclick="runCharacterAction('{{ account.id }}', '{{ character.id }}', 'treasurehunt')">Run
                                 Treasure Hunt</button>
-                            <button onclick="runCharacterAction('{{ account.id }}', '{{ character.id }}', 'fight')">Run
+                            <button onclick="openFightModal('{{ account.id }}', '{{ character.id }}')">Run
                                 Fight</button>
+
                         </li>
                         {% endfor %}
                     </ul>
@@ -44,6 +47,7 @@
                 <thead>
                     <tr>
                         <th>Character</th>
+                        <th>Level</th>
                         <th>Activity</th>
                         <th>Run Time</th>
                         <th>Status</th>
@@ -65,6 +69,25 @@
             </div>
         </div>
 
+    </div>
+    <!-- Add this modal structure to your HTML body -->
+    <div id="fightModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close-button" onclick="closeFightModal()">&times;</span>
+            <h2>Run Solo Fight</h2>
+            <form onsubmit="submitFightForm(); return false;">
+                <label for="fightPathsSelect">Path:</label>
+                <select id="fightPathsSelect"></select>
+
+                <label for="monsterLvlCoefDiffInput">Monster Level Coeff. Diff.:</label>
+                <input type="number" id="monsterLvlCoefDiffInput" step="any" min="0">
+
+                <input type="hidden" id="fightAccountId">
+                <input type="hidden" id="fightCharacterId">
+
+                <button type="submit">Start Fight</button>
+            </form>
+        </div>
     </div>
 </body>
 

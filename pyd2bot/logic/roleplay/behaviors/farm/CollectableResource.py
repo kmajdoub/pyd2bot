@@ -1,7 +1,6 @@
 
 from typing import TYPE_CHECKING
 
-from pyd2bot.logic.roleplay.behaviors.skill.UseSkill import UseSkill
 from pydofus2.com.ankamagames.atouin.managers.MapDisplayManager import \
     MapDisplayManager
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import \

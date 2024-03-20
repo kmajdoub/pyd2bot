@@ -118,7 +118,6 @@ class Target:
     def __str__(self) -> str:
         return f"({self.entity.contextualId}, { self.entity.disposition.cellId}, {self.distFromPlayer})"
 
-
 class BotFightFrame(Frame):
     VERBOSE = True
     ACTION_TIMEOUT = 7
@@ -568,7 +567,7 @@ class BotFightFrame(Frame):
             Logger().info(f"Next turn actions, {[a['fct'].__name__ for a in self._turnAction]}")
         if self._turnAction:
             action = self._turnAction.pop(0)
-            self._waitingSeqEnd = True
+            # self._waitingSeqEnd = True
             action["fct"](*action["args"])
         else:
             self.playTurn()

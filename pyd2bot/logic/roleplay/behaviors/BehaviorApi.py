@@ -65,9 +65,9 @@ class BehaviorApi:
 
             return self.autoTrip(154010883, 1, callback=onOutOfCelestialDim)
 
-        dstZaapVertex, dist = Localizer.findCloseZaapMapId(dstMapId, maxCost, excludeMaps=excludeMaps)
+        dstZaapVertex, _ = Localizer.findCloseZaapMapId(dstMapId, maxCost, excludeMaps=excludeMaps)
         if not dstZaapVertex:
-            Logger().warning(f"No src zaap found for cost {maxCost} and map {dstMapId}!")
+            Logger().warning(f"No dest zaap found for cost {maxCost} and map {dstMapId}!")
             return self.autoTrip(dstMapId, dstZoneId, callback=callback)
 
         if not PlayedCharacterManager().isZaapKnown(dstZaapVertex.mapId):
@@ -75,10 +75,9 @@ class BehaviorApi:
 
             def onDstZaapTrip(code, err):
                 if err:
-                    Logger().error(f"Can't not reach dst zaap at {dstZaapVertex} : {err}")
+                    Logger().error(f"Can't reach the dest zaap at {dstZaapVertex} : {err}")
                     return self.autoTrip(dstMapId, dstZoneId, callback=callback)
                 if withSaveZaap:
-
                     def onDstZaapSaved(code, err):
                         if err:
                             return callback(code, err)
@@ -94,7 +93,7 @@ class BehaviorApi:
                 callback=onDstZaapTrip,
             )
 
-        Logger().debug(f"Autotriping with zaaps to {dstMapId}, dst zaap at {dstZaapVertex}")
+        Logger().debug(f"Dst zaap at {dstZaapVertex} is found in known ZAAPS, Autotriping with zaaps to {dstMapId}, ")
 
         AutoTripUseZaap().start(
             dstMapId,

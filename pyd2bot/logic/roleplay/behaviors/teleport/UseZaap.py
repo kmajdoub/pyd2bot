@@ -61,7 +61,12 @@ class UseZaap(AbstractBehavior):
                 self.onceMapProcessed(self.onDestMapProcessed)
                 return Kernel().zaapFrame.teleportRequest(dst.cost, ttype, dst.destinationType, dst.mapId)
         else:
-            self.finish(self.DST_ZAAP_NOT_KNOWN, f"Didnt find dest zaap {dst.mapId} in teleport destinations!", teleportDestinations=[d.mapId for d in destinations])
+            ConnectionsHandler().send(LeaveDialogRequestMessage())
+            err = f"Didnt find dest zaap {dst.mapId} in teleport destinations, destinations: {[d.mapId for d in destinations]}"
+            return self.on(
+                KernelEvent.LeaveDialog,
+                lambda e: self.finish(self.DST_ZAAP_NOT_KNOWN, err),
+            )
 
     def onZapSaveEnd(self, code, err):
         if err:

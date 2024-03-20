@@ -182,6 +182,11 @@ class AutoTripUseZaap(AbstractBehavior):
                     return self.enterHavenBag(self.goToDestinationOnFeet)
                 else:
                     return self.goToDestinationOnFeet()
+
+            elif code == UseZaap.DST_ZAAP_NOT_KNOWN:
+                Logger().warning(err)
+                return self.goToDestinationOnFeet()
+
             elif code == UseSkill.UNREACHABLE_IE:
                 Logger().warning(f"Unreachable IE position of src zaap, can't use it to reach dst zaap map!")
                 iePos: MapPoint = kwargs.get("iePosition")
@@ -194,6 +199,7 @@ class AutoTripUseZaap(AbstractBehavior):
                         callback=self.onSrcZaapTrip,
                     )
                 return self.finish(code, err)
+
             else:
                 return self.finish(code, err)
         self.onDstZaapReached()

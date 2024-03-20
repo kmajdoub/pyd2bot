@@ -5,24 +5,19 @@ from pyd2bot.logic.common.rpcMessages.ComeToCollectMessage import \
 from pyd2bot.logic.common.rpcMessages.GetCurrentVertexMessage import \
     GetCurrentVertexMessage
 from pyd2bot.logic.common.rpcMessages.GetStatusMessage import GetStatusMessage
-from pyd2bot.logic.common.rpcMessages.RCPResponseMessage import \
-    RPCResponseMessage
+from pyd2bot.logic.common.rpcMessages.RCPResponseMessage import RPCResponseMessage
 from pyd2bot.logic.common.rpcMessages.RPCMessage import RPCMessage
 from pyd2bot.logic.managers.BotConfig import BotConfig
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
 from pyd2bot.logic.roleplay.behaviors.exchange.CollectItems import CollectItems
 from pyd2bot.logic.roleplay.behaviors.movement.AutoTrip import AutoTrip
 from pyd2bot.logic.roleplay.behaviors.movement.ChangeMap import ChangeMap
-from pyd2bot.logic.roleplay.messages.FollowTransitionMessage import \
-    FollowTransitionMessage
-from pyd2bot.logic.roleplay.messages.MoveToVertexMessage import \
-    MoveToVertexMessage
-from pyd2bot.logic.roleplay.messages.SellerVacantMessage import \
-    SellerVacantMessage
+from pyd2bot.logic.roleplay.messages.FollowTransitionMessage import FollowTransitionMessage
+from pyd2bot.logic.roleplay.messages.MoveToVertexMessage import MoveToVertexMessage
+from pyd2bot.logic.roleplay.messages.SellerVacantMessage import SellerVacantMessage
 from pyd2bot.misc.BotEventsmanager import BotEventsManager
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
-from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import \
-    KernelEventsManager
+from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import KernelEventsManager
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import \
     PlayedCharacterManager
@@ -86,7 +81,7 @@ class BotRPCFrame(Frame):
                 def onresponse(result, error):
                     if error:
                         Logger().error(f"[RPCFrame] Error while trying to meet the guest {msg.guestInfos.login} to collect resources: {error}")
-                    for instanceId, instance in Kernel.getInstances():
+                    for _, instance in Kernel.getInstances():
                         instance.worker.process(SellerVacantMessage(threading.current_thread().name))
                     BotConfig.SELLER_VACANT.set()
                     if BotConfig.SELLER_LOCK.locked():

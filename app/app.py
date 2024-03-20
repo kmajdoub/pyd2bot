@@ -14,6 +14,7 @@ from pyd2bot.thriftServer.pyd2botService.ttypes import (Certificate, JobFilter,
                                                         UnloadType, Vertex)
 from pydofus2.com.ankamagames.dofus.kernel.net.DisconnectionReasonEnum import \
     DisconnectionReasonEnum
+from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import PlayedCharacterManager
 from pydofus2.com.ankamagames.jerakine.benchmark.BenchmarkTimer import BenchmarkTimer
 from pydofus2.com.ankamagames.jerakine.logger.Logger import HtmlFormatter, Logger
 import signal
@@ -41,7 +42,6 @@ class SocketIOHandler(logging.Handler):
     def emit(self, record):
         log_entry = self.format(record)
         self.batch.append(log_entry)
-        
         if not self.timer:
             self.timer = BenchmarkTimer(self.batch_time, self.flush)
             self.timer.start()
@@ -207,18 +207,20 @@ class BotManagerApp:
 
         @self.app.route("/get_running_bots")
         def get_running_bots():
-            return jsonify(
-                [
-                    {
-                        "name": bot["obj"].name,
-                        "character": bot["character"],
-                        "runTime": format_runtime(bot["startTime"]),
-                        "status": SessionStatus._VALUES_TO_NAMES[bot["obj"].getState()],
-                        "activity": bot["activity"],
-                    }
-                    for bot in self._running_bots.values()
-                ]
-            )
+            result = []
+            for bot in self._running_bots.values():
+                bot_data = {
+                    "name": bot["obj"].name,
+                    "character": bot["character"],
+                    "runTime": format_runtime(bot["startTime"]),
+                    "status": SessionStatus._VALUES_TO_NAMES[bot["obj"].getState()],
+                    "activity": bot["activity"],
+                }
+                playermanager = PlayedCharacterManager.getInstance(bot["obj"].name)
+                if playermanager and playermanager.infos:
+                    bot_data["level"] = playermanager.infos.level
+                result.append(bot_data)
+            return jsonify(result)
 
         @self.app.route("/watch-log", methods=['POST'])
         def watch_log():

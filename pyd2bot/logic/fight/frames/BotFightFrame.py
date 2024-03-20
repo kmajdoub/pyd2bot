@@ -217,8 +217,8 @@ class BotFightFrame(Frame):
         KernelEventsManager().on(
             KernelEvent.ChallengeBonusSelected,
             self.onChallengeBonusChosen,
-            timeout=6,
-            ontimeout=lambda listener: self.onChallengeBonusChosen(None, "N/A"),
+            timeout=5,
+            ontimeout=lambda _: self.onChallengeBonusChosen(None, "N/A"),
             originator=self,
         )
         return True

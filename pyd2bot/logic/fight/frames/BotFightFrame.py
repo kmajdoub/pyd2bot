@@ -296,7 +296,7 @@ class BotFightFrame(Frame):
                         hasLosToTargets[p.cellId] = list[Target]()
                     hasLosToTargets[p.cellId].append(target)
                     maxRangeFromFighter = max(maxRangeFromFighter, target.distFromPlayer)
-        Logger().info(f"findCellsWithLosToTargets took {perf_counter() - s} seconds")
+        # Logger().info(f"findCellsWithLosToTargets took {perf_counter() - s} seconds")
         return maxRangeFromFighter, hasLosToTargets
 
     def findPathToTarget(self, spellw: SpellWrapper, targets: list[Target]) -> Tuple[Target, list[int]]:
@@ -353,16 +353,6 @@ class BotFightFrame(Frame):
             path = self.buildPath(parentOfCell, bestAlternative)
             return None, path
         return None, None
-
-    @classmethod
-    def updateAveragePathTime(cls, time: float):
-        with lock:
-            cls._total_time_to_find_path += time
-            cls._number_of_path_calculations += 1
-            cls._average_time_to_find_path = cls._total_time_to_find_path / cls._number_of_path_calculations
-            if cls._number_of_path_calculations > 100:
-                cls._total_time_to_find_path = 0
-                cls._number_of_path_calculations = 0
 
     def onInvisibleMobBlockingWay(self):
         self._turnAction.clear()
@@ -567,7 +557,6 @@ class BotFightFrame(Frame):
             Logger().info(f"Next turn actions, {[a['fct'].__name__ for a in self._turnAction]}")
         if self._turnAction:
             action = self._turnAction.pop(0)
-            # self._waitingSeqEnd = True
             action["fct"](*action["args"])
         else:
             self.playTurn()

@@ -10,6 +10,7 @@ Pyd2bot utilizes the Pydofus2 client as a background to automate tasks in Dofus.
 
 - **Python 3.9.11**: Download and install from [python.org](https://www.python.org/downloads/release/python-3911/).
 - **Pcap and Wireshark**: Required for sniffer functionality. Download Wireshark from [here](https://www.wireshark.org/download.html).
+- **Make**: Required for updating the protocol. You can install it with with chocolatery, ```shell choco install make```. If you dont have chocolatey installed in your windows install it.
 
 ## Setup Steps for Developers
 
@@ -55,14 +56,14 @@ Pyd2bot utilizes the Pydofus2 client as a background to automate tasks in Dofus.
   Navigate to the folder `pydofus2` and run
 
   ```bash
-  pip install -e
+  pip install -e .
   ```
 
   - Install pyd2bot in dev mode:
   Navigate to the folder `pyd2bot` and run
 
   ```bash
-  pip install -e
+  pip install -e .
   ```
 
 ### 2. Installing Dependencies

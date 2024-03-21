@@ -57,12 +57,18 @@ class MapMove(AbstractBehavior):
         self.move()
 
     def stop(self) -> None:
-        if PlayedCharacterManager().entity and PlayedCharacterManager().entity.isMoving:
-            PlayedCharacterManager().entity.stop_move()
-        elif self.requested_movement:
-            self.delayed_stop = True
-            Logger().warning("Player is not moving yet, will delay stop.")
-            return False
+        if not PlayedCharacterManager().isFighting:
+            player = PlayedCharacterManager().entity
+            if player is None:
+                Logger().warning("Player entity not found, can't stop movement.")
+            elif player and not player.isMoving:
+                Logger().warning("Player is not moving, can't stop movement.")
+            if player and player.isMoving:
+                player.stop_move()
+            elif self.requested_movement:
+                self.delayed_stop = True
+                Logger().warning("Player is not moving yet, will delay stop.")
+                return False
         KernelEventsManager().clearAllByOrigin(self)
         MapMove.clear()
         for callback in self._stop_callbacks:
@@ -72,7 +78,7 @@ class MapMove(AbstractBehavior):
 
     def registerStopCallback(self, callback) -> None:
         self._stop_callbacks.append(callback)
-    
+        
     def move(self) -> bool:
         rpmframe = Kernel().movementFrame
         

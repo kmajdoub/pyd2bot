@@ -4,8 +4,6 @@ from typing import TYPE_CHECKING, Iterator
 from pyd2bot.misc.Localizer import Localizer
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import \
     PlayedCharacterManager
-from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.astar.AStar import \
-    AStar
 from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Transition import \
     Transition
 from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Vertex import \
@@ -26,7 +24,7 @@ class AbstractFarmPath:
     jobIds = []
     monsterLvlCoefDiff = float("inf")
     name : str
-    lastVisited : dict['Edge', int]()
+    lastVisited : dict['Edge', int]
     _mapIds : list[int]
 
     def __init__(self) -> None:

@@ -130,6 +130,8 @@ function updateRunningBots() {
                     <tr>
                         <td>${bot.character}</td>
                         <td>${bot.level}</td>
+                        <td>${bot.kamas}</td>
+                        <td>${bot.pods}%</td>
                         <td>${bot.activity}</td>
                         <td>${bot.runTime}</td>
                         <td>${bot.status}</td>

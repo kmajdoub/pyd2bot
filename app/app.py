@@ -14,6 +14,7 @@ from pyd2bot.thriftServer.pyd2botService.ttypes import (Certificate, JobFilter,
                                                         UnloadType, Vertex)
 from pydofus2.com.ankamagames.dofus.kernel.net.DisconnectionReasonEnum import \
     DisconnectionReasonEnum
+from pydofus2.com.ankamagames.dofus.logic.game.common.managers.InventoryManager import InventoryManager
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import PlayedCharacterManager
 from pydofus2.com.ankamagames.jerakine.benchmark.BenchmarkTimer import BenchmarkTimer
 from pydofus2.com.ankamagames.jerakine.logger.Logger import HtmlFormatter, Logger
@@ -168,10 +169,9 @@ class BotManagerApp:
                 elif action == "farm":
                     session.type = SessionType.FARM
                     session.path = Path(
-                        id="amakna",
-                        type=PathType.RandomAreaFarmPath,
-                        startVertex=Vertex(mapId=191106048.0, zoneId=1),
-                        subAreaBlacklist=[6, 482, 276, 277],  # exclude astrub cimetery, Milicluster, Bwork village
+                        id="mine_astrub",
+                        type=PathType.CustomRandomFarmPath,
+                        mapIds=[193331715, 193200131, 188484108, 188484106, 188484104, 188485128, 188486154]
                     )
                     session.jobFilters = [
                         JobFilter(36, []),  # Pêcheur goujon
@@ -217,8 +217,13 @@ class BotManagerApp:
                     "activity": bot["activity"],
                 }
                 playermanager = PlayedCharacterManager.getInstance(bot["obj"].name)
+                invManager = InventoryManager.getInstance(bot["obj"].name)
+                if invManager and invManager.inventory:
+                    bot_data["kamas"] = invManager.inventory.kamas
                 if playermanager and playermanager.infos:
                     bot_data["level"] = playermanager.infos.level
+                if playermanager and playermanager.inventoryWeightMax:
+                    bot_data["pods"] = int(playermanager.inventoryWeight / playermanager.inventoryWeightMax * 100)
                 result.append(bot_data)
             return jsonify(result)
 

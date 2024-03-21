@@ -6,7 +6,9 @@ from pyd2bot.logic.managers.PathFactory import PathFactory
 from pyd2bot.thriftServer.pyd2botService.ttypes import (Character, Path,
                                                         Session, SessionType,
                                                         UnloadType)
+from pydofus2.com.ankamagames.dofus.network.enums.BreedEnum import BreedEnum
 from pydofus2.com.ankamagames.jerakine.metaclasses.Singleton import Singleton
+from pydofus2.damageCalculation.tools.StatIds import StatIds
 
 if TYPE_CHECKING:
     from pyd2bot.models.farmPaths.AbstractFarmPath import AbstractFarmPath
@@ -17,15 +19,18 @@ class BotConfig(metaclass=Singleton):
     SELLER_LOCK = threading.Lock()
 
     defaultBreedConfig = {
-        10: {  # sadida
-            "primarySpellId": 13516,  # larme
-            "secondarySpellId": 13528,  # ronce
-            "primaryStat": 10,  # force
+        BreedEnum.Sadida: {
+            "primarySpellId": 13516, # ronce
+            "primaryStat": StatIds.STRENGTH,
         },
-        4: {
-            "primarySpellId": 12902, 
-            "primaryStat": 10
-        },  # sram  # Truanderie  # force
+        BreedEnum.Sram: {
+            "primarySpellId": 12902, # Truanderie
+            "primaryStat": StatIds.STRENGTH
+        },  
+        BreedEnum.Cra: {
+            "primarySpellId": 13047, # fleche optique
+            "primaryStat": StatIds.INTELLIGENCE
+        }
     }
 
     def __init__(self) -> None:

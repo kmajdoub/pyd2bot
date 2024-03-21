@@ -100,6 +100,7 @@ enum PathType {
     RandomSubAreaFarmPath = 0,
     RandomAreaFarmPath=2,
     CyclicFarmPath = 1,
+    CustomRandomFarmPath = 3,
 }
 
 struct Path {
@@ -108,6 +109,7 @@ struct Path {
     3: optional Vertex startVertex,
     4: optional list<TransitionType> transitionTypeWhitelist,
     5: optional list<int> subAreaBlacklist,
+    6: optional list<int> mapIds,
 }
 
 struct Spell {

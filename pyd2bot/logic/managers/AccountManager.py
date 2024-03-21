@@ -1,8 +1,7 @@
 import json
 import os
 
-from pyd2bot.thriftServer.pyd2botService.ttypes import (Certificate, Character,
-                                                        D2BotError)
+from pyd2bot.thriftServer.pyd2botService.ttypes import (Certificate, Character)
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
 from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import \
     KernelEventsManager
@@ -192,6 +191,6 @@ class AccountManager:
                         break
             try:
                 AccountManager.fetch_account(1, apikey, certid, certhash, with_characters_fetch)
-            except D2BotError as e:
-                raise Exception(f"Failed to fetch characters from game server:\n{e.message}")
+            except Exception as exc:
+                raise Exception(f"Failed to fetch characters from game server:\n{exc}")
         return cls.accounts

@@ -6,14 +6,13 @@
 #  options string: py
 #
 
-import sys
-
+from thrift.Thrift import TType, TMessageType, TFrozenDict, TException, TApplicationException
 from thrift.protocol.TProtocol import TProtocolException
-from thrift.Thrift import (TApplicationException, TException, TFrozenDict,
-                           TMessageType, TType)
-from thrift.transport import TTransport
 from thrift.TRecursive import fix_spec
 
+import sys
+
+from thrift.transport import TTransport
 all_structs = []
 
 
@@ -138,17 +137,20 @@ class PathType(object):
     RandomSubAreaFarmPath = 0
     RandomAreaFarmPath = 2
     CyclicFarmPath = 1
+    CustomRandomFarmPath = 3
 
     _VALUES_TO_NAMES = {
         0: "RandomSubAreaFarmPath",
         2: "RandomAreaFarmPath",
         1: "CyclicFarmPath",
+        3: "CustomRandomFarmPath",
     }
 
     _NAMES_TO_VALUES = {
         "RandomSubAreaFarmPath": 0,
         "RandomAreaFarmPath": 2,
         "CyclicFarmPath": 1,
+        "CustomRandomFarmPath": 3,
     }
 
 
@@ -904,16 +906,18 @@ class Path(object):
      - startVertex
      - transitionTypeWhitelist
      - subAreaBlacklist
+     - mapIds
 
     """
 
 
-    def __init__(self, id=None, type=None, startVertex=None, transitionTypeWhitelist=None, subAreaBlacklist=None,):
+    def __init__(self, id=None, type=None, startVertex=None, transitionTypeWhitelist=None, subAreaBlacklist=None, mapIds=None,):
         self.id = id
         self.type = type
         self.startVertex = startVertex
         self.transitionTypeWhitelist = transitionTypeWhitelist
         self.subAreaBlacklist = subAreaBlacklist
+        self.mapIds = mapIds
 
     def read(self, iprot):
         if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
@@ -960,6 +964,16 @@ class Path(object):
                     iprot.readListEnd()
                 else:
                     iprot.skip(ftype)
+            elif fid == 6:
+                if ftype == TType.LIST:
+                    self.mapIds = []
+                    (_etype22, _size19) = iprot.readListBegin()
+                    for _i23 in range(_size19):
+                        _elem24 = iprot.readI32()
+                        self.mapIds.append(_elem24)
+                    iprot.readListEnd()
+                else:
+                    iprot.skip(ftype)
             else:
                 iprot.skip(ftype)
             iprot.readFieldEnd()
@@ -985,15 +999,22 @@ class Path(object):
         if self.transitionTypeWhitelist is not None:
             oprot.writeFieldBegin('transitionTypeWhitelist', TType.LIST, 4)
             oprot.writeListBegin(TType.I32, len(self.transitionTypeWhitelist))
-            for iter19 in self.transitionTypeWhitelist:
-                oprot.writeI32(iter19)
+            for iter25 in self.transitionTypeWhitelist:
+                oprot.writeI32(iter25)
             oprot.writeListEnd()
             oprot.writeFieldEnd()
         if self.subAreaBlacklist is not None:
             oprot.writeFieldBegin('subAreaBlacklist', TType.LIST, 5)
             oprot.writeListBegin(TType.I32, len(self.subAreaBlacklist))
-            for iter20 in self.subAreaBlacklist:
-                oprot.writeI32(iter20)
+            for iter26 in self.subAreaBlacklist:
+                oprot.writeI32(iter26)
+            oprot.writeListEnd()
+            oprot.writeFieldEnd()
+        if self.mapIds is not None:
+            oprot.writeFieldBegin('mapIds', TType.LIST, 6)
+            oprot.writeListBegin(TType.I32, len(self.mapIds))
+            for iter27 in self.mapIds:
+                oprot.writeI32(iter27)
             oprot.writeListEnd()
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
@@ -1351,11 +1372,11 @@ class Session(object):
             elif fid == 3:
                 if ftype == TType.LIST:
                     self.followers = []
-                    (_etype24, _size21) = iprot.readListBegin()
-                    for _i25 in range(_size21):
-                        _elem26 = Character()
-                        _elem26.read(iprot)
-                        self.followers.append(_elem26)
+                    (_etype31, _size28) = iprot.readListBegin()
+                    for _i32 in range(_size28):
+                        _elem33 = Character()
+                        _elem33.read(iprot)
+                        self.followers.append(_elem33)
                     iprot.readListEnd()
                 else:
                     iprot.skip(ftype)
@@ -1389,11 +1410,11 @@ class Session(object):
             elif fid == 9:
                 if ftype == TType.LIST:
                     self.jobFilters = []
-                    (_etype30, _size27) = iprot.readListBegin()
-                    for _i31 in range(_size27):
-                        _elem32 = JobFilter()
-                        _elem32.read(iprot)
-                        self.jobFilters.append(_elem32)
+                    (_etype37, _size34) = iprot.readListBegin()
+                    for _i38 in range(_size34):
+                        _elem39 = JobFilter()
+                        _elem39.read(iprot)
+                        self.jobFilters.append(_elem39)
                     iprot.readListEnd()
                 else:
                     iprot.skip(ftype)
@@ -1435,8 +1456,8 @@ class Session(object):
         if self.followers is not None:
             oprot.writeFieldBegin('followers', TType.LIST, 3)
             oprot.writeListBegin(TType.STRUCT, len(self.followers))
-            for iter33 in self.followers:
-                iter33.write(oprot)
+            for iter40 in self.followers:
+                iter40.write(oprot)
             oprot.writeListEnd()
             oprot.writeFieldEnd()
         if self.type is not None:
@@ -1462,8 +1483,8 @@ class Session(object):
         if self.jobFilters is not None:
             oprot.writeFieldBegin('jobFilters', TType.LIST, 9)
             oprot.writeListBegin(TType.STRUCT, len(self.jobFilters))
-            for iter34 in self.jobFilters:
-                iter34.write(oprot)
+            for iter41 in self.jobFilters:
+                iter41.write(oprot)
             oprot.writeListEnd()
             oprot.writeFieldEnd()
         if self.apikey is not None:
@@ -1496,7 +1517,7 @@ class Session(object):
         return not (self == other)
 
 
-class D2BotError(TException):
+class DofusError(TException):
     """
     Attributes:
      - code
@@ -1506,8 +1527,8 @@ class D2BotError(TException):
 
 
     def __init__(self, code=None, message=None,):
-        super(D2BotError, self).__setattr__('code', code)
-        super(D2BotError, self).__setattr__('message', message)
+        super(DofusError, self).__setattr__('code', code)
+        super(DofusError, self).__setattr__('message', message)
 
     def __setattr__(self, *args):
         raise TypeError("can't modify immutable instance")
@@ -1651,6 +1672,7 @@ Path.thrift_spec = (
     (3, TType.STRUCT, 'startVertex', [Vertex, None], None, ),  # 3
     (4, TType.LIST, 'transitionTypeWhitelist', (TType.I32, None, False), None, ),  # 4
     (5, TType.LIST, 'subAreaBlacklist', (TType.I32, None, False), None, ),  # 5
+    (6, TType.LIST, 'mapIds', (TType.I32, None, False), None, ),  # 6
 )
 all_structs.append(Spell)
 Spell.thrift_spec = (
@@ -1693,8 +1715,8 @@ Session.thrift_spec = (
     (11, TType.STRUCT, 'character', [Character, None], None, ),  # 11
     (12, TType.STRUCT, 'cert', [Certificate, None], None, ),  # 12
 )
-all_structs.append(D2BotError)
-D2BotError.thrift_spec = (
+all_structs.append(DofusError)
+DofusError.thrift_spec = (
     None,  # 0
     (1, TType.I32, 'code', None, None, ),  # 1
     (2, TType.STRING, 'message', 'UTF8', None, ),  # 2

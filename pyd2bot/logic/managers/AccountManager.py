@@ -1,6 +1,8 @@
 import json
 import os
+import threading
 
+from pyd2bot.logic.managers.AccountsCharactersFetcher import AccountsCharactersFetcher
 from pyd2bot.thriftServer.pyd2botService.ttypes import (Certificate, Character)
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
 from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import \
@@ -122,45 +124,10 @@ class AccountManager:
     def fetch_characters(cls, accountId, certid, certhash):
         acc = cls.get_account(accountId)
         apikey = acc["apikey"]
-        instanceName = "fetchCharactersThread" 
-        client = DofusClient(instanceName)
-        client.setApiKey(apikey)
-        client.setCertificate(certid, certhash)
-        client.start()
-        charachters = list()
-        evtsManager = KernelEventsManager.waitThreadRegister(instanceName, 25)
-        evtsManager.wait(KernelEvent.ServersList, 60)
-        first = True
-        kernel = Kernel.waitThreadRegister(instanceName, 25)
-        playerManager = PlayerManager.waitThreadRegister(instanceName, 25)
-        for server in kernel.serverSelectionFrame.usedServers:
-            if first:
-                first = False
-                kernel.worker.process(ServerSelectionAction.create(server.id))
-            else:
-                playerManager.charactersList.clear()
-                kernel.worker.process(ChangeServerAction.create(server.id))
-            evtsManager.wait(KernelEvent.CharactersList, 60)
-            Logger().info(f"Server : {server.id}, List characters received")
-            charachters += [
-                {
-                    "name": character.name,
-                    "id": character.id,
-                    "level": character.level,
-                    "breedId": character.breedId,
-                    "breedName": character.breed.name,
-                    "serverId": playerManager.server.id,
-                    "serverName": playerManager.server.name,
-                    "login": acc["login"],
-                    "accountId": accountId,
-                }
-                for character in playerManager.charactersList
-            ]
-        client.shutdown()
-        client.join()
-        print(f"Got characters {charachters}")
-        cls.accounts[accountId]["characters"] = charachters
-        return charachters
+        characters = AccountsCharactersFetcher().start(accountId, acc["login"], apikey, certid, certhash)
+        Logger().info(f"Characters fetched for account {accountId}: {characters}")
+        cls.accounts[accountId]["characters"] = characters
+        return characters
 
     @classmethod
     def save(cls):

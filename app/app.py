@@ -167,12 +167,19 @@ class BotManagerApp:
                     session.type = SessionType.TREASURE_HUNT
 
                 elif action == "farm":
-                    session.type = SessionType.FARM
-                    session.path = Path(
-                        id="mine_astrub",
-                        type=PathType.CustomRandomFarmPath,
-                        mapIds=[193331715, 193200131, 188484108, 188484106, 188484104, 188485128, 188486154]
-                    )
+                    session.type = SessionType.MULTIPLE_PATHS_FARM
+                    session.pathsList = [
+                        Path(
+                            id="mine_astrub",
+                            type=PathType.CustomRandomFarmPath,
+                            mapIds=[ 193331715, 193200131, 188484108 ]
+                        ),
+                        Path(
+                            id="mine_astrub2",
+                            type=PathType.CustomRandomFarmPath,
+                            mapIds=[ 193331713, 193200129 ]
+                        ),
+                    ],
                     session.jobFilters = [
                         JobFilter(36, []),  # Pêcheur goujon
                         JobFilter(2, []),  # Bucheron,

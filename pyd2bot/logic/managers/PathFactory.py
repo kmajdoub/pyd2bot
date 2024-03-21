@@ -15,7 +15,7 @@ class PathFactory:
     @classmethod
     def from_thriftObj(cls, obj: Path):
         if not isinstance(obj, Path):
-            raise ValueError("session.path must be a Path instance")
+            raise ValueError("session.path must be a Path instance, not " + str(type(obj)))
         if obj.type not in cls._pathClass:
             raise ValueError("Unknown path type: " + str(obj.type))
         pathCls = cls._pathClass.get(obj.type)

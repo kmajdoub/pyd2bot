@@ -16,3 +16,4 @@ class SystemTrayIcon(QtWidgets.QSystemTrayIcon):
     def stop_bot(self):
         print("Stopping the bot...")
         self.bot.shutdown("User wanted to stop the bot")
+        self.bot.join()

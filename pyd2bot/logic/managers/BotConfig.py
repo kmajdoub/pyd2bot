@@ -54,6 +54,7 @@ class BotConfig(metaclass=Singleton):
         self.followersIds = []
         self.fightPartyMembers = list[Character]()
         self.hasSellerLock = False
+        self.pathsList: list[Path] = []
 
     def releaseSellerLock(self):
         if self.hasSellerLock:
@@ -95,6 +96,10 @@ class BotConfig(metaclass=Singleton):
     def isMixed(self) -> bool:
         return self.sessionType == SessionType.MIXED
 
+    @property
+    def isMultiPathsFarmer(self):
+        return self.sessionType == SessionType.MULTIPLE_PATHS_FARM
+
     def getPlayerById(self, playerId: int) -> Character:
         if playerId == self.character.id:
             return self.character
@@ -125,6 +130,8 @@ class BotConfig(metaclass=Singleton):
         self.isFollower = not self.isLeader
         self.isSeller = session.type == SessionType.SELL
         self.seller = session.seller
+        if session.pathsList:
+            self.pathsList = [PathFactory.from_thriftObj(path) for path in session.pathsList]
         if session.path:
             self.path = PathFactory.from_thriftObj(session.path)
         elif session.type in [SessionType.FARM, SessionType.FIGHT]:

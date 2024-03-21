@@ -77,7 +77,8 @@ enum SessionType {
     SELL = 3,
     TREASURE_HUNT = 4,
     MIXED = 5,
-    MULE_FIGHT = 6
+    MULE_FIGHT = 6,
+    MULTIPLE_PATHS_FARM = 7,
 }
 
 enum TransitionType {
@@ -147,6 +148,7 @@ struct Session {
     10: string apikey,
     11: Character character,
     12: optional Certificate cert,
+    13: optional list<Path> pathsList,
 }
 
 exception DofusError {

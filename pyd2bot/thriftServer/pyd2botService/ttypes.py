@@ -65,6 +65,7 @@ class SessionType(object):
     TREASURE_HUNT = 4
     MIXED = 5
     MULE_FIGHT = 6
+    MULTIPLE_PATHS_FARM = 7
 
     _VALUES_TO_NAMES = {
         0: "FIGHT",
@@ -73,6 +74,7 @@ class SessionType(object):
         4: "TREASURE_HUNT",
         5: "MIXED",
         6: "MULE_FIGHT",
+        7: "MULTIPLE_PATHS_FARM",
     }
 
     _NAMES_TO_VALUES = {
@@ -82,6 +84,7 @@ class SessionType(object):
         "TREASURE_HUNT": 4,
         "MIXED": 5,
         "MULE_FIGHT": 6,
+        "MULTIPLE_PATHS_FARM": 7,
     }
 
 
@@ -1331,11 +1334,12 @@ class Session(object):
      - apikey
      - character
      - cert
+     - pathsList
 
     """
 
 
-    def __init__(self, id=None, leader=None, followers=None, type=None, unloadType=None, seller=None, path=None, monsterLvlCoefDiff=None, jobFilters=None, apikey=None, character=None, cert=None,):
+    def __init__(self, id=None, leader=None, followers=None, type=None, unloadType=None, seller=None, path=None, monsterLvlCoefDiff=None, jobFilters=None, apikey=None, character=None, cert=None, pathsList=None,):
         self.id = id
         self.leader = leader
         self.followers = followers
@@ -1348,6 +1352,7 @@ class Session(object):
         self.apikey = apikey
         self.character = character
         self.cert = cert
+        self.pathsList = pathsList
 
     def read(self, iprot):
         if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
@@ -1435,6 +1440,17 @@ class Session(object):
                     self.cert.read(iprot)
                 else:
                     iprot.skip(ftype)
+            elif fid == 13:
+                if ftype == TType.LIST:
+                    self.pathsList = []
+                    (_etype43, _size40) = iprot.readListBegin()
+                    for _i44 in range(_size40):
+                        _elem45 = Path()
+                        _elem45.read(iprot)
+                        self.pathsList.append(_elem45)
+                    iprot.readListEnd()
+                else:
+                    iprot.skip(ftype)
             else:
                 iprot.skip(ftype)
             iprot.readFieldEnd()
@@ -1456,8 +1472,8 @@ class Session(object):
         if self.followers is not None:
             oprot.writeFieldBegin('followers', TType.LIST, 3)
             oprot.writeListBegin(TType.STRUCT, len(self.followers))
-            for iter40 in self.followers:
-                iter40.write(oprot)
+            for iter46 in self.followers:
+                iter46.write(oprot)
             oprot.writeListEnd()
             oprot.writeFieldEnd()
         if self.type is not None:
@@ -1483,8 +1499,8 @@ class Session(object):
         if self.jobFilters is not None:
             oprot.writeFieldBegin('jobFilters', TType.LIST, 9)
             oprot.writeListBegin(TType.STRUCT, len(self.jobFilters))
-            for iter41 in self.jobFilters:
-                iter41.write(oprot)
+            for iter47 in self.jobFilters:
+                iter47.write(oprot)
             oprot.writeListEnd()
             oprot.writeFieldEnd()
         if self.apikey is not None:
@@ -1498,6 +1514,13 @@ class Session(object):
         if self.cert is not None:
             oprot.writeFieldBegin('cert', TType.STRUCT, 12)
             self.cert.write(oprot)
+            oprot.writeFieldEnd()
+        if self.pathsList is not None:
+            oprot.writeFieldBegin('pathsList', TType.LIST, 13)
+            oprot.writeListBegin(TType.STRUCT, len(self.pathsList))
+            for iter48 in self.pathsList:
+                iter48.write(oprot)
+            oprot.writeListEnd()
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
         oprot.writeStructEnd()
@@ -1714,6 +1737,7 @@ Session.thrift_spec = (
     (10, TType.STRING, 'apikey', 'UTF8', None, ),  # 10
     (11, TType.STRUCT, 'character', [Character, None], None, ),  # 11
     (12, TType.STRUCT, 'cert', [Certificate, None], None, ),  # 12
+    (13, TType.LIST, 'pathsList', (TType.STRUCT, [Path, None], False), None, ),  # 13
 )
 all_structs.append(DofusError)
 DofusError.thrift_spec = (

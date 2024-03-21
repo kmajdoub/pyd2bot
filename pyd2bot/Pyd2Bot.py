@@ -10,6 +10,7 @@ from pyd2bot.logic.common.rpcMessages.PlayerConnectedMessage import \
 from pyd2bot.logic.fight.frames.BotFightFrame import BotFightFrame
 from pyd2bot.logic.managers.BotConfig import BotConfig
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
+from pyd2bot.logic.roleplay.behaviors.farm.MultiplePathsResourceFarm import MultiplePathsResourceFarm
 from pyd2bot.logic.roleplay.behaviors.farm.ResourceFarm import ResourceFarm
 from pyd2bot.logic.roleplay.behaviors.fight.FarmFights import FarmFights
 from pyd2bot.logic.roleplay.behaviors.fight.MuleFighter import MuleFighter
@@ -123,6 +124,9 @@ class Pyd2Bot(DofusClient):
         elif BotConfig().isMixed:
             activity = random.choice([ResourceFarm(60 * 5), SoloFarmFights(60 * 3)])
             activity.start(callback=self.switchActivity)
+            
+        elif BotConfig().isMultiPathsFarmer:
+            MultiplePathsResourceFarm(60 * 2).start(callback=self.onMainBehaviorFinish)
         
     def switchActivity(self, code, err):
         self.onReconnect(None, f"Fake disconnect and take nap", random.random() * 60 * 3)

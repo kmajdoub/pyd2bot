@@ -6,7 +6,7 @@ from system_tray import SystemTrayIcon
 
 from pyd2bot.logic.managers.AccountManager import AccountManager
 from pyd2bot.Pyd2Bot import Pyd2Bot
-from pyd2bot.thriftServer.pyd2botService.ttypes import (Path, PathType,
+from pyd2bot.thriftServer.pyd2botService.ttypes import (JobFilter, Path, PathType,
                                                         Session, SessionType,
                                                         TransitionType,
                                                         UnloadType, Vertex)
@@ -26,15 +26,27 @@ if __name__ == "__main__":
     session = Session(
         id="test_fight_solo",
         character=creds['character'],
-        unloadType=UnloadType.BANK,
-        type=SessionType.FIGHT,
-        path=Path(
-            id="test_path",
-            type=PathType.RandomSubAreaFarmPath,
-            startVertex=Vertex(mapId=village_astrub, zoneId=1),
-            transitionTypeWhitelist=[TransitionType.SCROLL, TransitionType.SCROLL_ACTION],
-        ),
-        monsterLvlCoefDiff=1.5,
+        type=SessionType.MULTIPLE_PATHS_FARM,
+        pathsList=[
+            Path(
+                id="mine_astrub",
+                type=PathType.CustomRandomFarmPath,
+                mapIds=[ 193331715, 193200131, 188484108 ]
+            ),
+            Path(
+                id="mine_astrub2",
+                type=PathType.CustomRandomFarmPath,
+                mapIds=[ 193331713, 193200129 ]
+            ),
+        ],
+        jobFilters=[
+            JobFilter(36, []),  # Pêcheur goujon
+            JobFilter(2, []),  # Bucheron,
+            JobFilter(26, []),  # Alchimiste
+            JobFilter(28, []),  # Paysan
+            JobFilter(1, [311]),  # Base : eau
+            JobFilter(24, []),  # Miner
+        ],
         apikey=creds['apikey'],
         cert=creds['cert'],
     )

@@ -91,12 +91,11 @@ Pyd2bot utilizes the Pydofus2 client as a background to automate tasks in Dofus.
 ### 3. Configuration
 
 - **Setup Config Files**:
-  - In `pydofus2.pydofus2.com.ankamagames.dofus.Constants`, configure:
+  - In `<pydofus2_dir>/pydofus2/com/ankamagames/dofus/Constants.py`, configure:
     - `DOFUS_ROOTDIR`: Path to your Dofus installation directory.
-    - `LANG_FILE_PATH`: Path to your Dofus language file.
     - `LOGS_DIR`: Path to the folders you want pydofus2 to generate its logs to.
 - **Edit Makefile for Dofus Protocol build tools**:
-  - Modify the Makefile in `<pydofus2_dir>\pydofus2\devops\Makefile`.
+  - Edit the Makefile in `<pydofus2_dir>\pydofus2\devops\Makefile`.
   - Set variables like `DOFUSINVOKER`, `PYDOFUS_DIR`, etc.
     - Example:
 

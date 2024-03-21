@@ -104,13 +104,17 @@ class AutoTripUseZaap(AbstractBehavior):
         self.havenBagListener = self.once(
             KernelEvent.InHavenBag,
             callback,
-            timeout=5,
+            timeout=30,
             retryNbr=3,
-            retryAction=Kernel().roleplayContextFrame.havenbagEnter,
-            ontimeout=lambda l: self.finish(False, "Haven bag enter timedout"),
+            retryAction=self.onHeavenBagEnterTimeout,
+            ontimeout=lambda l: self.finish(False, "Haven bag enter timedout too many times"),
         )
         Kernel().roleplayContextFrame.havenbagEnter()
 
+    def onHeavenBagEnterTimeout(self):
+        Logger().error("Haven bag enter timedout!")
+        Kernel().roleplayContextFrame.havenbagEnter()
+        
     def onServerInfo(self, event, msgId, msgType, textId, msgContent, params):
         if textId == 589088:  # Can't join haven bag from current Map
             if self.havenBagListener:

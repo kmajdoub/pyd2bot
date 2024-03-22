@@ -30,7 +30,11 @@ class BotConfig(metaclass=Singleton):
         BreedEnum.Cra: {
             "primarySpellId": 13047, # fleche optique
             "primaryStat": StatIds.INTELLIGENCE
-        }
+        },
+        BreedEnum.Feca: {
+            "primarySpellId": 12978, # attaque naturelle
+            "primaryStat": StatIds.INTELLIGENCE,
+        },
     }
 
     def __init__(self) -> None:

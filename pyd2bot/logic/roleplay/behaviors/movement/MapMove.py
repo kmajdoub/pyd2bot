@@ -33,6 +33,7 @@ class MapMove(AbstractBehavior):
     CONSECUTIVE_MOVEMENT_DELAY = 0.25
     MOVE_REQ_TIMEOUT = 7
     ALREADY_ONCELL = 7001
+    PLAYER_STOPED = 7002
 
     def __init__(self) -> None:
         super().__init__()
@@ -172,4 +173,4 @@ class MapMove(AbstractBehavior):
         if success:
             self.finish(success, None, self._landingCell)
         else:
-            self.finish(success, "Player movement was stopped", self._landingCell)
+            self.finish(self.PLAYER_STOPED, "Player movement was stopped", self._landingCell)

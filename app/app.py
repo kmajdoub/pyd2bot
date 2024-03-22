@@ -59,7 +59,6 @@ paths = {
         "startVertex": {"mapId": 191106048, "zoneId": 1},
         "transitionTypeWhitelist": [TransitionType.SCROLL, TransitionType.SCROLL_ACTION],
     },
-    
 }
 
 def json_to_path(path_json) -> Path:

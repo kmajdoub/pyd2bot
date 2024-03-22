@@ -18,8 +18,7 @@ from pydofus2.com.ankamagames.dofus.network.messages.game.interactive.Interactiv
 from pydofus2.com.ankamagames.dofus.network.messages.game.interactive.skill.InteractiveUseWithParamRequestMessage import \
     InteractiveUseWithParamRequestMessage
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
-from pydofus2.com.ankamagames.jerakine.pathfinding.Pathfinding import \
-    Pathfinding
+
 
 
 class UseSkill(AbstractBehavior):
@@ -43,6 +42,7 @@ class UseSkill(AbstractBehavior):
         self._reach_skillcell_fails = 0
         self._move_to_skillcell_landingcell = None
         self._cells_blacklist = []
+        self._wanted_player_stop = False
 
     def run(
         self,
@@ -82,6 +82,10 @@ class UseSkill(AbstractBehavior):
         
     def onUseSkillCellReached(self, code, err, landingCell):
         if err:
+            if code == MapMove.PLAYER_STOPED:
+                if self._wanted_player_stop:
+                    self._wanted_player_stop = False
+                    return
             return self.finish(code, err)
         self._move_to_skillcell_landingcell = landingCell
         self.requestActivateSkill()
@@ -105,6 +109,7 @@ class UseSkill(AbstractBehavior):
     def onUsingInteractive(self, event, entityId, usingElementId):
         if self.elementId == usingElementId:
             if MapMove().isRunning():
+                self._wanted_player_stop = True
                 MapMove().stop()
             if entityId != PlayedCharacterManager().id:
                 Logger().error(f"Someone else is using this element, while we are moving to it, stopping map move")
@@ -115,6 +120,7 @@ class UseSkill(AbstractBehavior):
             if entityId != PlayedCharacterManager().id:
                 if self.elementId in Kernel().interactivesFrame._statedElm:
                     if MapMove().isRunning():
+                        self._wanted_player_stop = True
                         MapMove().stop()
                     self.finish(self.ELEM_TAKEN, "Someone else used this element")
             else:            

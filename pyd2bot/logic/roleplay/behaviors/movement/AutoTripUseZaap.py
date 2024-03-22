@@ -7,6 +7,7 @@ from pyd2bot.logic.roleplay.behaviors.teleport.UseZaap import UseZaap
 from pyd2bot.misc.Localizer import Localizer
 from pydofus2.com.ankamagames.atouin.managers.MapDisplayManager import \
     MapDisplayManager
+from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import KernelEventsManager
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
 from pydofus2.com.ankamagames.dofus.logic.common.managers.PlayerManager import \
@@ -109,6 +110,8 @@ class AutoTripUseZaap(AbstractBehavior):
             retryAction=self.onHeavenBagEnterTimeout,
             ontimeout=lambda l: self.finish(False, "Haven bag enter timedout too many times"),
         )
+        if not Kernel().roleplayContextFrame:
+            return KernelEventsManager().onceFramePushed("RoleplayContextFrame", Kernel().roleplayContextFrame.havenbagEnter)
         Kernel().roleplayContextFrame.havenbagEnter()
 
     def onHeavenBagEnterTimeout(self):

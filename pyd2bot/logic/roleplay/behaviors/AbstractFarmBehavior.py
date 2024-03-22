@@ -154,6 +154,8 @@ class AbstractFarmBehavior(AbstractBehavior):
         )
 
     def onBotOutOfFarmPath(self):
+        if not PlayedCharacterManager().currVertex:
+            return self.onceMapProcessed(callback=self.onBotOutOfFarmPath)
         Logger().warning(f"Bot is out of farm path, searching path to last vertex...")
         # dst_vertex, dist = self.path.findClosestMap()
         # Logger().debug(f"Found closest map {dst_vertex} at distance {dist} from current map")
@@ -248,9 +250,6 @@ class AbstractFarmBehavior(AbstractBehavior):
         if not self.running.is_set():
             Logger().error(f"Is not running!")
             return
-        if self.timeout and perf_counter() - self.startTime > self.timeout:
-            Logger().warning(f"Ending Behavior for reason : Timeout reached")
-            return self.finish(True, None)
         if PlayedCharacterManager().currentMap is None:
             return self.onceMapProcessed(callback=self.main)
         if self.inFight:
@@ -284,6 +283,9 @@ class AbstractFarmBehavior(AbstractBehavior):
                 )
             else:
                 self.currentVertex = self.path.currentVertex
+        if self.timeout and perf_counter() - self.startTime > self.timeout:
+            Logger().warning(f"Ending Behavior for reason : Timeout reached")
+            return self.finish(True, None)
         if PlayedCharacterManager().currVertex not in self.path:
             Logger().debug(f"Bot is out of farming area")
             return self.onBotOutOfFarmPath()

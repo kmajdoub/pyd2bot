@@ -6,16 +6,16 @@ const maxDisplayLines = 300;
 
 // Function to open the fight creation form in modal
 function openFightModal(accountId, characterId) {
-    fetch('/fight-paths')
+    fetch('/paths')
         .then(response => response.json())
         .then(data => {
             const pathsSelect = document.getElementById('fightPathsSelect');
             pathsSelect.innerHTML = ''; // Clear previous options
             
             // Iterate over the paths object
-            Object.entries(data.paths).forEach(([pathLabel, pathValue]) => {
+            data.paths.forEach(pathLabel => {
                 // Create an option element with the path name (key) as the label and the path value as the value
-                let option = new Option(pathLabel.replace(/_/g, ' '), pathValue); // Replace underscores with spaces for better readability
+                let option = new Option(pathLabel.replace(/_/g, ' '), pathLabel); // Replace underscores with spaces for better readability
                 pathsSelect.add(option);
             });
 
@@ -43,9 +43,9 @@ function submitFightForm() {
 
     // Creating the data object
     const data = {
-        account_id: accountId,
-        character_id: characterId,
-        path_value: pathValue,
+        accountId: accountId,
+        characterId: characterId,
+        pathId: pathValue,
         monsterLvlCoefDiff: monsterLevelDiff
     };
 
@@ -200,5 +200,215 @@ socket.on('log_message_batch', function(log_entries_batch) {
     logDetails.scrollTop = logDetails.scrollHeight;
 });
 
+// session stuff
+function populatePathsDropdown(paths) {
+    const pathsSelect = document.getElementById('pathsSelect');
+    pathsSelect.innerHTML = ''; // Clear previous options
+    console.log(paths);
+    paths.forEach(pathLabel => {
+        let option = new Option(pathLabel, pathLabel); // Using pathLabel as both the text and value
+        pathsSelect.add(option);
+    });
+}
+
+function adjustFormForSessionType(selectedType) {
+    // Example: Show/hide "Add Path" button based on selected session type
+    const addPathButton = document.getElementById('addPathButton');
+    if (selectedType === 'MULTIPLE_PATHS_FARM') {
+        addPathButton.style.display = 'block';
+    } else {
+        addPathButton.style.display = 'none';
+    }
+
+    // Additional logic to adjust form based on the session type...
+}
+
+function removePathInput(button) {
+    // Remove the path input div
+    button.parentElement.remove();
+}
+
+function submitFarmForm() {
+    const accountId = document.getElementById('farmAccountId').value;
+    const characterId = document.getElementById('farmCharacterId').value;
+
+    // Initialize your session object
+    let sessionData = {
+        accountId: accountId,
+        characterId: characterId,
+        type: document.getElementById('sessionTypeSelect').value,
+        jobFilters: getSelectedJobsAndResources()
+    };
+
+    // Check the session type and add either a single path or a pathList
+    if (sessionData.type === 7) {
+        // Collect all selected options from the pathsSelect element
+        const selectedPaths = Array.from(document.getElementById('pathsSelect').selectedOptions).map(option => option.value);
+        sessionData.pathList = selectedPaths;
+    } else {
+        // Get the single selected path from the pathsSelect element
+        const selectedPath = document.getElementById('pathsSelect').value;
+        sessionData.path = selectedPath;
+    }
+
+    // Convert session object to JSON and POST it
+    fetch('/farm', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(sessionData)
+    }).then(response => {
+        console.log('Success:', response);
+    }).catch(error => {
+        console.error('Error:', error);
+    });
+};
+
+function openFarmModal(accountId, characterId) {
+    fetch('/farm')
+        .then(response => response.json())
+        .then(data => {
+            const sessionTypeSelect = document.getElementById('sessionTypeSelect');
+            sessionTypeSelect.innerHTML = ''; // Clear previous options
+            
+            // Populate session types
+            data.sessionTypes.forEach(stype => {
+                let option = new Option(stype.label.replace(/_/g, ' '), stype.value);
+                sessionTypeSelect.add(option);
+            });
+
+            // Listener for session type changes
+            sessionTypeSelect.addEventListener('change', function() {
+                populatePathsDropdown(data.paths);
+            });
+
+            // Adjust form and populate paths initially
+            adjustFormAndPopulatePaths(sessionTypeSelect.value, data);
+
+            // Combined listener for session type changes
+            sessionTypeSelect.addEventListener('change', function() {
+                adjustFormAndPopulatePaths(this.value, data);
+            });
+
+            // Set hidden inputs for account and character ID
+            document.getElementById('farmAccountId').value = accountId;
+            document.getElementById('farmCharacterId').value = characterId;
+
+            // Show the modal
+            document.getElementById('farmModal').style.display = 'block';
+        })
+        .catch(error => console.log('Error fetching farm data:', error));
+}
 
 
+function adjustFormAndPopulatePaths(selectedType, data) {
+    // Check if the selected value is "MULTIPLE PATHS FARM"
+    if (selectedType == 7) {
+        // Change the select to allow multiple selections
+        document.getElementById('pathsSelect').setAttribute('multiple', '');
+        document.getElementById('pathsSelect').size = 5; // Show multiple rows
+    } else {
+        // Revert back to single selection
+        document.getElementById('pathsSelect').removeAttribute('multiple');
+        document.getElementById('pathsSelect').size = 1; // Show single row
+    }    
+    populatePathsDropdown(data.paths);
+    const container = document.getElementById('jobFiltersContainer');
+    container.innerHTML = ''; // Clear previous job filters
+    data.skills.forEach(job => {
+        addJobAndResourcesToForm(job);
+    });
+}
+
+function addPathInput() {
+    // Create and append new path input fields to the form
+    const pathsContainer = document.getElementById('pathsContainer');
+    const newPathDiv = document.createElement('div');
+    // Define your path input fields here. For example:
+    newPathDiv.innerHTML = `
+        <input type="text" placeholder="Path ID" name="pathId[]">
+        <input type="text" placeholder="Map IDs (comma-separated)" name="mapIds[]">
+        <button type="button" onclick="removePathInput(this)">Remove Path</button>
+    `;
+    pathsContainer.appendChild(newPathDiv);
+}
+
+
+function addJobAndResourcesToForm(jobData) {
+    const container = document.getElementById('jobFiltersContainer');
+    const jobResourceGroup = document.createElement('div');
+    jobResourceGroup.classList.add('job-resource-group');
+
+    // Create a checkbox for the job
+    const jobCheckbox = document.createElement('input');
+    jobCheckbox.type = 'checkbox';
+    jobCheckbox.id = `job-${jobData.id}`;
+    jobCheckbox.value = jobData.id;
+    jobCheckbox.name = 'jobs[]';
+    
+    // Event listener to toggle the disabled class
+    jobCheckbox.addEventListener('change', function() {
+        if (this.checked) {
+            jobLabel.classList.remove('disabled');
+            resourcesSelect.classList.remove('disabled');
+        } else {
+            jobLabel.classList.add('disabled');
+            resourcesSelect.classList.add('disabled');
+        }
+    });
+
+    // Create a label for the job name
+    const jobLabel = document.createElement('label');
+    jobLabel.htmlFor = `job-${jobData.id}`;
+    jobLabel.textContent = jobData.name;
+    jobLabel.classList.add('disabled'); // Start as disabled
+
+    // Create a select element for resources
+    const resourcesSelect = document.createElement('select');
+    resourcesSelect.id = `resources-for-job-${jobData.id}`;
+    resourcesSelect.multiple = true;
+    resourcesSelect.name = `resources[${jobData.id}][]`;
+    resourcesSelect.classList.add('disabled'); // Start as disabled
+
+    // Fill the select element with options
+    jobData.gatheredRessources.forEach(resource => {
+        const option = document.createElement('option');
+        option.value = resource.id;
+        option.textContent = `${resource.name} (Level Min: ${resource.levelMin})`;
+        resourcesSelect.appendChild(option);
+    });
+
+    // Append the elements to the group container
+    jobResourceGroup.appendChild(jobCheckbox);
+    jobResourceGroup.appendChild(jobLabel);
+    jobResourceGroup.appendChild(resourcesSelect);
+    
+    // Append the group to the main container
+    container.appendChild(jobResourceGroup);
+}
+
+function getSelectedJobsAndResources() {
+    const selectedJobs = [];
+    const jobCheckboxes = document.querySelectorAll('.job-resource-group input[type="checkbox"]:checked');
+
+    jobCheckboxes.forEach(checkbox => {
+        const jobId = checkbox.value;
+        const resourcesSelect = document.getElementById(`resources-for-job-${jobId}`);
+        const selectedResources = Array.from(resourcesSelect.options)
+            .filter(option => option.selected)
+            .map(option => option.value);
+
+        selectedJobs.push({
+            jobId: jobId,
+            resoursesIds: selectedResources
+        });
+    });
+
+    return selectedJobs;
+}
+
+// Function to close the modal
+function closeFarmModal() {
+    document.getElementById('farmModal').style.display = 'none';
+}

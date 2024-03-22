@@ -102,7 +102,7 @@ class ResourceFarm(AbstractFarmBehavior):
                 Logger().warning(f"Error while collecting resource: {error}, not a fatal error, restarting.")
                 self.forbidenActions.add(self.currentTarget.uid)
                 return self.main()
-            return self.send(KernelEvent.ClientShutdown, message=error)
+            return self.send(KernelEvent.ClientShutdown, error)
         BenchmarkTimer(0.2, self.main).start()
         
     def getAvailableResources(self) -> list[CollectableResource]:

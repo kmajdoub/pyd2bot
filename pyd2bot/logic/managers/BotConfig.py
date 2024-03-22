@@ -1,5 +1,4 @@
 import threading
-from enum import Enum
 from typing import TYPE_CHECKING
 
 from pyd2bot.logic.managers.PathFactory import PathFactory

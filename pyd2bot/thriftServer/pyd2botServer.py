@@ -185,7 +185,7 @@ class Pyd2botServer:
         stop = threading.Event()
 
         def onCrash(evt, message="unknown", reason=None):
-            client.shutdown(reason, message)
+            client.shutdown(message, reason)
             stop.set()
             result[0] = D2BotError(1002, "Internal error")
 
@@ -257,7 +257,7 @@ class Pyd2botServer:
         result = [None]
 
         def onCrash(evt, message="unknown", reason=None):
-            client.shutdown(reason, message)
+            client.shutdown(message, reason)
             result[0] = D2BotError(code=1002, message="Internal error")
             stop.set()
 

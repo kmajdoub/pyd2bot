@@ -1,4 +1,6 @@
+import json
 import logging
+import os
 import time
 import sys
 import traceback
@@ -38,7 +40,43 @@ def signal_handler(sig, frame):
 signal.signal(signal.SIGINT, signal_handler)
 signal.signal(signal.SIGTERM, signal_handler)
 
+paths = {
+    "Ankarnam (lvl1)": {
+        "id": 'ankarnam_lvl1',
+        "type": PathType.RandomSubAreaFarmPath,
+        "startVertex": {"mapId": 154010883, "zoneId": 1},
+        "transitionTypeWhitelist": [TransitionType.SCROLL, TransitionType.SCROLL_ACTION],
+    },
+    "Ankarnam (lvl5)": {
+        "id": 'ankarnam_lvl5',
+        "type": PathType.RandomSubAreaFarmPath,
+        "startVertex": {"mapId": 154010884, "zoneId": 1},
+        "transitionTypeWhitelist": [TransitionType.SCROLL, TransitionType.SCROLL_ACTION],
+    },
+    "Astrub village": {
+        "id": 'astrub_village',
+        "type": PathType.RandomSubAreaFarmPath,
+        "startVertex": {"mapId": 191106048, "zoneId": 1},
+        "transitionTypeWhitelist": [TransitionType.SCROLL, TransitionType.SCROLL_ACTION],
+    },
+    
+}
 
+def json_to_path(path_json) -> Path:
+    pth = Path(
+        id=path_json["id"],
+        type=path_json["type"],
+        transitionTypeWhitelist=path_json.get("transitionTypeWhitelist"),
+        mapIds=path_json.get("mapIds"),
+    )
+    if "startVertex" in path_json:
+        pth.startVertex = Vertex(mapId=path_json["startVertex"]["mapId"], zoneId=path_json["startVertex"]["zoneId"])
+    return pth
+
+staticdir = os.path.join(os.path.dirname(__file__), "static")
+dofus_data_file = os.path.join(staticdir, "dofusData", "dofus_data.json")
+with open(dofus_data_file, "r") as f:
+    dofus_data = json.load(f)
 class SocketIOHandler(logging.Handler):
     def __init__(self, socketio: "SocketIO", batch_time=1, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -122,23 +160,22 @@ class BotManagerApp:
                 "index.html", accounts=AccountManager.get_accounts(), runningBots=self._running_bots.values()
             )
 
-        @self.app.route("/fight-paths", methods=["GET"])
-        def get_fight_paths():
-            paths = {"Ankarnam (lvl1)": 154010883, "Ankarnam (lvl5)": 154010884, "Astrub village": 191106048}
-            # You might want to fetch these values from a database or another service in a real application
-            return jsonify({"paths": paths})
+        @self.app.route("/paths", methods=["GET"])
+        def get_paths():
+            return jsonify({"paths": list(paths.keys())}), 200
 
         @self.app.route("/solo-fight", methods=["POST"])
         def solo_fight():
-            if not request.is_json:
+            if not request.is_json: 
                 return jsonify({"error": "Request must be JSON"}), 400
 
             data = request.get_json()
 
             # Extracting the necessary information from the request
-            account_id = data.get("account_id")
-            character_id = data.get("character_id")
-            path_value = data.get("path_value")
+            account_id = data.get("accountId")
+            character_id = data.get("characterId")
+            path_id = data.get("pathId")
+            
             try:
                 monster_lvl_coef_diff = float(data.get("monsterLvlCoefDiff"))  # Explicitly convert to float
             except ValueError:
@@ -147,16 +184,11 @@ class BotManagerApp:
             # Placeholder for your logic to process the solo fight
             session = self.get_basic_session(account_id, character_id)
             session.type = SessionType.FIGHT
-            session.path = Path(
-                id="astrub",
-                type=PathType.RandomSubAreaFarmPath,
-                startVertex=Vertex(mapId=path_value, zoneId=1),
-                transitionTypeWhitelist=[TransitionType.SCROLL, TransitionType.SCROLL_ACTION],
-            )
+            session.path = json_to_path(paths[path_id])
             session.monsterLvlCoefDiff = monster_lvl_coef_diff
             # For example, validate the input and then update the database or process the game logic
             print(
-                f"Processing solo fight for account {account_id}, character {character_id}, on path {path_value} with monster level coefficient difficulty {monster_lvl_coef_diff}"
+                f"Processing solo fight for account {account_id}, character {character_id}, on path {path_id} with monster level coefficient difficulty {monster_lvl_coef_diff}"
             )
 
             self.start_bot_session(session, "solo-fight")
@@ -164,6 +196,46 @@ class BotManagerApp:
             # Responding with a success message or any other relevant information
             return jsonify({"message": "Solo fight initiated successfully"}), 200
 
+        @self.app.route("/farm", methods=["GET"])
+        def get_farm_data():
+            farm_session_types = [SessionType.FARM, SessionType.MULTIPLE_PATHS_FARM]
+            return jsonify({   
+                "skills": list(dofus_data["skills"].values()),
+                "paths": list(paths.keys()),
+                "sessionTypes": [{"label": SessionType._VALUES_TO_NAMES[st], "value": st} for st in farm_session_types],
+            }), 200
+
+        @self.app.route("/farm", methods=["POST"])
+        def farm():
+            if not request.is_json:
+                return jsonify({"error": "Request must be JSON"}), 400
+
+            data = request.get_json()
+            print(f"Post request data: {data}")
+
+            # Extracting the necessary information from the request
+            account_id = data.get("accountId")
+            character_id = data.get("characterId")
+            session_type = data.get("type")
+            path_id = data.get("pathId")
+            paths_ids = data.get("pathsIds")
+            job_filters = data.get("jobFilters")
+            session = self.get_basic_session(account_id, character_id)
+            session.type = session_type
+            if session_type == SessionType.FARM:
+                session.path = paths[path_id]
+            elif session_type == SessionType.MULTIPLE_PATHS_FARM:
+                session.pathsList = [json_to_path(paths[path_id]) for path_id in paths_ids]
+            session.jobFilters = [JobFilter(job['jobId'], job['resoursesIds']) for job in job_filters]
+            if path_id:
+                session.path = json_to_path(paths[path_id])
+            elif paths_ids:
+                session.pathsList = [json_to_path(paths[path_id]) for path_id in paths_ids]
+            self.start_bot_session(session, "solo-fight")
+
+            # Responding with a success message or any other relevant information
+            return jsonify({"message": "Solo fight initiated successfully"}), 200
+        
         @self.app.route("/run/<account_id>/<character_id>/<action>")
         def run_action(account_id, character_id, action):
             try:
@@ -171,26 +243,7 @@ class BotManagerApp:
 
                 if action == "treasurehunt":
                     session.type = SessionType.TREASURE_HUNT
-
-                elif action == "farm":
-                    session.type = SessionType.MULTIPLE_PATHS_FARM
-                    session.pathsList = [
-                        Path(
-                            id="mine_astrub",
-                            type=PathType.CustomRandomFarmPath,
-                            mapIds=[193331715, 193200131, 188484108],
-                        ),
-                        Path(id="mine_astrub2", type=PathType.CustomRandomFarmPath, mapIds=[193331713, 193200129]),
-                    ]
-                    session.jobFilters = [
-                        JobFilter(36, []),  # Pêcheur goujon
-                        JobFilter(2, []),  # Bucheron,
-                        JobFilter(26, []),  # Alchimiste
-                        JobFilter(28, []),  # Paysan
-                        JobFilter(1, [311]),  # Base : eau
-                        JobFilter(24, []),  # Miner
-                    ]
-
+                    
                 else:
                     return jsonify({"status": "error", "message": f"Unknown action {action}"})
 

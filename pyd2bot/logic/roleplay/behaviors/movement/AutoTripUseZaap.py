@@ -119,7 +119,7 @@ class AutoTripUseZaap(AbstractBehavior):
         Kernel().roleplayContextFrame.havenbagEnter()
         
     def onServerInfo(self, event, msgId, msgType, textId, msgContent, params):
-        if textId == 589088:  # Can't join haven bag from current Map
+        if textId == 589088: # Can't join haven bag from current Map
             if self.havenBagListener:
                 self.havenBagListener.delete()
             if not self.srcZaapVertex:
@@ -163,7 +163,7 @@ class AutoTripUseZaap(AbstractBehavior):
     
     def autotripToDestOnFeet(self):
         self.autoTrip(self.dstMapId, self.dstZoneId, callback=self.finish)
-        
+ 
     def onDstZaapUnreachable(self):
         Logger().warning(
             "No path found to dest zaap will travel to dest map on feet"

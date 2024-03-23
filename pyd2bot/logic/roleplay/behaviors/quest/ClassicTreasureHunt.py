@@ -9,7 +9,6 @@ from pyd2bot.logic.roleplay.behaviors.teleport.UseTeleportItem import \
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
 from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import \
     KernelEventsManager
-from pydofus2.com.ankamagames.dofus.datacenter.npcs.Npc import Npc
 from pydofus2.com.ankamagames.dofus.datacenter.quest.treasureHunt.PointOfInterest import \
     PointOfInterest
 from pydofus2.com.ankamagames.dofus.datacenter.world.MapPosition import \
@@ -41,7 +40,6 @@ from pydofus2.com.ankamagames.dofus.types.enums.TreasureHuntStepTypeEnum import 
     TreasureHuntStepTypeEnum
 from pydofus2.com.ankamagames.dofus.uiApi.PlayedCharacterApi import \
     PlayedCharacterApi
-from pydofus2.com.ankamagames.jerakine.data.I18n import I18n
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 from pydofus2.com.ankamagames.jerakine.types.enums.DirectionsEnum import \
     DirectionsEnum

@@ -9,7 +9,7 @@ from pyd2bot.logic.roleplay.behaviors.movement.AutoTrip import AutoTrip
 from pyd2bot.logic.roleplay.behaviors.movement.AutoTripUseZaap import \
     AutoTripUseZaap
 from pyd2bot.misc.Localizer import Localizer
-from pyd2bot.thriftServer.pyd2botService.ttypes import Character
+from pyd2bot.models.session.models import Character
 from pydofus2.com.ankamagames.atouin.managers.MapDisplayManager import \
     MapDisplayManager
 from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import \

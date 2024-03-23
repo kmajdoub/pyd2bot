@@ -5,7 +5,6 @@
     <title>Account Interface</title>
     <!-- Add CSS and JavaScript as needed -->
     
-    <script src="https://cdn.jsdelivr.net/npm/ansi_up@5.0.0/ansi_up.js"></script>
     <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
     <script src="{{ url_for('static', filename='js/scripts.js') }}"></script>
@@ -25,14 +24,9 @@
                         {% for character in account.characters %}
                         <li>
                             {{ character.name }}
-                            <button onclick="runCharacterAction('{{ account.id }}', '{{ character.id }}', 'farm')">Run
-                                Farm</button>
-                            <button
-                                onclick="runCharacterAction('{{ account.id }}', '{{ character.id }}', 'treasurehunt')">Run
-                                Treasure Hunt</button>
-                            <button onclick="openFightModal('{{ account.id }}', '{{ character.id }}')">Run
-                                Fight</button>
-
+                            <button onclick="openFarmModal('{{ account.id }}', '{{ character.id }}')">Farm</button>
+                            <button onclick="runTreasurehunt('{{ account.id }}', '{{ character.id }}')">Treasurehunt</button>
+                            <button onclick="openFightModal('{{ account.id }}', '{{ character.id }}')">Fight</button>
                         </li>
                         {% endfor %}
                     </ul>
@@ -61,23 +55,22 @@
                 </tbody>
             </table>
         </div>
-
-        <!-- Modal for Showing Logs -->
-        <div id="logModal" class="modal" style="display: none;">
-            <div class="modal-content">
-                <span class="close-button" onclick="closeLogModal()">&times;</span>
-                <h2>Log Details</h2>
-                <pre id="logDetails"></pre>
-            </div>
-        </div>
-
     </div>
-    <!-- Add this modal structure to your HTML body -->
+    <!-- Modal for Showing Logs -->
+    <div id="logModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close-button" onclick="closeLogModal()">&times;</span>
+            <h2>Log Details</h2>
+            <pre id="logDetails"></pre>
+        </div>
+    </div>
+
+    <!-- Model for Fight session -->
     <div id="fightModal" class="modal" style="display: none;">
         <div class="modal-content">
             <span class="close-button" onclick="closeFightModal()">&times;</span>
             <h2>Run Solo Fight</h2>
-            <form onsubmit="submitFightForm(); return false;">
+            <form id="fightSessionForm" onsubmit="submitFightForm(); return false;">
                 <label for="fightPathsSelect">Path:</label>
                 <select id="fightPathsSelect"></select>
 
@@ -88,6 +81,36 @@
                 <input type="hidden" id="fightCharacterId">
 
                 <button type="submit">Start Fight</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal for farm session -->
+    <div id="farmModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close-button" onclick="closeFarmModal()">&times;</span>
+            <h2>Run Farm</h2>
+            <form id="farmSessionForm" onsubmit="submitFarmForm(); return false;">
+                <label for="sessionTypeSelect">Session Type:</label>
+                <select id="sessionTypeSelect">
+                    <!-- Options will be filled based on data from the backend -->
+                </select>
+            
+                <div id="pathsContainer">
+                    <label for="pathsSelect">Path:</label>
+                    <select id="pathsSelect" multiple size="5">
+                        <!-- Options will be added dynamically -->
+                    </select>
+                </div>
+            
+                <div id="jobFiltersContainer">
+                    <!-- Job filters will be added dynamically -->
+                </div>
+
+                <input type="hidden" id="farmAccountId">
+                <input type="hidden" id="farmCharacterId">
+
+                <button type="submit">Submit</button>
             </form>
         </div>
     </div>

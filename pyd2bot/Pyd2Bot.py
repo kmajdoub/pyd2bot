@@ -18,8 +18,7 @@ from pyd2bot.logic.roleplay.behaviors.fight.SoloFarmFights import \
     SoloFarmFights
 from pyd2bot.logic.roleplay.behaviors.quest.ClassicTreasureHunt import \
     ClassicTreasureHunt
-from pyd2bot.thriftServer.pyd2botService.ttypes import (Session, SessionStatus,
-                                                        SessionType)
+from pyd2bot.models.session.models import Session, SessionStatus, SessionType
 from pydofus2.com.ankamagames.atouin.managers.MapDisplayManager import \
     MapDisplayManager
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
@@ -126,7 +125,7 @@ class Pyd2Bot(DofusClient):
             activity.start(callback=self.switchActivity)
             
         elif BotConfig().isMultiPathsFarmer:
-            MultiplePathsResourceFarm(60 * 2).start(callback=self.onMainBehaviorFinish)
+            MultiplePathsResourceFarm(60 * 10).start(callback=self.onMainBehaviorFinish)
         
     def switchActivity(self, code, err):
         self.onReconnect(None, f"Fake disconnect and take nap", random.random() * 60 * 3)
@@ -141,10 +140,11 @@ class Pyd2Bot(DofusClient):
 
     def getState(self):
         if self.terminated.is_set():
+            if self._banned:
+                return SessionStatus.BANNED
             if self._crashed:
                 return SessionStatus.CRASHED
-            else:
-                return SessionStatus.TERMINATED
+            return SessionStatus.TERMINATED
         if not ConnectionsHandler.getInstance(self.name) or \
             ConnectionsHandler.getInstance(self.name).connectionType == ConnectionType.DISCONNECTED:
             return SessionStatus.DISCONNECTED

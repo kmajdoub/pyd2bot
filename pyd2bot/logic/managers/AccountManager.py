@@ -1,22 +1,10 @@
 import json
 import os
-import threading
 
-from pyd2bot.logic.managers.AccountsCharactersFetcher import AccountsCharactersFetcher
-from pyd2bot.thriftServer.pyd2botService.ttypes import (Certificate, Character)
-from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
-from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import \
-    KernelEventsManager
-from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
-from pydofus2.com.ankamagames.dofus.logic.common.actions.ChangeServerAction import \
-    ChangeServerAction
-from pydofus2.com.ankamagames.dofus.logic.common.managers.PlayerManager import \
-    PlayerManager
-from pydofus2.com.ankamagames.dofus.logic.connection.actions.ServerSelectionAction import \
-    ServerSelectionAction
+from pyd2bot.logic.managers.AccountCharactersFetcher import AccountCharactersFetcher
+from pyd2bot.models.session.models import Account, Certificate, Character
+from pydofus2.com.ankamagames.dofus.misc.utils.GameID import GameID
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
-from pydofus2.com.DofusClient import DofusClient
-from pydofus2.Zaap.helpers.CryptoHelper import CryptoHelper
 from pydofus2.Zaap.ZaapDecoy import ZaapDecoy
 
 __dir__ = os.path.dirname(os.path.abspath(__file__))
@@ -32,29 +20,30 @@ class AccountManager:
         accounts = {}
     else:
         with open(accounts_jsonfile, "r") as fp:
-            accounts: dict = json.load(fp)
+            accounts_dto: dict = json.load(fp)
+            accounts: dict[int, Account] = {int(k): Account.from_dict(v) for k, v in accounts_dto.items()}
     
     _zaap = None
             
     @classmethod
-    def get_cert(cls, accountId):
+    def get_cert(cls, accountId) -> Certificate:
         account = cls.get_account(accountId)
-        return Certificate(id=account.get("certid", ""), hash=account.get("certhash", ""))
+        return Certificate(id=account.certid, hash=account.certhash)
 
     @classmethod
-    def get_account(cls, accountId) -> dict:
+    def get_account(cls, accountId) -> Account:
         if accountId not in cls.accounts:
             raise Exception(f"Account {accountId} not found")
         return cls.accounts[accountId]
 
     @classmethod
-    def get_accounts(cls):
+    def get_accounts(cls) -> list[Account]:
         return cls.accounts.values()
 
     @classmethod
-    def get_accountkey(cls, accountId):
+    def get_accountkey(cls, accountId) -> int:
         for key, value in cls.accounts.items():
-            if value["id"] == int(accountId):
+            if value.id == int(accountId):
                 return key
         raise Exception(f"Account {accountId} not found")
 
@@ -70,39 +59,15 @@ class AccountManager:
         }
     
     @classmethod
-    def get_character(cls, accountId, charId=None):
-        account = cls.get_account(accountId)
-        if "characters" not in account:
-            return None
-        characterJson = None
-        if charId is None:
-            characterJson = account["characters"][0]
-        else:
-            characters = account.get("characters", [])
-            for ch in characters:
-                if ch["id"] == int(charId):
-                    characterJson = ch
-        if characterJson is None:
-            raise Exception(f"Character {charId} not found")
-        return Character(
-            name=characterJson["name"],
-            id=characterJson["id"],
-            level=characterJson["level"],
-            breedId=characterJson["breedId"],
-            breedName=characterJson["breedName"],
-            serverId=characterJson["serverId"],
-            serverName=characterJson["serverName"],
-            login=characterJson["login"],
-            accountId=characterJson["accountId"],
-        )
+    def get_character(cls, accountId, charId=None) -> Character:
+        return cls.get_account(accountId).get_character(charId)
 
     @classmethod
     def get_apikey(cls, accountId):
-        acc = cls.get_account(accountId)
-        return acc["apikey"]
+        return cls.get_account(accountId).apikey
 
     @classmethod
-    def fetch_account(cls, game, apikey, certid="", certhash="", with_characters_fetch=True):
+    def fetch_account(cls, game, apikey, certid="", certhash="", with_characters_fetch=True) -> Account:
         print(f"Fetching account for game {game}, apikey {apikey}, certid {certid}, certhash {certhash}")
         if not cls._zaap:
             cls._zaap = ZaapDecoy(apikey)
@@ -110,23 +75,22 @@ class AccountManager:
         else:
             r = ZaapDecoy().fetchAccountData(apikey)
         accountId = r["id"]
-        cls.accounts[accountId] = r["account"]
-        cls.accounts[accountId]["apikey"] = apikey
-        cls.accounts[accountId]["certid"] = certid
-        cls.accounts[accountId]["certhash"] = certhash
+        cls.accounts[accountId] = Account.from_dict(r["account"])
+        cls.accounts[accountId].apikey = apikey
+        cls.accounts[accountId].certid = certid
+        cls.accounts[accountId].certhash = certhash
         if with_characters_fetch:
-            cls.fetch_characters(accountId, certid, certhash)
+            cls.fetch_characters(accountId)
         cls.save()
         return cls.accounts[accountId]
         
 
     @classmethod
-    def fetch_characters(cls, accountId, certid, certhash):
-        acc = cls.get_account(accountId)
-        apikey = acc["apikey"]
-        characters = AccountsCharactersFetcher().start(accountId, acc["login"], apikey, certid, certhash)
+    def fetch_characters(cls, accountId) -> list[Character]:
+        account = cls.get_account(accountId)
+        characters = AccountCharactersFetcher().run(account)
         Logger().info(f"Characters fetched for account {accountId}: {characters}")
-        cls.accounts[accountId]["characters"] = characters
+        cls.accounts[accountId].characters = characters
         return characters
 
     @classmethod
@@ -140,9 +104,9 @@ class AccountManager:
         cls.save()
 
     @classmethod
-    def import_launcher_accounts(cls, with_characters_fetch=True):
-        apikeys = CryptoHelper.get_all_stored_apikeys()
-        certs = CryptoHelper.get_all_stored_certificates()
+    def import_launcher_accounts(cls, with_characters_fetch=True) -> dict[int, Account]:
+        apikeys = ZaapDecoy.get_all_stored_apikeys()
+        certs = ZaapDecoy.get_all_stored_certificates()
         print(f"Found {len(apikeys)} apikeys and {len(certs)} certificates")
         for apikey_details in apikeys:
             keydata = apikey_details['apikey']
@@ -157,7 +121,7 @@ class AccountManager:
                         certhash = cert['hash']
                         break
             try:
-                AccountManager.fetch_account(1, apikey, certid, certhash, with_characters_fetch)
+                AccountManager.fetch_account(GameID.DOFUS, apikey, certid, certhash, with_characters_fetch)
             except Exception as exc:
                 raise Exception(f"Failed to fetch characters from game server:\n{exc}")
         return cls.accounts

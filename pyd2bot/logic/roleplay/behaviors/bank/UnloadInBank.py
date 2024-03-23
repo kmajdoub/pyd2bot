@@ -27,6 +27,7 @@ class UnloadInBank(AbstractBehavior):
     TRANSFER_ITEMS_TIMEDOUT = 111111
     BANK_CLOSE_TIMEDOUT = 222222
     STORAGE_OPEN_TIMEDOUT = 9874521
+    LEVEL_TOO_LOW = 909799
     
     def __init__(self):
         super().__init__()
@@ -34,6 +35,8 @@ class UnloadInBank(AbstractBehavior):
         self.callback = None
     
     def run(self, return_to_start=True, bankInfos=None) -> bool:
+        if PlayedCharacterManager().limitedLevel < 10:
+            return self.finish(self.LEVEL_TOO_LOW, "Character level is too low to use bank.")
         self.return_to_start = return_to_start
         if bankInfos is None:
             self.infos = Localizer.getBankInfos()

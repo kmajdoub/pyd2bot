@@ -1,4 +1,3 @@
-from typing import TYPE_CHECKING
 
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
 from pyd2bot.logic.roleplay.behaviors.fight.MuleFighter import MuleFighter

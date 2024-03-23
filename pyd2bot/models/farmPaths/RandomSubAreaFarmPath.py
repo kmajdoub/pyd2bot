@@ -5,7 +5,6 @@ from typing import Iterator, Set
 
 from pyd2bot.models.farmPaths.AbstractFarmPath import AbstractFarmPath
 from pyd2bot.models.farmPaths.RandomAreaFarmPath import NoTransitionFound
-from pyd2bot.thriftServer.pyd2botService.ttypes import Path, TransitionType
 from pydofus2.com.ankamagames.dofus.datacenter.world.SubArea import SubArea
 from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.astar.AStar import \
     AStar
@@ -41,7 +40,6 @@ class RandomSubAreaFarmPath(AbstractFarmPath):
     
     def init(self):
         self._subArea = SubArea.getSubAreaByMapId(self.startVertex.mapId)
-        self.verticies = self.reachableVerticies()
         Logger().info(f"RandomSubAreaFarmPath {self.name} initialized with {len(self.verticies)} verticies")
 
     def recentVisitedVerticies(self):
@@ -74,25 +72,14 @@ class RandomSubAreaFarmPath(AbstractFarmPath):
             if edge.dst.mapId in self._subArea.mapIds:
                 if self.hasValidTransition(edge):
                     if onlyNonRecentVisited:
-                        if edge.dst in self.lastVisited:
-                            if time.perf_counter() - self.lastVisited[edge.dst] > 60 * 60:
+                        if edge.dst in self._lastVisited:
+                            if time.perf_counter() - self._lastVisited[edge.dst] > 60 * 60:
                                 ret.append(edge)
                         else:
                             ret.append(edge)
                     else:
                         ret.append(edge)
         return ret
-    
-    def reachableVerticies(self) -> Set[Vertex]:
-        queue = collections.deque([self.startVertex])
-        verticies = set([self.startVertex])
-        while queue:
-            curr = queue.popleft()
-            for e in self.outgoingEdges(curr):
-                if e.dst not in verticies:
-                    queue.append(e.dst)
-                    verticies.add(e.dst)
-        return verticies
 
     def __iter__(self) -> Iterator[Vertex]:
         for it in self.verticies:
@@ -112,29 +99,6 @@ class RandomSubAreaFarmPath(AbstractFarmPath):
             },
             "transitionTypeWhitelist": self.transitionTypeWhitelist,
         }
-
-    @classmethod
-    def from_thriftObj(cls, path: Path) -> "RandomSubAreaFarmPath":
-        startVertex = WorldGraph().getVertex(path.startVertex.mapId, path.startVertex.zoneId)
-        if startVertex is None:
-            raise ValueError("Could not find start vertex from startVertex : " + str(path.startVertex))
-        twl = None
-        if path.transitionTypeWhitelist:
-            twl = []
-            for e in path.transitionTypeWhitelist:
-                if e == TransitionType.SCROLL:
-                    twl.append(TransitionTypeEnum.SCROLL)
-                elif e == TransitionType.SCROLL_ACTION:
-                    twl.append(TransitionTypeEnum.SCROLL_ACTION)
-                elif e == TransitionType.INTERACTIVE:
-                    twl.append(TransitionTypeEnum.INTERACTIVE)
-                elif e == TransitionType.MAP_ACTION:
-                    twl.append(TransitionTypeEnum.MAP_ACTION)
-                elif e == TransitionType.MAP_EVENT:
-                    twl.append(TransitionTypeEnum.MAP_EVENT)
-                elif e == TransitionType.MAP_OBSTACLE:
-                    twl.append(TransitionTypeEnum.MAP_OBSTACLE)
-        return RandomSubAreaFarmPath(path.id, startVertex, twl)
 
     def hasValidTransition(self, edge: Edge) -> bool:
         from pydofus2.com.ankamagames.dofus.datacenter.items.criterion.GroupItemCriterion import \

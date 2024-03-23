@@ -2,14 +2,11 @@ import os
 import sys
 
 from PyQt5 import QtGui, QtWidgets
+from pyd2bot.models.session.models import JobFilter, Path, PathType, Session, SessionType
 from system_tray import SystemTrayIcon
 
 from pyd2bot.logic.managers.AccountManager import AccountManager
 from pyd2bot.Pyd2Bot import Pyd2Bot
-from pyd2bot.thriftServer.pyd2botService.ttypes import (JobFilter, Path, PathType,
-                                                        Session, SessionType,
-                                                        TransitionType,
-                                                        UnloadType, Vertex)
 
 ankarnam_lvl1 = 154010883
 ankarnal_lvl5 = 154010884

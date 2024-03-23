@@ -37,6 +37,8 @@ CURR_DIR = os.path.dirname(os.path.abspath(__file__))
 class AbstractFarmBehavior(AbstractBehavior):
     path: AbstractFarmPath
     currentTarget: Any = None
+    JOIN_PATH_FAILED = 909988
+    PLAYER_STUCK = 909989
 
     def __init__(self, timeout=None):
         self.timeout = timeout
@@ -103,10 +105,7 @@ class AbstractFarmBehavior(AbstractBehavior):
 
     def onGotBackInsideFarmArea(self, code, error):
         if error:
-            return self.send(
-                KernelEvent.ClientShutdown,
-                f"Error while moving to farm path [{code}]: %s." % error,
-            )
+            return self.finish(self.JOIN_PATH_FAILED, f"Error while moving to farm path [{code}]: %s." % error)
         Logger().debug(f"Player got back inside farm area")
         self.main()
 
@@ -131,7 +130,7 @@ class AbstractFarmBehavior(AbstractBehavior):
         if not PlayedCharacterManager().isInFight:
             self.currentVertex = self.path.currentVertex
         if self._currEdge:
-            self.path.lastVisited[self._currEdge] = perf_counter()
+            self.path._lastVisited[self._currEdge] = perf_counter()
         self.forbidenActions = set()
         self.main()
 
@@ -143,9 +142,7 @@ class AbstractFarmBehavior(AbstractBehavior):
         except NoTransitionFound:
             Logger().error(f"No next vertex found in path, player is stuck!")
             if PlayedCharacterManager().currVertex in self.path:
-                return KernelEventsManager().send(
-                    KernelEvent.ClientRestart, "Player is stuck in farm path without next vertex!"
-                )
+                return self.finish(self.PLAYER_STUCK, "Player is stuck in farm path without next vertex!")
             return self.onBotOutOfFarmPath()
         self.changeMap(
             edge=self._currEdge,
@@ -157,8 +154,6 @@ class AbstractFarmBehavior(AbstractBehavior):
         if not PlayedCharacterManager().currVertex:
             return self.onceMapProcessed(callback=self.onBotOutOfFarmPath)
         Logger().warning(f"Bot is out of farm path, searching path to last vertex...")
-        # dst_vertex, dist = self.path.findClosestMap()
-        # Logger().debug(f"Found closest map {dst_vertex} at distance {dist} from current map")
         self.autotripUseZaap(
             self.path.startVertex.mapId,
             self.path.startVertex.zoneId,
@@ -168,7 +163,7 @@ class AbstractFarmBehavior(AbstractBehavior):
 
     def onBotUnloaded(self, code, err):
         if err:
-            return self.send(KernelEvent.ClientShutdown, f"Error while unloading: {err}")
+            return self.finish(code, f"Error while unloading: {err}")
         self.main()
 
     def onResourceCollectEnd(self, code, error, iePosition=None):
@@ -207,9 +202,7 @@ class AbstractFarmBehavior(AbstractBehavior):
 
     def onRevived(self, code, error):
         if error:
-            KernelEventsManager().send(
-                KernelEvent.ClientShutdown, f"Error [{code}] while auto-reviving player: {error}"
-            )
+            return self.finish(code, f"Error [{code}] while auto-reviving player: {error}")
         Logger().debug(f"Bot back on form, autotravelling to last memorized vertex {self.currentVertex}")
         if self.initialized:
             self.autotripUseZaap(
@@ -240,9 +233,7 @@ class AbstractFarmBehavior(AbstractBehavior):
             if PlayedCharacterManager().isDead():
                 Logger().warning(f"Player is dead.")
                 return self.autoRevive(callback=self.onRevived)
-
             self.main()
-
         self.onceMapProcessed(onRolePlayMapLoaded)
 
     def main(self, event=None, error=None):
@@ -267,11 +258,6 @@ class AbstractFarmBehavior(AbstractBehavior):
             return Kernel().mountFrame.mountToggleRidingRequest()
         if PlayedCharacterManager().isPodsFull():
             Logger().warning(f"Inventory is almost full will trigger auto unload ...")
-            if PlayedCharacterManager().limitedLevel < 10 and BotConfig().unloadInBank:
-                Logger().warning(f"Player level is too low to unload in bank, ending behavior")
-                return KernelEventsManager().send(
-                    KernelEvent.ClientShutdown, "Player level is too low to unload in bank"
-                )
             return self.unloadInBank(callback=self.onBotUnloaded)
         if not self.initialized:
             Logger().debug(f"Initializing behavior...")
@@ -297,4 +283,3 @@ class AbstractFarmBehavior(AbstractBehavior):
         It should be overriden by subclasses to implement the behavior.
         The default implementation is to collect the nearest resource.
         """
-        pass

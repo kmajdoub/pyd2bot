@@ -1,5 +1,4 @@
 import json
-import math
 import os
 from typing import TYPE_CHECKING
 
@@ -7,6 +6,7 @@ from pyd2bot.misc.Localizer import Localizer
 from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import \
     KernelEventsManager
 from pydofus2.com.ankamagames.dofus.datacenter.world.SubArea import SubArea
+from pydofus2.com.ankamagames.dofus.logic.common.managers.PlayerManager import PlayerManager
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.InventoryManager import \
     InventoryManager
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import \
@@ -14,7 +14,6 @@ from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterMa
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 
 if TYPE_CHECKING:
-    from pyd2bot.thriftServer.pyd2botService.ttypes import Character
     from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Edge import \
         Edge
     from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Transition import \
@@ -49,12 +48,16 @@ class BehaviorApi:
     def autotripUseZaap(self, dstMapId, dstZoneId=1, withSaveZaap=False, maxCost=None, excludeMaps=[], callback=None):
         from pyd2bot.logic.roleplay.behaviors.movement.AutoTripUseZaap import \
             AutoTripUseZaap
-
+            
         if not maxCost:
             maxCost = InventoryManager().inventory.kamas
             Logger().debug(f"Player max teleport cost is {maxCost}")
 
         dstsubArea = SubArea.getSubAreaByMapId(dstMapId)
+        
+        if PlayerManager().isBasicAccount() and not dstsubArea.basicAccountAllowed:
+            return callback(0, "Destination map is not allowed for basic account")
+            
         if PlayedCharacterManager().currentSubArea.id == 446 and dstsubArea.id != 446:
             Logger().info(f"Player is in celestial dimension, we have to get him outta there.")
 
@@ -174,6 +177,12 @@ class BehaviorApi:
 
         ChangeMap().start(transition, edge, dstMapId, callback=callback, parent=self)
 
+    def enterHaevenBag(self, callback=None):
+        from pyd2bot.logic.roleplay.behaviors.movement.EnterHaevenBag import \
+            EnterHaevenBag
+
+        EnterHaevenBag().start(callback=callback, parent=self)
+    
     def mapMove(
         self,
         destCell,
@@ -218,7 +227,7 @@ class BehaviorApi:
 
         FarmFights().start(timeout=timeout, callback=callback, parent=self)
 
-    def muleFighter(self, leader: "Character", callback=None):
+    def muleFighter(self, leader, callback=None):
         from pyd2bot.logic.roleplay.behaviors.fight.MuleFighter import \
             MuleFighter
 

@@ -1,7 +1,7 @@
 from enum import Enum
 
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
-from pyd2bot.thriftServer.pyd2botService.ttypes import Character
+from pyd2bot.models.session.models import Character
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
 from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import \
     KernelEventsManager
@@ -43,7 +43,7 @@ class BotExchange(AbstractBehavior):
     EXCHANGE_READY_TIMEOUT = 557
     TARGET_CANT_TAKE_ALL_ITEMS = 5023
     CANT_TAKE_ALL_SOURCE_ITEMS = 516493
-    EXCHANGE_REQ_TIMEOUT = 3
+    EXCHANGE_REQ_TIMEOUT = 7
 
     def __init__(self, ):
         super().__init__()
@@ -140,7 +140,7 @@ class BotExchange(AbstractBehavior):
         self.openExchangeListener = KernelEventsManager().once(
             event_id=KernelEvent.ExchangeStartedType, 
             callback=self.onExchangeOpen, 
-            timeout=7,
+            timeout=self.EXCHANGE_REQ_TIMEOUT,
             retryNbr=5,
             retryAction=lambda: Kernel().exchangeManagementFrame.exchangePlayerRequest(ExchangeTypeEnum.PLAYER_TRADE, self.target.id),
             ontimeout=lambda: self.finish(self.EXCHANGE_REQ_TIMEOUT, "send exchange timedout"), 

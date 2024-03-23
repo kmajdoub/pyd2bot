@@ -1,6 +1,3 @@
-import json
-import os
-import threading
 
 from pyd2bot.logic.managers.AccountManager import AccountManager
 

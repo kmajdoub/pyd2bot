@@ -6,21 +6,22 @@ from pyd2bot.models.session.models import Account, Certificate, Character
 from pydofus2.com.ankamagames.dofus.misc.utils.GameID import GameID
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 from pydofus2.Zaap.ZaapDecoy import ZaapDecoy
+from pyd2bot.BotConstants import BotConstants
 
 __dir__ = os.path.dirname(os.path.abspath(__file__))
-persistence_dir = "D://botdev//pyd2bot//pyd2bot//persistence"
-accounts_jsonfile = os.path.join(persistence_dir, "accounts.json")
+accounts_jsonfile = os.path.join(BotConstants.PERSISTENCE_DIR, "accounts.json")
 
 
 class AccountManager:
-    if not os.path.exists(persistence_dir):
-        os.makedirs(persistence_dir)
 
     if not os.path.exists(accounts_jsonfile):
         accounts = {}
     else:
         with open(accounts_jsonfile, "r") as fp:
-            accounts_dto: dict = json.load(fp)
+            try:
+                accounts_dto: dict = json.load(fp)
+            except json.JSONDecodeError:
+                accounts_dto = {}
             accounts: dict[int, Account] = {int(k): Account.from_dict(v) for k, v in accounts_dto.items()}
     
     _zaap = None
@@ -96,7 +97,8 @@ class AccountManager:
     @classmethod
     def save(cls):
         with open(accounts_jsonfile, "w") as fp:
-            json.dump(cls.accounts, fp, indent=4)
+            accounts_json = {str(k): v.to_dict() for k, v in cls.accounts.items()}
+            json.dump(accounts_json, fp, indent=4)
             
     @classmethod
     def clear(cls):

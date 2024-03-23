@@ -182,9 +182,9 @@ class Account:
     addedDate: str
     locked: bool
     avatar: str
-    apikey: str
-    certid: int
-    certhash: str
+    apikey: Optional[str] = None
+    certid: Optional[int] = 0
+    certhash: Optional[str] = ""
     characters: Optional[List[Character]] = field(default_factory=list)
     parentEmailStatus: Optional[str] = None
 

@@ -17,8 +17,6 @@ from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Vertex impor
 from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.WorldGraph import \
     WorldGraph
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
-from pydofus2.com.ankamagames.jerakine.types.positions.WorldPoint import \
-    WorldPoint
 
 
 class BankInfos:
@@ -103,7 +101,7 @@ class Localizer:
                             candidates.extend(WorldGraph().getVertices(hint.mapId).values())
             if not candidates:
                 Logger().warning(f"Could not find a candidate zaap for map {mapId}")
-                return None
+                return None, None
             Logger().debug(f"Found {len(candidates)} candidates maps for closest zaap to map {mapId}")
             return cls.findClosestVertexFromVerticies(startVertex, candidates)
         return None, float("inf")

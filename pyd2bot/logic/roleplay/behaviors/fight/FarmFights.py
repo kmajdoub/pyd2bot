@@ -5,7 +5,6 @@ from pyd2bot.logic.managers.BotConfig import BotConfig
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
 from pyd2bot.logic.roleplay.behaviors.fight.AttackMonsters import \
     AttackMonsters
-from pyd2bot.logic.roleplay.behaviors.movement.AutoTrip import AutoTrip
 from pyd2bot.logic.roleplay.behaviors.movement.AutoTripUseZaap import \
     AutoTripUseZaap
 from pyd2bot.logic.roleplay.behaviors.movement.ChangeMap import ChangeMap
@@ -19,7 +18,6 @@ from pyd2bot.logic.roleplay.messages.FollowTransitionMessage import \
     FollowTransitionMessage
 from pyd2bot.logic.roleplay.messages.MoveToVertexMessage import \
     MoveToVertexMessage
-from pyd2bot.thriftServer.pyd2botService.ttypes import Vertex
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
 from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import \
     KernelEventsManager
@@ -30,6 +28,7 @@ from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterMa
     PlayedCharacterManager
 from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.TransitionTypeEnum import \
     TransitionTypeEnum
+from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Vertex import Vertex
 from pydofus2.com.ankamagames.dofus.network.enums.PlayerLifeStatusEnum import \
     PlayerLifeStatusEnum
 from pydofus2.com.ankamagames.dofus.network.types.game.context.roleplay.GameRolePlayGroupMonsterInformations import \

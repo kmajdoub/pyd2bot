@@ -1,5 +1,4 @@
-from re import S
-import threading
+from pyd2bot.models.session.models import Account
 from pydofus2.com.DofusClient import DofusClient
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
 from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import KernelEventsManager
@@ -10,7 +9,7 @@ from pydofus2.com.ankamagames.dofus.logic.connection.actions.ServerSelectionActi
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 
 
-class AccountsCharactersFetcher:
+class AccountCharactersFetcher:
     
     def __init__(self):
         self.characters = []
@@ -18,25 +17,24 @@ class AccountsCharactersFetcher:
         self.currServer = None
         self.serversList = None
 
-    def start(self, accountId, login, apikey, certid, certhash):
-        self.accountId = accountId
-        self.login = login
-        self.client = DofusClient(login)
-        self.client.setApiKey(apikey)
-        self.client.setCertificate(certid, certhash)
+    def run(self, account: Account):
+        self.account = account
+        self.client = DofusClient(account.login)
+        self.client.setApiKey(account.apikey)
+        self.client.setCertificate(account.certid, account.certhash)
         self.client.addShutDownListener(self.onClientShutdown)
         self.client.start()
-        self.evtsManager = KernelEventsManager.waitThreadRegister(self.login, 30)
+        self.evtsManager = KernelEventsManager.waitThreadRegister(self.account.login, 30)
         self.evtsManager.once(KernelEvent.ServersList, self.onServersList)
-        self.playerManager = PlayerManager.waitThreadRegister(self.login, 60)
+        self.playerManager = PlayerManager.waitThreadRegister(self.account.login, 60)
         self.client.join()
         return self.characters
     
     def onClientShutdown(self, event, message, reason):
-        Logger().info(f"Client {self.login} shutdown : {message} - {reason}")
+        Logger().info(f"Client {self.account.login} shutdown : {message} - {reason}")
     
     def onServersList(self, event, erversList, serversUsedList, serversTypeAvailableSlots):
-        self.kernel = Kernel.waitThreadRegister(self.login, 30)
+        self.kernel = Kernel.waitThreadRegister(self.account.login, 30)
         selectableServers = [server for server in self.kernel.serverSelectionFrame.usedServers if server.isSelectable]
         self.serversListIter = iter(selectableServers)
         self.processServer()
@@ -71,8 +69,8 @@ class AccountsCharactersFetcher:
                 "breedName": character.breed.name,
                 "serverId": self.playerManager.server.id,
                 "serverName": self.playerManager.server.name,
-                "login": self.login,
-                "accountId": self.accountId,
+                "login": self.account.login,
+                "accountId": self.account.id,
             }
             for character in self.playerManager.charactersList
         ]

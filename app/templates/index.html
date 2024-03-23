@@ -5,7 +5,6 @@
     <title>Account Interface</title>
     <!-- Add CSS and JavaScript as needed -->
     
-    <script src="https://cdn.jsdelivr.net/npm/ansi_up@5.0.0/ansi_up.js"></script>
     <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
     <script src="{{ url_for('static', filename='js/scripts.js') }}"></script>
@@ -26,10 +25,8 @@
                         <li>
                             {{ character.name }}
                             <button onclick="openFarmModal('{{ account.id }}', '{{ character.id }}')">Farm</button>
-                            <button
-                                onclick="runCharacterAction('{{ account.id }}', '{{ character.id }}', 'treasurehunt')">Treasure Hunt</button>
+                            <button onclick="runTreasurehunt('{{ account.id }}', '{{ character.id }}')">Treasurehunt</button>
                             <button onclick="openFightModal('{{ account.id }}', '{{ character.id }}')">Fight</button>
-
                         </li>
                         {% endfor %}
                     </ul>

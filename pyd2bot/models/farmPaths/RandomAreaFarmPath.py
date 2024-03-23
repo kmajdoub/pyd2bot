@@ -1,11 +1,8 @@
-import collections
 import random
 from time import perf_counter
 from typing import Iterator, Set
 
-from pyd2bot.misc.Localizer import Localizer
 from pyd2bot.models.farmPaths.AbstractFarmPath import AbstractFarmPath
-from pyd2bot.thriftServer.pyd2botService.ttypes import Path, TransitionType
 from pydofus2.com.ankamagames.dofus.datacenter.world.MapPosition import \
     MapPosition
 from pydofus2.com.ankamagames.dofus.datacenter.world.SubArea import SubArea
@@ -53,7 +50,7 @@ class RandomAreaFarmPath(AbstractFarmPath):
 
     @property
     def pourcentExplored(self):
-        return 100 * len(self.lastVisited) / len(self.verticies)
+        return 100 * len(self._lastVisited) / len(self.verticies)
 
     def getClosestUnvisited(self):
         bestDist = float("inf")
@@ -62,7 +59,7 @@ class RandomAreaFarmPath(AbstractFarmPath):
         for v in self.verticies:
             if v.mapId == self.currentVertex.mapId:
                 continue
-            if v not in self.lastVisited:
+            if v not in self._lastVisited:
                 vMp = MapPosition.getMapPositionById(v.mapId)
                 dist = abs(currMp.posX - vMp.posX) + abs(currMp.posY - vMp.posY)
                 if dist < bestDist:
@@ -87,23 +84,6 @@ class RandomAreaFarmPath(AbstractFarmPath):
         if not outgoingEdges:
             raise NoTransitionFound()
         edge = random.choice(outgoingEdges)
-        return edge
-        
-    def reachableVerticies(self) -> Set[Vertex]:
-        queue = collections.deque([self.startVertex])
-        verticies = set([self.startVertex])
-        while queue:
-            curr = queue.popleft()
-            for e in self.outgoingEdges(curr):
-                if e.dst not in verticies:
-                    queue.append(e.dst)
-                    verticies.add(e.dst)
-        return verticies
-
-    def filter_out_transitions(self, edge: Edge, tr_types_whitelist: list[TransitionTypeEnum]) -> bool:
-        for tr in edge.transitions:
-            if TransitionTypeEnum(tr.type) not in tr_types_whitelist:
-                edge.transitions.remove(tr)
         return edge
     
     def hasValidTransition(self, edge: Edge) -> bool:
@@ -140,8 +120,8 @@ class RandomAreaFarmPath(AbstractFarmPath):
             if edge.dst.mapId in self.mapIds:
                 if self.hasValidTransition(edge):
                     if onlyNonRecentVisited:
-                        if edge.dst in self.lastVisited:
-                            if perf_counter() - self.lastVisited[edge.dst] > 60 * 60:
+                        if edge.dst in self._lastVisited:
+                            if perf_counter() - self._lastVisited[edge.dst] > 60 * 60:
                                 ret.append(edge)
                         else:
                             ret.append(edge)
@@ -183,27 +163,3 @@ class RandomAreaFarmPath(AbstractFarmPath):
             "transitionTypeWhitelist": self.transitionTypeWhitelist,
             "subAreaBlacklist": self.subAreaBlacklist,
         }
-
-    @classmethod
-    def from_thriftObj(cls, path: Path) -> "RandomAreaFarmPath":
-        startVertex = WorldGraph().getVertex(path.startVertex.mapId, path.startVertex.zoneId)
-        if startVertex is None:
-            raise ValueError("Could not find start vertex from startVertex : " + str(path.startVertex))
-        twl = None
-        if path.transitionTypeWhitelist:
-            twl = []
-            for e in path.transitionTypeWhitelist:
-                if e == TransitionType.SCROLL:
-                    twl.append(TransitionTypeEnum.SCROLL)
-                elif e == TransitionType.SCROLL_ACTION:
-                    twl.append(TransitionTypeEnum.SCROLL_ACTION)
-                elif e == TransitionType.INTERACTIVE:
-                    twl.append(TransitionTypeEnum.INTERACTIVE)
-                elif e == TransitionType.MAP_ACTION:
-                    twl.append(TransitionTypeEnum.MAP_ACTION)
-                elif e == TransitionType.MAP_EVENT:
-                    twl.append(TransitionTypeEnum.MAP_EVENT)
-                elif e == TransitionType.MAP_OBSTACLE:
-                    twl.append(TransitionTypeEnum.MAP_OBSTACLE)
-        
-        return RandomAreaFarmPath(path.id, startVertex, twl, path.subAreaBlacklist)

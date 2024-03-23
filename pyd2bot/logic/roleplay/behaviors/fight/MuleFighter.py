@@ -1,16 +1,14 @@
 
-import re
 from time import perf_counter
 
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
-from pyd2bot.logic.roleplay.behaviors.movement.AutoTrip import AutoTrip
 from pyd2bot.logic.roleplay.behaviors.movement.AutoTripUseZaap import \
     AutoTripUseZaap
 from pyd2bot.logic.roleplay.behaviors.movement.GetOutOfAnkarnam import \
     GetOutOfAnkarnam
 from pyd2bot.logic.roleplay.behaviors.movement.MapMove import MapMove
 from pyd2bot.misc.BotEventsmanager import BotEventsManager
-from pyd2bot.thriftServer.pyd2botService.ttypes import Character
+from pyd2bot.models.session.models import Character
 from pydofus2.com.ankamagames.berilia.managers.EventsHandler import (Event,
                                                                      Listener)
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
@@ -43,8 +41,8 @@ class MuleFighter(AbstractBehavior):
         self.leader = leader
         self.running.set()
         self.checkIfLeaderInFight()
-        KernelEventsManager().on(KernelEvent.FightSwordShowed, self.onceFightStarted, originator=self)
-        KernelEventsManager().on(KernelEvent.ServerTextInfo, self.onServerNotif, originator=self)
+        self.on(KernelEvent.FightSwordShowed, self.onceFightStarted)
+        self.on(KernelEvent.ServerTextInfo, self.onServerNotif)
         BotEventsManager().on(BotEventsManager.MOVE_TO_VERTEX, self.onMoveToVertex, originator=self)
     
     def onMoveToVertex(self, event: Event, vertex: Vertex):

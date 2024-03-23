@@ -8,11 +8,7 @@ from pyd2bot.misc.Localizer import Localizer
 from pydofus2.Ankama_Common.ui.Recipes import Recipes
 from pydofus2.Ankama_storage.ui.enum.StorageState import StorageState
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
-from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import \
-    KernelEventsManager
 from pydofus2.com.ankamagames.dofus.datacenter.jobs.Recipe import Recipe
-from pydofus2.com.ankamagames.dofus.internalDatacenter.items.ItemWrapper import \
-    ItemWrapper
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import \
     PlayedCharacterManager

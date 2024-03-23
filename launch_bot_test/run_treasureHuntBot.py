@@ -6,8 +6,8 @@ from PyQt5 import QtGui, QtWidgets
 
 from pyd2bot.logic.managers.AccountManager import AccountManager
 from pyd2bot.Pyd2Bot import Pyd2Bot
-from pyd2bot.thriftServer.pyd2botService.ttypes import (Session, SessionType,
-                                                        UnloadType)
+from pyd2bot.models.session.models import Session, SessionType, UnloadType
+
 
 __dir__ = os.path.dirname(os.path.abspath(__file__))
 

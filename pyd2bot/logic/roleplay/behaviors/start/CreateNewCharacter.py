@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING
 
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
 from pyd2bot.logic.roleplay.behaviors.skill.UseSkill import UseSkill
-from pyd2bot.thriftServer.pyd2botService.ttypes import Character
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
 from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import \
     KernelEventsManager
@@ -52,7 +51,7 @@ class CreateNewCharacter(AbstractBehavior):
         self.name = name
         self.breedId = breedId
         self.sex = sex
-        self.character: Character = None
+        self.character = None
         self.nbrFails = 0
         self.charNameSuggListener = None
         self.charNameSuggFailListener = None

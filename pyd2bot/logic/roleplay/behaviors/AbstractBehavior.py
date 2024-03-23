@@ -14,6 +14,7 @@ class AbstractBehaviorState(Enum):
     UNKNOWN = 0
     RUNNING = 1
     IDLE = 2
+    
 class AbstractBehavior(BehaviorApi, metaclass=Singleton):
     ALREADY_RUNNING = 666
     _onEmptyCallbacks = dict[str, list[callable]]()

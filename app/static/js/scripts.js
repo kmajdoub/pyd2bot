@@ -82,8 +82,8 @@ function toggleCharacters(accountId) {
 }
 
 
-function runCharacterAction(accountId, characterId, action) {
-    fetch(`/run/${accountId}/${characterId}/${action}`)
+function runTreasurehunt(accountId, characterId) {
+    fetch(`/treasurehunt/${accountId}/${characterId}`)
         .then(response => response.json())
         .then(data => alert(data.message))
         .catch(error => console.error('Error:', error));
@@ -150,7 +150,6 @@ function updateRunningBots() {
 let runningBotsRefreshInterval = setInterval(updateRunningBots, 5000);
 
 // section about logs watching
-
 function showLogModal(name) {
     var logModal = document.getElementById('logModal');
     var logDetails = document.getElementById('logDetails');
@@ -219,13 +218,6 @@ function adjustFormForSessionType(selectedType) {
     } else {
         addPathButton.style.display = 'none';
     }
-
-    // Additional logic to adjust form based on the session type...
-}
-
-function removePathInput(button) {
-    // Remove the path input div
-    button.parentElement.remove();
 }
 
 function submitFarmForm() {
@@ -236,19 +228,19 @@ function submitFarmForm() {
     let sessionData = {
         accountId: accountId,
         characterId: characterId,
-        type: document.getElementById('sessionTypeSelect').value,
+        type: parseInt(document.getElementById('sessionTypeSelect').value),
         jobFilters: getSelectedJobsAndResources()
     };
 
     // Check the session type and add either a single path or a pathList
-    if (sessionData.type === 7) {
+    if (sessionData.type == 7) {
         // Collect all selected options from the pathsSelect element
         const selectedPaths = Array.from(document.getElementById('pathsSelect').selectedOptions).map(option => option.value);
-        sessionData.pathList = selectedPaths;
+        sessionData.pathsIds = selectedPaths;
     } else {
         // Get the single selected path from the pathsSelect element
         const selectedPath = document.getElementById('pathsSelect').value;
-        sessionData.path = selectedPath;
+        sessionData.pathId = selectedPath;
     }
 
     // Convert session object to JSON and POST it
@@ -260,6 +252,7 @@ function submitFarmForm() {
         body: JSON.stringify(sessionData)
     }).then(response => {
         console.log('Success:', response);
+        closeFarmModal();
     }).catch(error => {
         console.error('Error:', error);
     });
@@ -288,12 +281,12 @@ function openFarmModal(accountId, characterId) {
 
             // Combined listener for session type changes
             sessionTypeSelect.addEventListener('change', function() {
-                adjustFormAndPopulatePaths(this.value, data);
+                adjustFormAndPopulatePaths(parseInt(this.value), data);
             });
 
             // Set hidden inputs for account and character ID
-            document.getElementById('farmAccountId').value = accountId;
-            document.getElementById('farmCharacterId').value = characterId;
+            document.getElementById('farmAccountId').value = parseInt(accountId);
+            document.getElementById('farmCharacterId').value = parseFloat(characterId);
 
             // Show the modal
             document.getElementById('farmModal').style.display = 'block';
@@ -320,20 +313,6 @@ function adjustFormAndPopulatePaths(selectedType, data) {
         addJobAndResourcesToForm(job);
     });
 }
-
-function addPathInput() {
-    // Create and append new path input fields to the form
-    const pathsContainer = document.getElementById('pathsContainer');
-    const newPathDiv = document.createElement('div');
-    // Define your path input fields here. For example:
-    newPathDiv.innerHTML = `
-        <input type="text" placeholder="Path ID" name="pathId[]">
-        <input type="text" placeholder="Map IDs (comma-separated)" name="mapIds[]">
-        <button type="button" onclick="removePathInput(this)">Remove Path</button>
-    `;
-    pathsContainer.appendChild(newPathDiv);
-}
-
 
 function addJobAndResourcesToForm(jobData) {
     const container = document.getElementById('jobFiltersContainer');
@@ -401,7 +380,7 @@ function getSelectedJobsAndResources() {
 
         selectedJobs.push({
             jobId: jobId,
-            resoursesIds: selectedResources
+            resourcesIds: selectedResources
         });
     });
 

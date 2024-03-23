@@ -6,19 +6,11 @@ import sys
 import traceback
 from flask import Flask, jsonify, request, render_template
 from flask_socketio import SocketIO
+from marshmallow import ValidationError
+from forms.schemas import FarmSessionSchema, FightSessionSchema
 from pyd2bot.logic.managers.AccountManager import AccountManager
 from pyd2bot.Pyd2Bot import Pyd2Bot
-from pyd2bot.thriftServer.pyd2botService.ttypes import (
-    JobFilter,
-    Path,
-    PathType,
-    Session,
-    SessionStatus,
-    SessionType,
-    TransitionType,
-    UnloadType,
-    Vertex,
-)
+from pyd2bot.models.session.models import JobFilter, Path, Session, SessionStatus, SessionType, UnloadType
 from pydofus2.com.ankamagames.dofus.kernel.net.DisconnectionReasonEnum import DisconnectionReasonEnum
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.InventoryManager import InventoryManager
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import PlayedCharacterManager
@@ -30,9 +22,8 @@ import signal
 def signal_handler(sig, frame):
     print("You pressed Ctrl+C or the server is reloading!")
     # Insert your cleanup code here
-    for bot_data in BotManagerApp._running_bots.values():
-        bot = bot_data["obj"]
-        bot.shutdown(DisconnectionReasonEnum.WANTED_SHUTDOWN, "Brutal shutdown because of app reload")
+    for bot in BotManagerApp._running_bots.values():
+        bot.shutdown(DisconnectionReasonEnum.WANTED_SHUTDOWN, "Shutting down bot because of app shutdown")
         bot.join()
     sys.exit(0)
 
@@ -40,44 +31,19 @@ def signal_handler(sig, frame):
 signal.signal(signal.SIGINT, signal_handler)
 signal.signal(signal.SIGTERM, signal_handler)
 
-paths = {
-    "Ankarnam (lvl1)": {
-        "id": 'ankarnam_lvl1',
-        "type": PathType.RandomSubAreaFarmPath,
-        "startVertex": {"mapId": 154010883, "zoneId": 1},
-        "transitionTypeWhitelist": [TransitionType.SCROLL, TransitionType.SCROLL_ACTION],
-    },
-    "Ankarnam (lvl5)": {
-        "id": 'ankarnam_lvl5',
-        "type": PathType.RandomSubAreaFarmPath,
-        "startVertex": {"mapId": 154010884, "zoneId": 1},
-        "transitionTypeWhitelist": [TransitionType.SCROLL, TransitionType.SCROLL_ACTION],
-    },
-    "Astrub village": {
-        "id": 'astrub_village',
-        "type": PathType.RandomSubAreaFarmPath,
-        "startVertex": {"mapId": 191106048, "zoneId": 1},
-        "transitionTypeWhitelist": [TransitionType.SCROLL, TransitionType.SCROLL_ACTION],
-    },
-}
-
-def json_to_path(path_json) -> Path:
-    pth = Path(
-        id=path_json["id"],
-        type=path_json["type"],
-        transitionTypeWhitelist=path_json.get("transitionTypeWhitelist"),
-        mapIds=path_json.get("mapIds"),
-    )
-    if "startVertex" in path_json:
-        pth.startVertex = Vertex(mapId=path_json["startVertex"]["mapId"], zoneId=path_json["startVertex"]["zoneId"])
-    return pth
+paths_file = os.path.join(os.path.dirname(__file__), "db", "paths.json")
+with open(paths_file, "r") as f:
+    paths_json = json.load(f)
+    paths: dict[str, Path] = {json_path["id"]: Path.from_dict(json_path) for json_path in paths_json}
 
 staticdir = os.path.join(os.path.dirname(__file__), "static")
 dofus_data_file = os.path.join(staticdir, "dofusData", "dofus_data.json")
 with open(dofus_data_file, "r") as f:
     dofus_data = json.load(f)
+
+
 class SocketIOHandler(logging.Handler):
-    def __init__(self, socketio: "SocketIO", batch_time=1, *args, **kwargs):
+    def __init__(self, socketio: "SocketIO", batch_time=0.6, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.socketio = socketio
         self.batch_time = batch_time
@@ -97,8 +63,10 @@ class SocketIOHandler(logging.Handler):
         self.timer = None
 
 
-def format_runtime(startTime):
-    seconds = time.time() - startTime
+def format_runtime(startTime, endTime=None):
+    if not endTime:
+        endTime = time.time()
+    seconds = endTime - startTime
     hours = seconds // 3600
     minutes = (seconds % 3600) // 60
     seconds = seconds % 60
@@ -113,7 +81,8 @@ def format_runtime(startTime):
 
 
 class BotManagerApp:
-    _running_bots = dict()
+    _bots_run_infos = dict()
+    _running_bots = dict[str, Pyd2Bot]()
 
     def __init__(self):
         self.app = Flask(__name__)
@@ -122,7 +91,7 @@ class BotManagerApp:
         self.setup_routes()
 
     @staticmethod
-    def get_basic_session(account_id, character_id) -> Session:
+    def get_basic_session(account_id: int, character_id: float, session_type: SessionType) -> Session:
         accountkey = AccountManager.get_accountkey(account_id)
         character = AccountManager.get_character(accountkey, character_id)
         apikey = AccountManager.get_apikey(accountkey)
@@ -133,22 +102,29 @@ class BotManagerApp:
             unloadType=UnloadType.BANK,
             apikey=apikey,
             cert=cert,
+            type=session_type,
         )
 
-    def start_bot_session(self, session: Session, action: str):
+    def start_bot_session(self, session: Session):
         bot = Pyd2Bot(session)
         bot.addShutDownListener(self.on_bot_shutdown)
-        self._running_bots[session.character.login] = {
-            "obj": bot,
+        self._running_bots[session.character.login] = bot
+        self._bots_run_infos[session.character.login] = {
+            "name": bot.name,
             "startTime": time.time(),
             "character": session.character.name,
-            "activity": action,
+            "activity": session.type.name,
+            "kamas": "N/A",
+            "level": "N/A",
+            "pods": "N/A",
+            "status": "Starting...",
+            "runtime": "0s",
+            "endTime": "N/A",
         }
         bot.start()
 
     def teardown(self, *args):
-        for bot_data in self._running_bots.values():
-            bot = bot_data["obj"]
+        for bot in self._running_bots.values():
             bot.shutdown(DisconnectionReasonEnum.WANTED_SHUTDOWN, "Brutal shutdown because of app reload")
         self.socketio.stop()
 
@@ -156,136 +132,127 @@ class BotManagerApp:
         @self.app.route("/")
         def index():
             return render_template(
-                "index.html", accounts=AccountManager.get_accounts(), runningBots=self._running_bots.values()
+                "index.html", accounts=AccountManager.get_accounts(), runningBots=self._bots_run_infos.values()
             )
 
         @self.app.route("/paths", methods=["GET"])
         def get_paths():
-            return jsonify({"paths": list(paths.keys())}), 200
+            return jsonify({"paths": [path for path in paths]}), 200
 
         @self.app.route("/solo-fight", methods=["POST"])
         def solo_fight():
-            if not request.is_json: 
+            if not request.is_json:
                 return jsonify({"error": "Request must be JSON"}), 400
-
-            data = request.get_json()
-
-            # Extracting the necessary information from the request
+            print(f"Post request data: {request.get_json()}")
+            try:
+                data = FightSessionSchema().load(request.get_json())
+            except ValidationError as err:
+                return jsonify({"errors": err.messages}), 400
             account_id = data.get("accountId")
             character_id = data.get("characterId")
             path_id = data.get("pathId")
-            
-            try:
-                monster_lvl_coef_diff = float(data.get("monsterLvlCoefDiff"))  # Explicitly convert to float
-            except ValueError:
-                return jsonify({"error": "Invalid format for monsterLvlCoefDiff. A float is required."}), 400
-
-            # Placeholder for your logic to process the solo fight
-            session = self.get_basic_session(account_id, character_id)
-            session.type = SessionType.FIGHT
-            session.path = json_to_path(paths[path_id])
-            session.monsterLvlCoefDiff = monster_lvl_coef_diff
-            # For example, validate the input and then update the database or process the game logic
-            print(
-                f"Processing solo fight for account {account_id}, character {character_id}, on path {path_id} with monster level coefficient difficulty {monster_lvl_coef_diff}"
-            )
-
-            self.start_bot_session(session, "solo-fight")
-
-            # Responding with a success message or any other relevant information
+            session = self.get_basic_session(account_id, character_id, SessionType.FIGHT)
+            session.monsterLvlCoefDiff = data.get("monsterLvlCoefDiff")
+            session.path = paths[path_id]
+            self.start_bot_session(session)
             return jsonify({"message": "Solo fight initiated successfully"}), 200
 
         @self.app.route("/farm", methods=["GET"])
         def get_farm_data():
             farm_session_types = [SessionType.FARM, SessionType.MULTIPLE_PATHS_FARM]
-            return jsonify({   
-                "skills": list(dofus_data["skills"].values()),
-                "paths": list(paths.keys()),
-                "sessionTypes": [{"label": SessionType._VALUES_TO_NAMES[st], "value": st} for st in farm_session_types],
-            }), 200
+            return (
+                jsonify(
+                    {
+                        "skills": list(dofus_data["skills"].values()),
+                        "paths": [path.id for path in paths.values()],
+                        "sessionTypes": [{"label": st.name, "value": st.value} for st in farm_session_types],
+                    }
+                ),
+                200,
+            )
 
         @self.app.route("/farm", methods=["POST"])
         def farm():
             if not request.is_json:
                 return jsonify({"error": "Request must be JSON"}), 400
-
-            data = request.get_json()
-            print(f"Post request data: {data}")
-
-            # Extracting the necessary information from the request
+            print(f"Post request data: {request.get_json()}")
+            try:
+                data = FarmSessionSchema().load(request.get_json())
+            except ValidationError as err:
+                return jsonify({"errors": err.messages}), 400
             account_id = data.get("accountId")
             character_id = data.get("characterId")
             session_type = data.get("type")
             path_id = data.get("pathId")
             paths_ids = data.get("pathsIds")
             job_filters = data.get("jobFilters")
-            session = self.get_basic_session(account_id, character_id)
+            session = self.get_basic_session(account_id, character_id, session_type)
             session.type = session_type
             if session_type == SessionType.FARM:
+                if path_id not in paths:
+                    return jsonify({"error": f"Path {path_id} not found"}), 400
                 session.path = paths[path_id]
             elif session_type == SessionType.MULTIPLE_PATHS_FARM:
-                session.pathsList = [json_to_path(paths[path_id]) for path_id in paths_ids]
-            session.jobFilters = [JobFilter(job['jobId'], job['resoursesIds']) for job in job_filters]
-            if path_id:
-                session.path = json_to_path(paths[path_id])
-            elif paths_ids:
-                session.pathsList = [json_to_path(paths[path_id]) for path_id in paths_ids]
-            self.start_bot_session(session, "solo-fight")
-
-            # Responding with a success message or any other relevant information
-            return jsonify({"message": "Solo fight initiated successfully"}), 200
-        
-        @self.app.route("/run/<account_id>/<character_id>/<action>")
-        def run_action(account_id, character_id, action):
+                for path_id in paths_ids:
+                    if path_id not in paths:
+                        return jsonify({"error": f"Path {path_id} not found"}), 400
+                session.pathsList = [paths[path_id] for path_id in paths_ids]
+            else:
+                return jsonify({"error": f"Invalid session type: {session_type}"}), 400
             try:
-                session = self.get_basic_session(account_id, character_id)
-
-                if action == "treasurehunt":
-                    session.type = SessionType.TREASURE_HUNT
-                    
-                else:
-                    return jsonify({"status": "error", "message": f"Unknown action {action}"})
-
-                self.start_bot_session(session, action)
-
+                session.jobFilters = [JobFilter.from_dict(job) for job in job_filters]
             except Exception as e:
-                return jsonify({"status": "error", "message": f"Error while running {action} : {e}"})
+                return jsonify({"error": f"Invalid jobFilters: {e}"}), 400
+            self.start_bot_session(session)
+
+            return jsonify({"message": "Solo fight initiated successfully"}), 200
+
+        @self.app.route("/treasurehunt/<account_id>/<character_id>")
+        def trasurehunt(account_id, character_id):
+            try:
+                session = self.get_basic_session(account_id, character_id, SessionType.TREASURE_HUNT)
+                self.start_bot_session(session)
+            except Exception as e:
+                return jsonify({"status": "error", "message": f"Error : {e}"})
 
             return jsonify(
                 {
                     "status": "success",
-                    "message": f"Running {action} for account {account_id}, character {character_id}",
+                    "message": f"Running treasurehunt for account {account_id}, character {character_id}",
                 }
             )
 
         @self.app.route("/stop/<botname>")
         def stop_action(botname):
-            bot_data = self._running_bots.get(botname)
-            if bot_data:
-                bot = bot_data["obj"]
+            bot = self._running_bots.get(botname)
+            if bot:
                 bot.shutdown(DisconnectionReasonEnum.WANTED_SHUTDOWN, "User wanted to stop bot")
+                bot.join()
+                self._running_bots.pop(botname)
+                # self._bots_run_infos.pop(botname)
             return jsonify({"status": "success", "message": f"Stopped bot {botname}"})
 
         @self.app.route("/get_running_bots")
         def get_running_bots():
             result = []
-            for bot in self._running_bots.values():
-                bot_data = {
-                    "name": bot["obj"].name,
-                    "character": bot["character"],
-                    "runTime": format_runtime(bot["startTime"]),
-                    "status": SessionStatus._VALUES_TO_NAMES[bot["obj"].getState()],
-                    "activity": bot["activity"],
-                }
-                playermanager = PlayedCharacterManager.getInstance(bot["obj"].name)
-                invManager = InventoryManager.getInstance(bot["obj"].name)
-                if invManager and invManager.inventory:
-                    bot_data["kamas"] = invManager.inventory.kamas
-                if playermanager and playermanager.infos:
-                    bot_data["level"] = playermanager.infos.level
-                if playermanager and playermanager.inventoryWeightMax:
-                    bot_data["pods"] = int(playermanager.inventoryWeight / playermanager.inventoryWeightMax * 100)
-                result.append(bot_data)
+            for bot_oper in self._bots_run_infos.values():
+                bot = self._running_bots.get(bot_oper["name"])
+                if bot:
+                    bot_status = bot.getState()
+                    bot_oper["status"] = bot_status.name
+                    stopped = bot_oper["status"] in [SessionStatus.TERMINATED, SessionStatus.CRASHED, SessionStatus.BANNED]
+                    if not stopped:
+                        bot_oper["endTime"] = time.time()
+                        bot_oper["runTime"] = format_runtime(bot_oper["startTime"], bot_oper.get("endTime", None))
+                        playermanager = PlayedCharacterManager.getInstance(bot_oper["name"])
+                        invManager = InventoryManager.getInstance(bot_oper["name"])
+                        if invManager and invManager.inventory:
+                            bot_oper["kamas"] = invManager.inventory.kamas
+                        if playermanager and playermanager.infos:
+                            bot_oper["level"] = playermanager.infos.level
+                        if playermanager and playermanager.inventoryWeightMax:
+                            bot_oper["pods"] = int(playermanager.inventoryWeight / playermanager.inventoryWeightMax * 100)
+                result.append(bot_oper)
             return jsonify(result)
 
         @self.app.route("/watch-log", methods=["POST"])

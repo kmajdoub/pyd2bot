@@ -1,4 +1,3 @@
-from enum import Enum
 
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
 from pyd2bot.misc.Localizer import Localizer

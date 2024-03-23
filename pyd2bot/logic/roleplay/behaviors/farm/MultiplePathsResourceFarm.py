@@ -8,6 +8,7 @@ class MultiplePathsResourceFarm(AbstractBehavior):
 
     def __init__(self, timeout=None) -> None:
         self.timeout = timeout
+        self.forbiden_paths = []
         super().__init__()
 
     def run(self) -> bool:
@@ -17,11 +18,17 @@ class MultiplePathsResourceFarm(AbstractBehavior):
         self.startNextPath(None, None)
 
     def startNextPath(self, code, err):
+        if err:
+            Logger().debug(f"Error[{code}] during the farm path : {err}")
+            self.forbiden_paths.append(self.currentPath)
         Logger().info(f"Starting next path")
         try:
             self.currentPath = next(self.iterPathsList)
         except StopIteration:
-            self.iterPathsList = iter(self.pathsList)
+            non_forbiden_paths = [p for p in self.pathsList if p not in self.forbiden_paths]
+            if not non_forbiden_paths:
+                return self.finish(1, "All paths are forbiden")
+            self.iterPathsList = iter([p for p in self.pathsList if p not in self.forbiden_paths])
             self.currentPath = next(self.iterPathsList)
         BotConfig().path = self.currentPath
         ResourceFarm(self.timeout).start(callback=self.startNextPath)

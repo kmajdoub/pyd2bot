@@ -1,3 +1,4 @@
 thrift
 prettytable
 cloudscraper
+dataclasses-json

@@ -11,7 +11,7 @@ from pyd2bot.logic.fight.messages.MuleSwitchedToCombatContext import \
     MuleSwitchedToCombatContext
 from pyd2bot.logic.managers.BotConfig import BotConfig
 from pyd2bot.misc.BotEventsmanager import BotEventsManager
-from pyd2bot.thriftServer.pyd2botService.ttypes import Character
+from pyd2bot.models.session.models import Character
 from pydofus2.com.ankamagames.atouin.HaapiEventsManager import \
     HaapiEventsManager
 from pydofus2.com.ankamagames.atouin.managers.EntitiesManager import \
@@ -275,7 +275,7 @@ class BotFightFrame(Frame):
 
     def findCellsWithLosToTargets(self, spellw: SpellWrapper, targets: list[Target], fighterCell: int) -> list[int]:
         hasLosToTargets = dict[int, list[Target]]()
-        s = perf_counter()
+        perf_counter()
         spellZone = self.getSpellZone(spellw)
         maxRangeFromFighter = 0
         for target in targets:

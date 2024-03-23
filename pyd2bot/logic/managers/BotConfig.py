@@ -2,9 +2,7 @@ import threading
 from typing import TYPE_CHECKING
 
 from pyd2bot.logic.managers.PathFactory import PathFactory
-from pyd2bot.thriftServer.pyd2botService.ttypes import (Character, Path,
-                                                        Session, SessionType,
-                                                        UnloadType)
+from pyd2bot.models.session.models import Character, Path, Session, SessionType, UnloadType
 from pydofus2.com.ankamagames.dofus.network.enums.BreedEnum import BreedEnum
 from pydofus2.com.ankamagames.jerakine.metaclasses.Singleton import Singleton
 from pydofus2.damageCalculation.tools.StatIds import StatIds
@@ -118,7 +116,7 @@ class BotConfig(metaclass=Singleton):
         self.id = session.id
         if not session.jobFilters:
             session.jobFilters = []
-        self.jobFilter = {jf.jobId: jf.resoursesIds for jf in session.jobFilters}
+        self.jobFilter = {jf.jobId: jf.resourcesIds for jf in session.jobFilters}
         self.sessionType = session.type
         self.unloadType = session.unloadType
         self.followers = session.followers if session.followers else []
@@ -130,9 +128,9 @@ class BotConfig(metaclass=Singleton):
         self.isSeller = session.type == SessionType.SELL
         self.seller = session.seller
         if session.pathsList:
-            self.pathsList = [PathFactory.from_thriftObj(path) for path in session.pathsList]
+            self.pathsList = [PathFactory.from_dto(path) for path in session.pathsList]
         if session.path:
-            self.path = PathFactory.from_thriftObj(session.path)
+            self.path = PathFactory.from_dto(session.path)
         elif session.type in [SessionType.FARM, SessionType.FIGHT]:
             raise ValueError("Session path is required for farm and fight sessions")
         if self.monsterLvlCoefDiff:

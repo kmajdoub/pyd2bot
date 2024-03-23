@@ -1,9 +1,5 @@
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
-from pyd2bot.logic.roleplay.behaviors.skill.UseSkill import UseSkill
-from pyd2bot.logic.roleplay.behaviors.teleport.SaveZaap import SaveZaap
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
-from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import \
-    KernelEventsManager
 from pydofus2.com.ankamagames.dofus.internalDatacenter.taxi.TeleportDestinationWrapper import \
     TeleportDestinationWrapper
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
@@ -62,7 +58,7 @@ class UseZaap(AbstractBehavior):
                 return Kernel().zaapFrame.teleportRequest(dst.cost, ttype, dst.destinationType, dst.mapId)
         else:
             ConnectionsHandler().send(LeaveDialogRequestMessage())
-            err = f"Didnt find dest zaap {dst.mapId} in teleport destinations, destinations: {[d.mapId for d in destinations]}"
+            err = f"Didnt find dest zaap {self.dstMapId} in teleport destinations, destinations: {[d.mapId for d in destinations]}"
             return self.on(
                 KernelEvent.LeaveDialog,
                 lambda e: self.finish(self.DST_ZAAP_NOT_KNOWN, err),

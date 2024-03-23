@@ -1,17 +1,10 @@
-import collections
 import random
 import time
-from typing import Iterator, Set
-
+from typing import Iterator
 from pyd2bot.models.farmPaths.AbstractFarmPath import AbstractFarmPath
 from pyd2bot.models.farmPaths.RandomAreaFarmPath import NoTransitionFound
-from pyd2bot.thriftServer.pyd2botService.ttypes import Path, TransitionType
-from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.astar.AStar import \
-    AStar
 from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Edge import \
     Edge
-from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.TransitionTypeEnum import \
-    TransitionTypeEnum
 from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Vertex import \
     Vertex
 from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.WorldGraph import \
@@ -35,7 +28,6 @@ class CustomRandomFarmPath(AbstractFarmPath):
     
     def init(self):
         self.startVertex = WorldGraph().getVertex(self.mapIds[0], 1)
-        self.verticies = self.reachableVerticies()
         Logger().info(f"CustomRandomFarmPath {self.name} initialized with {len(self.verticies)} verticies")
 
     def __next__(self, forbidenEdges=None) -> Edge:
@@ -50,12 +42,6 @@ class CustomRandomFarmPath(AbstractFarmPath):
 
     def currNeighbors(self) -> Iterator[Vertex]:
         return self.outgoingEdges(self.currentVertex)
-
-    def filter_out_transitions(self, edge: Edge, whitelist: list[TransitionTypeEnum]) -> bool:
-        for tr in edge.transitions:
-            if TransitionTypeEnum(tr.type) not in whitelist:
-                edge.transitions.remove(tr)
-        return edge
     
     def outgoingEdges(self, vertex=None, onlyNonRecentVisited=False) -> Iterator[Edge]:
         if vertex is None:
@@ -66,63 +52,14 @@ class CustomRandomFarmPath(AbstractFarmPath):
             if edge.dst.mapId in self.mapIds:
                 if self.hasValidTransition(edge):
                     if onlyNonRecentVisited:
-                        if edge.dst in self.lastVisited:
-                            if time.perf_counter() - self.lastVisited[edge.dst] > 60 * 60:
+                        if edge.dst in self._lastVisited:
+                            if time.perf_counter() - self._lastVisited[edge.dst] > 60 * 60:
                                 ret.append(edge)
                         else:
                             ret.append(edge)
                     else:
                         ret.append(edge)
         return ret
-    
-    def reachableVerticies(self) -> Set[Vertex]:
-        queue = collections.deque([self.startVertex])
-        verticies = set([self.startVertex])
-        while queue:
-            curr = queue.popleft()
-            for e in self.outgoingEdges(curr):
-                if e.dst not in verticies:
-                    queue.append(e.dst)
-                    verticies.add(e.dst)
-        return verticies
-
-    def __iter__(self) -> Iterator[Vertex]:
-        for it in self.verticies:
-            yield it
-
-    def __in__(self, vertex: Vertex) -> bool:
-        return vertex in self.verticies
-
-    def to_json(self) -> dict:
-        return {
-            "type": self.__class__.__name__,
-            "name": self.name,
-            "mapIds": self.mapIds
-        }
-
-    @classmethod
-    def from_thriftObj(cls, path: Path) -> "CustomRandomFarmPath":
-        return CustomRandomFarmPath(path.id, path.mapIds)
-
-    def hasValidTransition(self, edge: Edge) -> bool:
-        from pydofus2.com.ankamagames.dofus.datacenter.items.criterion.GroupItemCriterion import \
-            GroupItemCriterion
-
-        transitions = edge.transitions
-        valid = False
-        for transition in transitions:
-            
-            if transition.criterion:
-                if (
-                    "&" not in transition.criterion
-                    and "|" not in transition.criterion
-                    and transition.criterion[0:2] not in AStar.CRITERION_WHITE_LIST
-                ):
-                    return False
-                criterion = GroupItemCriterion(transition.criterion)
-                return criterion.isRespected
-            valid = True
-        return valid
     
     def getNextVertex(self, forbidenEdges=None, onlyNonRecent=False) -> Vertex:
         outgoingEdges = list(self.outgoingEdges(onlyNonRecentVisited=onlyNonRecent))

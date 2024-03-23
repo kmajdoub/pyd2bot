@@ -7,9 +7,7 @@ from pyd2bot.logic.roleplay.behaviors.teleport.UseZaap import UseZaap
 from pyd2bot.misc.Localizer import Localizer
 from pydofus2.com.ankamagames.atouin.managers.MapDisplayManager import \
     MapDisplayManager
-from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import KernelEventsManager
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
-from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
 from pydofus2.com.ankamagames.dofus.logic.common.managers.PlayerManager import \
     PlayerManager
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import \
@@ -80,7 +78,7 @@ class AutoTripUseZaap(AbstractBehavior):
         )
         if self.distFromTarget <= self.srcZaapDist + self.dstZaapDist:
             self.goToDestinationOnFeet()
-        elif PlayerManager().isBasicAccount() or teleportCostFromCurrToDstMap > maxCost:
+        elif PlayerManager().isBasicAccount() or teleportCostFromCurrToDstMap > maxCost or PlayedCharacterManager().infos.level < 10:
             Logger().debug(f"Auto travelling to src zaap on feet")
             self.autoTrip(
                 self.srcZaapVertex.mapId,
@@ -89,7 +87,7 @@ class AutoTripUseZaap(AbstractBehavior):
             )
         else:
             Logger().debug(f"Auto travelling to src zaap with havenbag")
-            self.enterHavenBag(lambda event: self.onSrcZaapTrip(True, None))
+            self.enterHaevenBag(self.onEnterHaevenBagFinish)
 
     def findSrcZaap(self):
         self.srcZaapVertex, self.srcZaapDist = Localizer.findCloseZaapMapId(
@@ -100,44 +98,26 @@ class AutoTripUseZaap(AbstractBehavior):
             return False
         Logger().debug(f"Found src zaap at {self.srcZaapDist} maps from current pos.")
         return True
-
-    def enterHavenBag(self, callback):
-        self.havenBagListener = self.once(
-            KernelEvent.InHavenBag,
-            callback,
-            timeout=30,
-            retryNbr=3,
-            retryAction=self.onHeavenBagEnterTimeout,
-            ontimeout=lambda l: self.finish(False, "Haven bag enter timedout too many times"),
-        )
-        if not Kernel().roleplayContextFrame:
-            return KernelEventsManager().onceFramePushed('RoleplayContextFrame', Kernel().roleplayContextFrame.havenbagEnter)
-        Kernel().roleplayContextFrame.havenbagEnter()
-
-    def onHeavenBagEnterTimeout(self):
-        Logger().error("Haven bag enter timedout!")
-        Kernel().roleplayContextFrame.havenbagEnter()
         
     def onServerInfo(self, event, msgId, msgType, textId, msgContent, params):
-        if textId == 589088:  # Can't join haven bag from current Map
-            if self.havenBagListener:
-                self.havenBagListener.delete()
-            if not self.srcZaapVertex:
-                if not self.findSrcZaap():
-                    return self.goToDestinationOnFeet()
-            Logger().debug(
-                f"Can't use haven bag so will travel to source zaap on feet."
+        if textId == 592304:  # Player is busy
+            self.finish(
+                self.BOT_BUSY,
+                "Player is busy so cant use zaap and walking might raise unexpected errors.",
+            )
+
+    def onEnterHaevenBagFinish(self, code, err):
+        if err:
+            Logger().warning(
+                f"Unable to use haven bag for reason {err}, so we will travel to source zaap on feet!"
             )
             self.autoTrip(
                 self.srcZaapVertex.mapId,
                 self.srcZaapVertex.zoneId,
                 callback=self.onSrcZaapTrip,
             )
-        elif textId == 592304:  # Player is busy
-            self.finish(
-                self.BOT_BUSY,
-                "Player is busy so cant use zaap and walking might raise unexpected errors.",
-            )
+        else:
+            self.onSrcZaapTrip(True, None)
 
     def onDstZaapSaved(self, code, err):
         if err:

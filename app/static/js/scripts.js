@@ -97,8 +97,14 @@ function stopBot(botName) {
         .catch(error => console.error('Error:', error));
 }
 
+
 // JavaScript function to handle the import accounts action
 function importAccounts() {
+    // Show the spinner
+    document.getElementById('spinner').style.display = 'block';
+    document.getElementById('import_accounts_button').style.display = 'none';
+    document.getElementById('accounts-lis').innerHTML = '';
+
     fetch('/import_accounts')
     .then(response => {
         if (!response.ok) {
@@ -108,13 +114,19 @@ function importAccounts() {
     })
     .then(data => {
         console.log('Import successful:', data);
+        // Hide the spinner
+        document.getElementById('spinner').style.display = 'none';
         // You can refresh the page or update the UI here
         location.reload(); // Refreshes the page to update the accounts list
     })
     .catch(error => {
         console.error('Import failed:', error);
+        // Hide the spinner even on failure
+        document.getElementById('spinner').style.display = 'none';
+        document.getElementById('import_accounts_button').style.display = 'block';
     });
 }
+
 
 let lastUpdate = [];
 

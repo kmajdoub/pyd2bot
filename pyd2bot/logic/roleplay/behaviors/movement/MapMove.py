@@ -40,7 +40,6 @@ class MapMove(AbstractBehavior):
         self._landingCell = None
         self.requested_movement = False
         self.delayed_stop = False
-        self._stop_callbacks = []
 
     def run(self, destCell, exactDistination=True, forMapChange=False, mapChangeDirection=-1, cellsblacklist=[]) -> None:
         Logger().info(f"Move from {PlayedCharacterManager().currentCellId} to {destCell} started")
@@ -65,20 +64,14 @@ class MapMove(AbstractBehavior):
             elif player and not player.isMoving:
                 Logger().warning("Player is not moving, can't stop movement.")
             if player and player.isMoving:
-                player.stop_move()
+                player.stop_move() # this is blocking until the player movment animation is stopped
             elif self.requested_movement:
                 self.delayed_stop = True
-                Logger().warning("Player is not moving yet, will delay stop.")
+                Logger().warning("Player requested movement, but is not moving yet, will delay stop.")
                 return False
         KernelEventsManager().clearAllByOrigin(self)
         MapMove.clear()
-        for callback in self._stop_callbacks:
-            callback()
-        self._stop_callbacks.clear()
         return True
-
-    def registerStopCallback(self, callback) -> None:
-        self._stop_callbacks.append(callback)
         
     def move(self) -> bool:
         rpmframe = Kernel().movementFrame
@@ -160,14 +153,13 @@ class MapMove(AbstractBehavior):
         self._landingCell = clientMovePath.end
         if clientMovePath.end.cellId != self.dstCell.cellId:
             Logger().warning(f"Heading to cell {clientMovePath.end.cellId} not the wanted destination {self.dstCell.cellId}!")
+        self.once(
+            KernelEvent.PlayerMovementCompleted, callback=self.onMovementCompleted
+        )
         if self.delayed_stop:
-            Logger().warning("Scheduled player stop movement, will stop now.")
             self.delayed_stop = False
-            BenchmarkTimer(0.6, self.stop).start()
-        else:
-            self.once(
-                KernelEvent.PlayerMovementCompleted, callback=self.onMovementCompleted
-            )
+            Logger().warning("Scheduled player stop movement, will stop now.")
+            BenchmarkTimer(0.4, self.stop).start()
 
     def onMovementCompleted(self, event, success):
         if success:

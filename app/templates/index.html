@@ -14,8 +14,9 @@
     <div class="container">
         <div class="account-list">
             <h2>Accounts</h2>
-            <button onclick="importAccounts()">Import Accounts</button>
-            <ul>
+            <button id="import_accounts_button" onclick="importAccounts()">Import Accounts</button>
+            <div id="spinner" style="display:none;"></div>
+            <ul id="accounts-lis">
                 {% for account in accounts %}
                 <li>
                     {{ account.nickname }}

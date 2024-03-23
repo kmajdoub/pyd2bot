@@ -43,6 +43,8 @@ class UseSkill(AbstractBehavior):
         self._move_to_skillcell_landingcell = None
         self._cells_blacklist = []
         self._wanted_player_stop = False
+        self._stop_code = None
+        self._stop_message = None
 
     def run(
         self,
@@ -84,8 +86,7 @@ class UseSkill(AbstractBehavior):
         if err:
             if code == MapMove.PLAYER_STOPED:
                 if self._wanted_player_stop:
-                    self._wanted_player_stop = False
-                    return
+                    return self.finish(self._stop_code, self._stop_message)
             return self.finish(code, err)
         self._move_to_skillcell_landingcell = landingCell
         self.requestActivateSkill()
@@ -108,21 +109,28 @@ class UseSkill(AbstractBehavior):
 
     def onUsingInteractive(self, event, entityId, usingElementId):
         if self.elementId == usingElementId:
-            if MapMove().isRunning():
-                self._wanted_player_stop = True
-                MapMove().stop()
             if entityId != PlayedCharacterManager().id:
-                Logger().error(f"Someone else is using this element, while we are moving to it, stopping map move")
-                self.finish(self.ELEM_BEING_USED, "Someone else is using this element")
-
+                if MapMove().isRunning():
+                    self._stop_message = "Someone else is using this element while we are moving to it!"
+                    Logger().warning(self._stop_message)
+                    self._wanted_player_stop = True
+                    self._stop_code = self.ELEM_BEING_USED
+                    MapMove().stop()
+                else:
+                    self.finish(self.ELEM_BEING_USED, "Someone else is using this element")
+            elif MapMove().isRunning():
+                Logger().debug(f"/!\ Impossible thing happened : Player is using the element, while we are moving to it!!")
+                    
     def onUsedInteractive(self, event, entityId, usedElementId):
         if self.elementId == usedElementId:
             if entityId != PlayedCharacterManager().id:
                 if self.elementId in Kernel().interactivesFrame._statedElm:
                     if MapMove().isRunning():
                         self._wanted_player_stop = True
+                        self._stop_code = self.ELEM_TAKEN
+                        self._stop_message = "Someone else is using this element while we are moving to it!"
+                        Logger().warning(self._stop_message)
                         MapMove().stop()
-                    self.finish(self.ELEM_TAKEN, "Someone else used this element")
             else:            
                 if self.useErrorListener:
                     self.useErrorListener.delete()

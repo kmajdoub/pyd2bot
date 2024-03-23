@@ -1,4 +1,4 @@
-from pyd2bot.models.session.models import Account
+from pyd2bot.models.session.models import Account, Character
 from pydofus2.com.DofusClient import DofusClient
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
 from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import KernelEventsManager
@@ -17,14 +17,14 @@ class AccountCharactersFetcher:
         self.currServer = None
         self.serversList = None
 
-    def run(self, account: Account):
+    def run(self, account: Account) -> list[Character]:
         self.account = account
         self.client = DofusClient(account.login)
         self.client.setApiKey(account.apikey)
         self.client.setCertificate(account.certid, account.certhash)
         self.client.addShutDownListener(self.onClientShutdown)
         self.client.start()
-        self.evtsManager = KernelEventsManager.waitThreadRegister(self.account.login, 30)
+        self.evtsManager = KernelEventsManager.waitThreadRegister(self.account.login, 60)
         self.evtsManager.once(KernelEvent.ServersList, self.onServersList)
         self.playerManager = PlayerManager.waitThreadRegister(self.account.login, 60)
         self.client.join()
@@ -61,17 +61,17 @@ class AccountCharactersFetcher:
     def onCharactersList(self, event, charactersList):
         Logger().info(f"Server : {self.currServer.id}, List characters received")
         self.characters += [
-            {
-                "name": character.name,
-                "id": character.id,
-                "level": character.level,
-                "breedId": character.breedId,
-                "breedName": character.breed.name,
-                "serverId": self.playerManager.server.id,
-                "serverName": self.playerManager.server.name,
-                "login": self.account.login,
-                "accountId": self.account.id,
-            }
+            Character(
+                name=character.name,
+                id=character.id,
+                level=character.level,
+                breedId=character.breedId,
+                breedName=character.breed.name,
+                serverId=self.playerManager.server.id,
+                serverName=self.playerManager.server.name,
+                login=self.account.login,
+                accountId=self.account.id,
+            )
             for character in self.playerManager.charactersList
         ]
         self.processServer()

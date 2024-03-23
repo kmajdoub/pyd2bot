@@ -215,12 +215,10 @@ class BotManagerApp:
             except Exception as e:
                 return jsonify({"status": "error", "message": f"Error : {e}"})
 
-            return jsonify(
-                {
-                    "status": "success",
-                    "message": f"Running treasurehunt for account {account_id}, character {character_id}",
-                }
-            )
+            return jsonify({
+                "status": "success",
+                "message": f"Running treasurehunt for account {account_id}, character {character_id}",
+            })
 
         @self.app.route("/stop/<botname>")
         def stop_action(botname):
@@ -240,7 +238,7 @@ class BotManagerApp:
                 if bot:
                     bot_status = bot.getState()
                     bot_oper["status"] = bot_status.name
-                    stopped = bot_oper["status"] in [SessionStatus.TERMINATED, SessionStatus.CRASHED, SessionStatus.BANNED]
+                    stopped = bot_status in [SessionStatus.TERMINATED, SessionStatus.CRASHED, SessionStatus.BANNED]
                     if not stopped:
                         bot_oper["endTime"] = time.time()
                         bot_oper["runTime"] = format_runtime(bot_oper["startTime"], bot_oper.get("endTime", None))
@@ -252,6 +250,8 @@ class BotManagerApp:
                             bot_oper["level"] = playermanager.infos.level
                         if playermanager and playermanager.inventoryWeightMax:
                             bot_oper["pods"] = int(playermanager.inventoryWeight / playermanager.inventoryWeightMax * 100)
+                else:
+                    bot_oper["status"] = "Stopped"
                 result.append(bot_oper)
             return jsonify(result)
 

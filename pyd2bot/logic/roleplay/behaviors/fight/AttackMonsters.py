@@ -46,11 +46,9 @@ class AttackMonsters(AbstractBehavior):
 
     def __init__(self) -> None:
         super().__init__()
-        self.entityMovedListener: Listener = None
-        self.fightSwordListener: Listener = None
         self.attackMonsterListener: Listener = None
-        self.mapChangeListener: Listener = None
         self.nbrFails = 0
+        self._stop_message = None
 
     @property
     def entityInfo(self) -> "GameContextActorInformations":
@@ -66,9 +64,9 @@ class AttackMonsters(AbstractBehavior):
         cellId = self.getEntityCellId()
         if not cellId:
             return self.finish(self.ENTITY_VANISHED, "Entity no more on the map")
-        self.entityMovedListener = self.onEntityMoved(self.entityId, callback=self.ontargetMonsterMoved)
-        self.fightSwordListener = self.onceFightSword(self.entityId, cellId, callback=self.onFightWithEntityTaken)
-        self.mapChangeListener = self.on(KernelEvent.CurrentMap, self.onCurrentMap)
+        self.onEntityMoved(self.entityId, callback=self.ontargetMonsterMoved)
+        self.onceFightSword(self.entityId, cellId, callback=self.onFightWithEntityTaken)
+        self.on(KernelEvent.CurrentMap, self.onCurrentMap)
         self._start()
 
     def _start(self):
@@ -83,13 +81,21 @@ class AttackMonsters(AbstractBehavior):
     def onFightWithEntityTaken(self):
         if MapMove().isRunning():
             error = "Entity vanished while moving towards it!"
+            Logger().warning(error)
+            self._wanted_player_stop = True
+            self._stop_code = self.ENTITY_VANISHED
+            self._stop_message = error
             MapMove().stop()
         elif self.attackMonsterListener:
-            error = "Entity vanished while attacking it"
-        return self.finish(self.ENTITY_VANISHED, error)
+            return self.finish(self.ENTITY_VANISHED, "Entity vanished while attacking it!")
 
     def ontargetMonsterReached(self, status, error, landingcell=None):
         if error:
+            if self._wanted_player_stop:
+                if self._stop_code == self.ENTITY_MOVED:
+                    return self.restart()
+                elif self._stop_code == self.ENTITY_VANISHED:
+                    return self.finish(self.ENTITY_VANISHED, self._stop_message)
             return self.finish(status, error)
         Logger().info(f"[AttackMonsters] Reached monster group cell")
         self.attackMonsterListener = KernelEventsManager().once(
@@ -106,15 +112,13 @@ class AttackMonsters(AbstractBehavior):
     def ontargetMonsterMoved(self, event: Event, movePath: MovementPath):
         Logger().warning(f"[AttackMonsters] Entity moved to cell {movePath.end.cellId}")
         if MapMove().isRunning():
+            self._wanted_player_stop = True
+            self._stop_code = self.ENTITY_MOVED
             MapMove().stop()
         elif self.attackMonsterListener:
             Logger().warning("Entity moved but we already asked server for attack")
             return
-        if MapMove().delayed_stop:
-            MapMove().registerStopCallback(self.restart)
-        else:
-            self.restart()
-        
+            
     def restart(self):
         KernelEventsManager().clearAllByOrigin(self)
         RequestMapData().start(callback=lambda code, err: self._start(), parent=self)

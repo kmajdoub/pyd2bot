@@ -56,7 +56,7 @@ class UseSkill(AbstractBehavior):
         if ie is None:
             if elementId and skilluid:
                 def onIeFound(ie: InteractiveElementData):
-                    self.targetIe: InteractiveElementData = ie
+                    self.targetIe = ie
                     self.skillUID = ie.skillUID
                     self.elementId = ie.element.elementId
                     self.elementPosition = ie.position
@@ -96,7 +96,7 @@ class UseSkill(AbstractBehavior):
             skill = Skill.getSkillById(skillId)
             Logger().debug(f"Using {skill.name}, range {skill.range}, id {skill.id}")
             if skill.id in [211, 184] :
-                self._curr_skill_mp, send_request = Kernel().interactivesFrame.getNearestCellToIe(self.element, self.elementPosition)
+                self._curr_skill_mp, _ = Kernel().interactivesFrame.getNearestCellToIe(self.element, self.elementPosition)
             if not self._curr_skill_mp:
                 self._curr_skill_mp = self.elementPosition
             if self.waitForSkillUsed:

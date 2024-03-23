@@ -7,6 +7,7 @@ from pyd2bot.logic.roleplay.behaviors.teleport.UseZaap import UseZaap
 from pyd2bot.misc.Localizer import Localizer
 from pydofus2.com.ankamagames.atouin.managers.MapDisplayManager import \
     MapDisplayManager
+from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import KernelEventsManager
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
 from pydofus2.com.ankamagames.dofus.logic.common.managers.PlayerManager import \
     PlayerManager
@@ -143,7 +144,7 @@ class AutoTripUseZaap(AbstractBehavior):
     
     def autotripToDestOnFeet(self):
         self.autoTrip(self.dstMapId, self.dstZoneId, callback=self.finish)
-        
+ 
     def onDstZaapUnreachable(self):
         Logger().warning(
             "No path found to dest zaap will travel to dest map on feet"

@@ -12,7 +12,7 @@ from pyd2bot.models.session.models import Session, SessionType, UnloadType
 __dir__ = os.path.dirname(os.path.abspath(__file__))
 
 if __name__ == "__main__":
-    account_key = "244588168088949842"
+    account_key = "244588168235074572"
     creds = AccountManager.get_credentials(account_key)
     session = Session(
         id="account_key",

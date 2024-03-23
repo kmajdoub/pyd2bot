@@ -47,7 +47,7 @@ class ResourceFarm(AbstractFarmBehavior):
     def onPartyInvited(self, event, partyId, partyType, fromId, fromName):
         Logger().warning(f"Player invited to party {partyId} by {fromName}")
         Kernel().partyFrame.sendPartyInviteCancel(fromId)
-        
+
     def onGuildInvited(self, event, guildInfo: GuildInformations, recruterName):
         Logger().warning(f"Player invited to guild {guildInfo.guildName} by {recruterName}")
         Kernel().guildDialogFrame.guildInvitationAnswer(False)
@@ -104,7 +104,7 @@ class ResourceFarm(AbstractFarmBehavior):
                 return self.main()
             return self.send(KernelEvent.ClientShutdown, error)
         BenchmarkTimer(0.2, self.main).start()
-        
+
     def getAvailableResources(self) -> list[CollectableResource]:
         if not Kernel().interactivesFrame:
             Logger().error("No interactives frame found")

@@ -1,6 +1,6 @@
 from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.TransitionTypeEnum import \
     TransitionTypeEnum
-from typing import TYPE_CHECKING, Iterator
+from typing import TYPE_CHECKING, Iterator, List
 from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.astar.AStar import \
     AStar
 from pyd2bot.misc.Localizer import Localizer
@@ -72,23 +72,19 @@ class AbstractFarmPath:
 
     def init(self):
         raise NotImplementedError()
-
-    def findClosestMap(self) -> 'Vertex':
-        raise NotImplementedError()
     
     @classmethod
     def from_json(cls, pathJson) -> "AbstractFarmPath":
         raise NotImplementedError()
     
-    def findClosestMap(self):
-        Logger().info(f"Searching closest path map from vertex")
+    def findPathToClosestMap(self) -> List['Edge']:
+        Logger().info(f"Looking for a path to the closest parkour map, starting from the current vertex...")
         candidates = []
         for dst_mapId in self.mapIds:
             verticies = WorldGraph().getVertices(dst_mapId)
             if verticies:
                 candidates.extend(verticies.values())
-        v = Localizer.findClosestVertexFromVerticies(self.currentVertex, candidates)
-        return v
+        return Localizer.findPathtoClosestVertexFromVerticies(self.currentVertex, candidates)
 
     def hasValidTransition(self, edge: 'Edge') -> bool:
         from pydofus2.com.ankamagames.dofus.datacenter.items.criterion.GroupItemCriterion import \

@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     pass
 
 
-class EnterHaevenBag(AbstractBehavior):
+class EnterHavenBag(AbstractBehavior):
     NEED_LVL_10 = 589049
     ONLY_SUBSCRIBED = 589048
     TIMEDOUT = 589047
@@ -35,18 +35,6 @@ class EnterHaevenBag(AbstractBehavior):
         elif textId == 589088:  # Can't join haven bag from current Map
             self.finish(self.CANT_USE_IN_CURRENT_MAP, text)
 
-            if not self.srcZaapVertex:
-                if not self.findSrcZaap():
-                    return self.goToDestinationOnFeet()
-            Logger().debug(
-                f"Can't use haven bag so will travel to source zaap on feet."
-            )
-            self.autoTrip(
-                self.srcZaapVertex.mapId,
-                self.srcZaapVertex.zoneId,
-                callback=self.onSrcZaapTrip,
-            )
-        
     def run(self) -> bool:
         if PlayedCharacterManager().infos.level < 10:
             return self.finish(self.NEED_LVL_10, "Need to be level 10 to enter haven bag")

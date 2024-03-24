@@ -42,3 +42,20 @@ Serveur Discord pour le Projet: Création d'un serveur pour rassembler la commun
 Amélioration de l'Interface WebUI: Refonte de l'interface du bot manager avec ajout d'une fonctionnalité de lancement de combats et affichage du niveau des bots.
 Polling des Logs via SocketIO: Intégration d'un handler custom pour le logger, permettant l'envoi de logs formatés en HTML via SocketIO.
 Correction de Bugs: Résolution de problèmes dans les modules autotripUseZaap, Haapi, et dans le cadre de gestion des combats du bot, améliorant la stabilité générale.
+
+## 24.03.2024
+
+- isBasicAccount() is not working correctly
+- Farm form added to webui and is stable
+- UseSkill works now correctly when the resource is picked by another player
+- Treasure hunt haven bag usage was improved and some bugs fixed (still need some work)
+- A ban protection that closes launcher before launching the bot was added 
+- Everything related to thrift server and its types was cleaned from the repo and python dataclasses where used instead for modeling pyd2bot data
+- It is now possible to run the bot with custom random paths that parkour a zone defined by a set of mapIds
+- Now the bot sends the messages that asks for freindlist, ignored, spouce etc
+- CRA config and FECA configs added
+- Status route missing from sniffer backend fixed
+- usage of pymarshal to validate forms using python schemas was intergrated to the app
+- pydofus2 now handles AchievmentList message and store infos about the player achievement
+- Readme was updated and install process was simplified, now user defines paths to dofus and its dev directory/logs in env variables
+- And much more little bug fixes and enhacements

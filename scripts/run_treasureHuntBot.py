@@ -1,7 +1,7 @@
 import os
 import sys
 
-from launch_bot_test.system_tray import SystemTrayIcon
+from scripts.system_tray import SystemTrayIcon
 from PyQt5 import QtGui, QtWidgets
 
 from pyd2bot.logic.managers.AccountManager import AccountManager

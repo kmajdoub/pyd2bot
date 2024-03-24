@@ -1,4 +1,2 @@
-thrift
-prettytable
-cloudscraper
 dataclasses-json
+marshmallow

@@ -1,4 +1,4 @@
-# Pyd2bot: A Python Bot for Dofus
+# Pyd2bot: A Python Bot for Dofus 2
 
 Pyd2bot utilizes the Pydofus2 client as a background to automate tasks in Dofus. This guide is tailored for beginners, especially for Windows users.
 
@@ -10,14 +10,13 @@ Pyd2bot utilizes the Pydofus2 client as a background to automate tasks in Dofus.
 
 - **Python 3.9.11**: Download and install from [python.org](https://www.python.org/downloads/release/python-3911/).
 - **Pcap and Wireshark**: Required for sniffer functionality. Download Wireshark from [here](https://www.wireshark.org/download.html).
-- **Make**: Required for updating the protocol. You can install it with with chocolatery, ```shell choco install make```. If you dont have chocolatey installed in your windows install it.
+- **Make**: Required for updating the protocol. You can install it with with chocolatery, ```shell choco install make```. If you dont have chocolatey install it.
 
 ## Setup Steps for Developers
 
 ### 1. Setting Up the Environment
 
 - **Create a New Folder**:
-  - Open Command Prompt.
   - Create a new folder named `botdev` and navigate into it:
 
     ```bash
@@ -26,13 +25,13 @@ Pyd2bot utilizes the Pydofus2 client as a background to automate tasks in Dofus.
     ```
 
 - **Clone Repositories**:
-  - Clone the `pydofus2` repository inside botdev folder:
+  - Clone the `pydofus2` repository inside `botdev` folder:
 
     ```bash
     git clone https://github.com/hadamrd/pydofus2.git
     ```
 
-  - Clone the `pyd2bot` repository inside botdev folder:
+  - Clone the `pyd2bot` repository inside `botdev` folder:
 
     ```bash
     git clone https://github.com/hadamrd/pyd2bot.git
@@ -45,6 +44,14 @@ Pyd2bot utilizes the Pydofus2 client as a background to automate tasks in Dofus.
     python -m venv .venv
     ```
 
+### 2. Env variables configuration
+
+Add the following env variables to your system:
+
+- `DOFUS_HOME`: Path to your Dofus installation directory.
+- `LOGS_DIR`: Path to the folder you want pydofus2 to generate its logs to.
+- `PYBOTDEV_HOME`: Path to you `botdev` directory.
+
 ### 2. Installing Dependencies
 
 - **Activate Virtual Environment**:
@@ -54,78 +61,39 @@ Pyd2bot utilizes the Pydofus2 client as a background to automate tasks in Dofus.
     ```
 
 - **Install Dependencies**:
-  - Install pydofus2 in dev mode:
-  Navigate to the folder `pydofus2` and run
+  Install pydofus2 in dev mode:
 
   ```bash
+  cd $PYBOTDEV_HOME/pydofus2
   pip install -e .
   ```
 
-  - Install pyd2bot in dev mode:
-  Navigate to the folder `pyd2bot` and run
+  Install pyd2bot in dev mode:
 
   ```bash
+  cd $PYBOTDEV_HOME/pyd2bot
   pip install -e .
   ```
 
-### 3. Configuration
-
-- **Setup Config Files**:
-  - In `<pydofus2_dir>/pydofus2/com/ankamagames/dofus/Constants.py`, configure:
-    - `DOFUS_ROOTDIR`: Path to your Dofus installation directory.
-    - `LOGS_DIR`: Path to the folders you want pydofus2 to generate its logs to.
-  
-- **Edit Makefile for Dofus Protocol build tools**:
-  - Edit the Makefile in `<pydofus2_dir>\pydofus2\devops\Makefile`.
-  - Set variables like `DOFUSINVOKER`, `PYDOFUS_DIR`, etc.
-    - Example:
-
-      ```bash
-      DOFUSINVOKER = D://Dofus//DofusInvoker.swf
-      PYDOFUS_DIR = D://botdev//pydofus2
-      PYD2BOT_DIR = D://botdev//pyd2bot
-      VENV_DIR = D://botdev//.venv
-      ```
-
-### 4. Generate Keys and Unpack Maps
-
-- Navigate to `<pydofus2_dir>\pydofus2\devops`.
-- Execute:
+### 4. Run Unpack Maps to dezip the game maps locally
 
 ```bash
-make extract-keys
+cd $PYBOTDEV_HOME/pydofus2/updater
 make unpack-maps
 ```
 
-### 5. If you want to run the Sniffer App (Optional)
-
-- Go to `<pydofus2_dir>\pydofus2\sniffer`.
-- Install requirements and run the app:
+## To run the bot application
 
 ```bash
+cd $PYBOTDEV_HOME/pydofus2/app
 pip install -r requirements.txt
 python app.py
 ```
 
-## Importing Account and Character Data
+### To run the Sniffer App (Optional)
 
-1. **Obtain Your HAAPI API Key**:
-
-- Add your account to ankama launcher
-- Clone launcherd2 projetct into your botdev folder : ```git clone https://github.com/hadamrd/launcherd2```
-- Add its .pth file in the root of your .venv.
-- Launch `python import_all_accounts_from_launcher.py`
-
-2. **Configure and Run the treasure hunt farm Bot Example**:
-
-- `cd launch_bot_test folder`
-- Edit `run_treasureHuntBot.py`.
-- Replace `account_key` with your account ID. The account ID is the key of the account in the `pyd2bot/persistence/accounts.json` file.
-- Start the script to see the bot in action.
-
-4. **Run example using the flask app**:
-
-- `cd app`
-- `python app.py`.
-
-Follow these steps to successfully set up and run Pyd2bot on your Windows system.
+```bash
+cd $PYBOTDEV_HOME/pydofus2/sniffer
+pip install -r requirements.txt
+python app.py
+```

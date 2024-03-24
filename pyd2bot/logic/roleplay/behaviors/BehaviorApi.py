@@ -68,13 +68,14 @@ class BehaviorApi:
 
             return self.autoTrip(154010883, 1, callback=onOutOfCelestialDim)
 
-        dstZaapVertex, _ = Localizer.findCloseZaapMapId(dstMapId, maxCost, excludeMaps=excludeMaps)
-        if not dstZaapVertex:
+        path_to_dest_zaap = Localizer.findPathtoClosestZaap(dstMapId, maxCost, excludeMaps=excludeMaps)
+        if not path_to_dest_zaap:
             Logger().warning(f"No dest zaap found for cost {maxCost} and map {dstMapId}!")
             return self.autoTrip(dstMapId, dstZoneId, callback=callback)
-
+        dstZaapVertex = path_to_dest_zaap[-1].dst
+        
         if not PlayedCharacterManager().isZaapKnown(dstZaapVertex.mapId):
-            Logger().debug(f"Dest zaap at vertex {dstZaapVertex} is not known ==> will travel to register it.")
+            Logger().debug(f"Dest zaap at vertex {dstZaapVertex} is not known ==> We need to travel to register it.")
 
             def onDstZaapTrip(code, err):
                 if err:
@@ -177,11 +178,11 @@ class BehaviorApi:
 
         ChangeMap().start(transition, edge, dstMapId, callback=callback, parent=self)
 
-    def enterHaevenBag(self, callback=None):
+    def enterHavenBag(self, callback=None):
         from pyd2bot.logic.roleplay.behaviors.movement.EnterHaevenBag import \
-            EnterHaevenBag
+            EnterHavenBag
 
-        EnterHaevenBag().start(callback=callback, parent=self)
+        EnterHavenBag().start(callback=callback, parent=self)
     
     def mapMove(
         self,

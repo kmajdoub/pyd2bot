@@ -45,13 +45,15 @@ Pyd2bot utilizes the Pydofus2 client as a background to automate tasks in Dofus.
     python -m venv .venv
     ```
 
-- **Intall repos for dev**:
-  - Source the .venv :
+### 2. Installing Dependencies
+
+- **Activate Virtual Environment**:
 
    ```bash
    source .venv/Script/activate
     ```
 
+- **Install Dependencies**:
   - Install pydofus2 in dev mode:
   Navigate to the folder `pydofus2` and run
 
@@ -66,34 +68,13 @@ Pyd2bot utilizes the Pydofus2 client as a background to automate tasks in Dofus.
   pip install -e .
   ```
 
-### 2. Installing Dependencies
-
-- **Activate Virtual Environment**:
-  - Execute following command to activate the virtual env:
-
-    ```bash
-    source .venv\Scripts\activate
-    ```
-
-- **Install Dependencies**:
-  - For `pyd2bot`:
-
-    ```bash
-    pip install -r pyd2bot/requirements.txt
-    ```
-
-  - For `pydofus2`:
-
-    ```bash
-    pip install -r pydofus2/requirements.txt
-    ```
-
 ### 3. Configuration
 
 - **Setup Config Files**:
   - In `<pydofus2_dir>/pydofus2/com/ankamagames/dofus/Constants.py`, configure:
     - `DOFUS_ROOTDIR`: Path to your Dofus installation directory.
     - `LOGS_DIR`: Path to the folders you want pydofus2 to generate its logs to.
+  
 - **Edit Makefile for Dofus Protocol build tools**:
   - Edit the Makefile in `<pydofus2_dir>\pydofus2\devops\Makefile`.
   - Set variables like `DOFUSINVOKER`, `PYDOFUS_DIR`, etc.

@@ -12,6 +12,7 @@ from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterMa
     PlayedCharacterManager
 from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.astar.AStar import \
     AStar
+from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Edge import Edge
 from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Vertex import \
     Vertex
 from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.WorldGraph import \
@@ -79,13 +80,13 @@ class Localizer:
             return AStar().search(WorldGraph(), startVertex, candidates)
 
     @classmethod
-    def findCloseZaapMapId(cls, mapId, maxCost=float("inf"), dstZaapMapId=None, excludeMaps=[]):
-        Logger().debug(f"Searching closest zaap from map {mapId}")
-        if not mapId:
-            raise ValueError(f"Invalid mapId value {mapId}")
+    def findPathtoClosestZaap(cls, startMapId, maxCost=float("inf"), dstZaapMapId=None, excludeMaps=[]) -> list['Edge']:
+        Logger().debug(f"Searching closest zaap from map {startMapId}")
+        if not startMapId:
+            raise ValueError(f"Invalid mapId value {startMapId}")
         if dstZaapMapId:
             dmp = MapPosition.getMapPositionById(dstZaapMapId)
-        for startVertex in WorldGraph().getVertices(mapId).values():
+        for startVertex in WorldGraph().getVertices(startMapId).values():
             candidates = []
             for hint in Hint.getHints():
                 if hint.mapId in excludeMaps:
@@ -100,24 +101,24 @@ class Localizer:
                         else:
                             candidates.extend(WorldGraph().getVertices(hint.mapId).values())
             if not candidates:
-                Logger().warning(f"Could not find a candidate zaap for map {mapId}")
+                Logger().warning(f"Could not find a candidate zaap for map {startMapId}")
                 return None, None
-            Logger().debug(f"Found {len(candidates)} candidates maps for closest zaap to map {mapId}")
-            return cls.findClosestVertexFromVerticies(startVertex, candidates)
-        return None, float("inf")
+            Logger().debug(f"Found {len(candidates)} candidates maps for closest zaap to map {startMapId}")
+            return cls.findPathtoClosestVertexFromVerticies(startVertex, candidates)
+        return None
         
         
     @classmethod
-    def findClosestVertexFromVerticies(cls, vertex: Vertex, candidates: list[Vertex]):
+    def findPathtoClosestVertexFromVerticies(cls, vertex: Vertex, candidates: list[Vertex]):
         Logger().info(f"Searching closest map from vertex to one of the candidates")
         if not candidates:
             Logger().warning(f"No candidates to search path to!")
-            return None, float("inf")
+            return None
         path = AStar().search(WorldGraph(), vertex, candidates)
         if path is None:
             Logger().warning(f"Could not find a path to any of the candidates!")
-            return None, None
+            return None
         if len(path) == 0:
             Logger().warning(f"One of the candidates is the start map, returning it as closest zaap")
-            return vertex, float("inf")
-        return path[-1].dst, len(path)
+            return []
+        return path

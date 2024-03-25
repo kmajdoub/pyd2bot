@@ -31,6 +31,7 @@ from pydofus2.com.ankamagames.dofus.kernel.net.ConnectionType import \
     ConnectionType
 from pydofus2.com.ankamagames.dofus.kernel.net.DisconnectionReasonEnum import \
     DisconnectionReasonEnum
+from pydofus2.com.ankamagames.dofus.network.enums.BreedEnum import BreedEnum
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 from pydofus2.com.DofusClient import DofusClient
 
@@ -38,6 +39,9 @@ from pydofus2.com.DofusClient import DofusClient
 class Pyd2Bot(DofusClient):
 
     def __init__(self, session: Session):
+        if session.character.breedId not in BotConfig.defaultBreedConfig:
+            supported_breeds = [BreedEnum.get_name(b) for b in BotConfig.defaultBreedConfig.keys()]
+            raise ValueError(f"Breed {session.character.breedName} is not supported, supported breeds are {supported_breeds}")
         super().__init__(session.character.login)
         self._apikey = session.apikey
         self._session = session

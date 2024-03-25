@@ -80,36 +80,45 @@ class Localizer:
             return AStar().search(WorldGraph(), startVertex, candidates)
 
     @classmethod
-    def findPathtoClosestZaap(cls, startMapId, maxCost=float("inf"), dstZaapMapId=None, excludeMaps=[]) -> list['Edge']:
+    def findPathtoClosestZaap(cls, startMapId, maxCost=float("inf"), dstZaapMapId=None, excludeMaps=None, onlyKnownZaap=True) -> list['Edge']:
+        if not excludeMaps:
+            excludeMaps = []
         Logger().debug(f"Searching closest zaap from map {startMapId}")
         if not startMapId:
             raise ValueError(f"Invalid mapId value {startMapId}")
         if dstZaapMapId:
             dmp = MapPosition.getMapPositionById(dstZaapMapId)
-        for startVertex in WorldGraph().getVertices(startMapId).values():
+        possible_start_vertices = WorldGraph().getVertices(startMapId).values()
+        if not possible_start_vertices:
+            Logger().warning(f"Could not find any vertex for map {startMapId}")
+            return None
+        else:
+            Logger().debug(f"Found {possible_start_vertices} vertices for map {startMapId}")
+        for startVertex in possible_start_vertices:
             candidates = []
             for hint in Hint.getHints():
                 if hint.mapId in excludeMaps:
                     continue
                 if hint.gfx == cls.ZAAP_GFX:
-                    if PlayedCharacterManager().isZaapKnown(hint.mapId):
-                        if dstZaapMapId:
-                            cmp = MapPosition.getMapPositionById(hint.mapId)
-                            cost = 10 * int(math.sqrt((dmp.posX - cmp.posX)**2 + (dmp.posY - cmp.posY)**2))
-                            if cost <= maxCost:
-                                candidates.extend(WorldGraph().getVertices(hint.mapId).values())
-                        else:
+                    if onlyKnownZaap and not PlayedCharacterManager().isZaapKnown(hint.mapId):
+                        continue
+                    if dstZaapMapId:
+                        cmp = MapPosition.getMapPositionById(hint.mapId)
+                        cost = 10 * int(math.sqrt((dmp.posX - cmp.posX)**2 + (dmp.posY - cmp.posY)**2))
+                        if cost <= maxCost:
                             candidates.extend(WorldGraph().getVertices(hint.mapId).values())
+                    else:
+                        candidates.extend(WorldGraph().getVertices(hint.mapId).values())
             if not candidates:
                 Logger().warning(f"Could not find a candidate zaap for map {startMapId}")
                 return None, None
             Logger().debug(f"Found {len(candidates)} candidates maps for closest zaap to map {startMapId}")
-            return cls.findPathtoClosestVertexFromVerticies(startVertex, candidates)
+            return cls.findPathtoClosestVertexCandidate(startVertex, candidates)
         return None
         
         
     @classmethod
-    def findPathtoClosestVertexFromVerticies(cls, vertex: Vertex, candidates: list[Vertex]):
+    def findPathtoClosestVertexCandidate(cls, vertex: Vertex, candidates: list[Vertex]):
         Logger().info(f"Searching closest map from vertex to one of the candidates")
         if not candidates:
             Logger().warning(f"No candidates to search path to!")
@@ -122,3 +131,9 @@ class Localizer:
             Logger().warning(f"One of the candidates is the start map, returning it as closest zaap")
             return []
         return path
+    
+if __name__ == "__main__":
+    Logger.logToConsole = True
+    r = Localizer.findPathtoClosestZaap(startMapId=128452097, onlyKnownZaap=False)
+    endMapId = r[-1].dst.mapId
+    print(f"Found path to closest zaap {endMapId} from map 128452097")

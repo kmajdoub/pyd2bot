@@ -70,9 +70,9 @@ class AutoTripUseZaap(AbstractBehavior):
         )
         Logger().debug(f"Player basic account: {PlayerManager().isBasicAccount()}")
         Logger().debug(
-            f"Teleport cost to dst from curr pos is : {self.teleportCostFromCurrToDstMap:.2f}, teleport max cost is {self.maxCost}."
+            f"Teleport cost to dest from curr pos is {self.teleportCostFromCurrToDstMap:.2f}, teleport max cost is {self.maxCost}."
         )
-        Logger().debug(f"Dist from current Map to dest Zaap is {self.dist_from_currmap_to_dest} map steps away.")
+        Logger().debug(f"Distance from current Map to dest Zaap is {self.dist_from_currmap_to_dest} map steps away.")
         if self.canUseHavenBag(): # Here we check if we can't use havenbag to reach dest zaap
             Logger().debug(f"Player can use havenbag to reach dest zaap.")
             Logger().debug(f"Looking for a map we can use havenbag to reach dest zaap from.")
@@ -121,19 +121,6 @@ class AutoTripUseZaap(AbstractBehavior):
     
     def canUseHavenBag(self):
         return not PlayerManager().isBasicAccount() and PlayedCharacterManager().infos.level >= 10 and self.teleportCostFromCurrToDstMap <= self.maxCost
-    
-    def findASrcZaap(self):
-        self.path_from_currmap_to_src_zaap = Localizer.findPathtoClosestZaap(
-            self.currMapId, self.maxCost, self.dstZaapMapId
-        )
-        
-        if not self.path_from_currmap_to_src_zaap:
-            Logger().warning(f"No associated zaap found for map {self.dstMapId}.")
-            return False
-        self.src_zaap_vertex = self.path_from_currmap_to_src_zaap[-1].dst
-        self.dist_from_currmap_to_src_zaap = len(self.path_from_currmap_to_src_zaap)
-        Logger().debug(f"Found src zaap at {self.dist_from_currmap_to_src_zaap} map steps from current pos.")
-        return True
         
     def onServerInfo(self, event, msgId, msgType, textId, msgContent, params):
         if textId == 592304:  # Player is busy
@@ -213,7 +200,7 @@ class AutoTripUseZaap(AbstractBehavior):
         
     def travelToDestinationOnFeetWithSaveZaap(self):
         if self.withSaveZaap:
-            Logger().debug(f"Will trip to dest zaap on feet to save it before travelling to dest on feet")
+            Logger().debug(f"Will trip to dest zaap at {self.dstZaapVertex.mapId} on feet to save it before travelling to dest on feet.")
             self.travelToDstZaapOnFeet()
         else:
             Logger().debug(f"Will auto trip on feet to dest")

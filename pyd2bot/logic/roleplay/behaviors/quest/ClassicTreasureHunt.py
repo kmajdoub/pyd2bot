@@ -40,6 +40,7 @@ from pydofus2.com.ankamagames.dofus.types.enums.TreasureHuntStepTypeEnum import 
     TreasureHuntStepTypeEnum
 from pydofus2.com.ankamagames.dofus.uiApi.PlayedCharacterApi import \
     PlayedCharacterApi
+from pydofus2.com.ankamagames.jerakine.benchmark.BenchmarkTimer import BenchmarkTimer
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 from pydofus2.com.ankamagames.jerakine.types.enums.DirectionsEnum import \
     DirectionsEnum
@@ -79,6 +80,7 @@ class ClassicTreasureHunt(AbstractBehavior):
         self.maxCost = 800
         self.guessMode = False
         self.guessedAnswers = []
+        self._chests_to_open = []
 
     def submitet_flag_maps(self):
         return [
@@ -165,8 +167,7 @@ class ClassicTreasureHunt(AbstractBehavior):
     def onObjectAdded(self, event, iw: ItemWrapper):
         Logger().info(f"{iw.name}, gid {iw.objectGID}, uid {iw.objectUID}, {iw.description} added to inventory")
         if iw.objectGID in self.CHESTS_GUID:
-            Kernel().inventoryManagementFrame.useItem(iw)
-            sleep(1)
+            self._chests_to_open.append(iw)
 
     def onHuntFinished(self, event, questType):
         Logger().debug(f"Treasure hunt finished")
@@ -174,12 +175,17 @@ class ClassicTreasureHunt(AbstractBehavior):
             Logger().debug(f"Waiting for roleplay to start")
             return self.onceMapProcessed(lambda: self.onHuntFinished(event, questType))
         if self.guessedAnswers:
-            for startMapId, poiId, answerMapId in self.guessedAnswers:
+            for _, poiId, answerMapId in self.guessedAnswers:
                 Logger().debug(f"Will memorise guessed answers : {self.guessedAnswers}")
                 self.memorizeHint(answerMapId, poiId)
             self.guessedAnswers.clear()
             self.guessMode = False
-        self.goToHuntAtm()
+        if self._chests_to_open:
+            iw = self._chests_to_open.pop(0)
+            Kernel().inventoryManagementFrame.useItem(iw)
+            BenchmarkTimer(0.5, lambda: self.onHuntFinished(event, questType)).start()
+        else:
+            self.goToHuntAtm()
 
     def onTakeQuestMapReached(self, code, err):
         if err:

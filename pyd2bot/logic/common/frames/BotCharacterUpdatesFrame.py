@@ -170,9 +170,9 @@ class BotCharacterUpdatesFrame(Frame):
         pass
 
     def onAchievementFinished(self, event, achievementId, finishedlevel):
-        arrmsg = AchievementRewardRequestMessage()
-        arrmsg.init(achievementId)
         if PlayedCharacterManager().isFighting:
                 return
+        arrmsg = AchievementRewardRequestMessage()
+        arrmsg.init(achievementId)
         ConnectionsHandler().send(arrmsg)
         return True

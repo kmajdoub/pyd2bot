@@ -61,6 +61,7 @@ class ClassicTreasureHunt(AbstractBehavior):
     RAPPEL_POTION_GUID = 548
     CHESTS_GUID = [15260, 15248, 15261, 15262]
     ZAAP_HUNT_MAP = 142087694
+    REST_TIME_BETWEEN_HUNTS = 60 * 5
 
     with open(HINTS_FILE, "r") as fp:
         hint_db = json.load(fp)
@@ -188,8 +189,8 @@ class ClassicTreasureHunt(AbstractBehavior):
                 Kernel().inventoryManagementFrame.useItem(iw)
                 BenchmarkTimer(3, lambda: self.onHuntFinished(event, questType)).start()
         else:
-            Logger().debug(f"Sleeping for 30 seconds before going to the next hunt, to avoid being kicked")
-            BenchmarkTimer(30, lambda: self.goToHuntAtm()).start()
+            Logger().debug(f"Sleeping for 5 minutes before going to the next hunt, to avoid being kicked")
+            BenchmarkTimer(self.REST_TIME_BETWEEN_HUNTS, lambda: self.goToHuntAtm()).start()
 
     def onTakeQuestMapReached(self, code, err):
         if err:

@@ -68,7 +68,7 @@ class BehaviorApi:
 
             return self.autoTrip(154010883, 1, callback=onOutOfCelestialDim)
 
-        path_to_dest_zaap = Localizer.findPathtoClosestZaap(dstMapId, maxCost, excludeMaps=excludeMaps)
+        path_to_dest_zaap = Localizer.findPathtoClosestZaap(dstMapId, maxCost, excludeMaps=excludeMaps, onlyKnownZaap=False)
         if not path_to_dest_zaap:
             Logger().warning(f"No dest zaap found for cost {maxCost} and map {dstMapId}!")
             return self.autoTrip(dstMapId, dstZoneId, callback=callback)

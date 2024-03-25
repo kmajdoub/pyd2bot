@@ -84,7 +84,7 @@ class AbstractFarmPath:
             verticies = WorldGraph().getVertices(dst_mapId)
             if verticies:
                 candidates.extend(verticies.values())
-        return Localizer.findPathtoClosestVertexFromVerticies(self.currentVertex, candidates)
+        return Localizer.findPathtoClosestVertexCandidate(self.currentVertex, candidates)
 
     def hasValidTransition(self, edge: 'Edge') -> bool:
         from pydofus2.com.ankamagames.dofus.datacenter.items.criterion.GroupItemCriterion import \

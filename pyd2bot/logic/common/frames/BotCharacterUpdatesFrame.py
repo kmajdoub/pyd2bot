@@ -61,9 +61,10 @@ class BotCharacterUpdatesFrame(Frame):
         elif random.random() < 0.1:
             if random.random() < 0.5:
                 HaapiEventsManager().registerShortcutUse('openInventory')
+                Kernel().worker.terminated.wait(0.2)
             else:
                 HaapiEventsManager().sendInventoryOpenEvent()
-            Kernel().worker.terminated.wait(2)
+                Kernel().worker.terminated.wait(2)
         elif random.random() < 0.1:
             HaapiEventsManager().sendSocialOpenEvent()
             Kernel().worker.terminated.wait(2)
@@ -94,7 +95,9 @@ class BotCharacterUpdatesFrame(Frame):
 
     def onBotLevelUp(self, event, previousLevel, newLevel):
         HaapiEventsManager().sendInventoryOpenEvent()
+        Kernel().worker.terminated.wait(2)
         HaapiEventsManager().sendSocialOpenEvent()
+        Kernel().worker.terminated.wait(2)
 
     def getStatFloor(self, statId: int):
         breed = Breed.getBreedById(PlayedCharacterManager().infos.breed)

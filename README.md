@@ -61,6 +61,7 @@ Add the following env variables to your system:
     ```
 
 - **Install Dependencies**:
+
   Install pydofus2 in dev mode:
 
   ```bash

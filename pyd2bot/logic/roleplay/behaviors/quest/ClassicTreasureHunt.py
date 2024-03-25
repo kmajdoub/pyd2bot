@@ -6,6 +6,7 @@ from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
 from pyd2bot.logic.roleplay.behaviors.quest.FindHintNpc import FindHintNpc
 from pyd2bot.logic.roleplay.behaviors.teleport.UseTeleportItem import \
     UseTeleportItem
+from pydofus2.com.ankamagames.atouin.HaapiEventsManager import HaapiEventsManager
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
 from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import \
     KernelEventsManager
@@ -145,7 +146,7 @@ class ClassicTreasureHunt(AbstractBehavior):
     def goToHuntAtm(self):
         Logger().debug(f"AutoTravelling to treasure hunt ATM")
         distanceToTHATMZaap = MapTools.distanceBetweenTwoMaps(self.currentMapId, self.ZAAP_HUNT_MAP)
-        Logger().debug(f"Distance to ATM Zaap is {distanceToTHATMZaap}")
+        Logger().debug(f"Distance to ATM Zaap is {distanceToTHATMZaap} maps steps")
         if distanceToTHATMZaap > 12:
             if int(Kernel().zaapFrame.spawnMapId) == int(self.ZAAP_HUNT_MAP):
                 iw = ItemWrapper._cacheGId.get(self.RAPPEL_POTION_GUID)
@@ -182,8 +183,10 @@ class ClassicTreasureHunt(AbstractBehavior):
             self.guessMode = False
         if self._chests_to_open:
             iw = self._chests_to_open.pop(0)
-            Kernel().inventoryManagementFrame.useItem(iw)
-            BenchmarkTimer(0.5, lambda: self.onHuntFinished(event, questType)).start()
+            HaapiEventsManager().sendInventoryOpenEvent()
+            if not Kernel().worker.terminated.wait(2):
+                Kernel().inventoryManagementFrame.useItem(iw)
+                BenchmarkTimer(2, lambda: self.onHuntFinished(event, questType)).start()
         else:
             self.goToHuntAtm()
 

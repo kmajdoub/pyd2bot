@@ -184,11 +184,12 @@ class ClassicTreasureHunt(AbstractBehavior):
         if self._chests_to_open:
             iw = self._chests_to_open.pop(0)
             HaapiEventsManager().sendInventoryOpenEvent()
-            if not Kernel().worker.terminated.wait(2):
+            if not Kernel().worker.terminated.wait(3):
                 Kernel().inventoryManagementFrame.useItem(iw)
-                BenchmarkTimer(2, lambda: self.onHuntFinished(event, questType)).start()
+                BenchmarkTimer(3, lambda: self.onHuntFinished(event, questType)).start()
         else:
-            self.goToHuntAtm()
+            Logger().debug(f"Sleeping for 30 seconds before going to the next hunt, to avoid being kicked")
+            BenchmarkTimer(30, lambda: self.goToHuntAtm()).start()
 
     def onTakeQuestMapReached(self, code, err):
         if err:

@@ -179,7 +179,7 @@ class BehaviorApi:
         ChangeMap().start(transition, edge, dstMapId, callback=callback, parent=self)
 
     def enterHavenBag(self, callback=None):
-        from pyd2bot.logic.roleplay.behaviors.movement.EnterHaevenBag import \
+        from pyd2bot.logic.roleplay.behaviors.movement.EnterHavenBag import \
             EnterHavenBag
 
         EnterHavenBag().start(callback=callback, parent=self)

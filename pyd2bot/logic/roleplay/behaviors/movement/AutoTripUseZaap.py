@@ -2,7 +2,7 @@ from typing import Tuple
 
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
 from pyd2bot.logic.roleplay.behaviors.movement.AutoTrip import AutoTrip
-from pyd2bot.logic.roleplay.behaviors.movement.EnterHaevenBag import EnterHavenBag
+from pyd2bot.logic.roleplay.behaviors.movement.EnterHavenBag import EnterHavenBag
 from pyd2bot.logic.roleplay.behaviors.skill.UseSkill import UseSkill
 from pyd2bot.logic.roleplay.behaviors.teleport.UseZaap import UseZaap
 from pyd2bot.misc.Localizer import Localizer

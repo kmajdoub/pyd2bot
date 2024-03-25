@@ -64,13 +64,19 @@ class BotConfig(metaclass=Singleton):
             BotConfig.SELLER_VACANT.set()
 
     def getPrimarySpellId(self, breedId) -> int:
+        if breedId not in self.defaultBreedConfig:
+            raise ValueError(f"Primary spell not defined for breed {BreedEnum.to_name(breedId)}. You need to add it the BotConfig module 'defaultBreedConfig' dict.")
         return self.defaultBreedConfig[breedId]["primarySpellId"]
 
     def getSecondarySpellId(self, breedId) -> int:
+        if breedId not in self.defaultBreedConfig:
+            raise ValueError(f"Secondary spell not defined for breed {BreedEnum.to_name(breedId)}. You need to add it the BotConfig module 'defaultBreedConfig' dict.")
         return self.defaultBreedConfig[breedId]["secondarySpellId"]
 
     @property
     def primaryStatId(self) -> int:
+        if self.character.breedId not in self.defaultBreedConfig:
+            raise ValueError(f"Primary stat not defined for breed {self.character.breedName}. You need to add it the BotConfig module 'defaultBreedConfig' dict.")
         return self.defaultBreedConfig[self.character.breedId]["primaryStat"]
 
     @property
@@ -127,6 +133,8 @@ class BotConfig(metaclass=Singleton):
         self.followersIds = [follower.id for follower in self.followers]
         self.party = self.followers is not None and len(self.followers) > 0
         self.character = session.character
+        if self.character.breedId not in self.defaultBreedConfig:
+            raise ValueError(f"Primary spell/stat not defined for breed {self.character.breedName}. You need to add it the BotConfig module 'defaultBreedConfig' dict.")
         self.isLeader = session.type != SessionType.MULE_FIGHT
         self.isFollower = not self.isLeader
         self.isSeller = session.type == SessionType.SELL

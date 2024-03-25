@@ -22,11 +22,11 @@ class BotConfig(metaclass=Singleton):
         },
         BreedEnum.Sram: {
             "primarySpellId": 12902, # Truanderie
-            "primaryStat": StatIds.STRENGTH
+            "primaryStat": StatIds.STRENGTH,
         },  
         BreedEnum.Cra: {
             "primarySpellId": 13047, # fleche optique
-            "primaryStat": StatIds.INTELLIGENCE
+            "primaryStat": StatIds.AGILITY,
         },
         BreedEnum.Feca: {
             "primarySpellId": 12978, # attaque naturelle

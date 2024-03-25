@@ -1,5 +1,6 @@
 import heapq
-
+import numpy as np
+import time
 from prettytable import PrettyTable
 
 from pyd2bot.logic.managers.BotConfig import BotConfig
@@ -26,18 +27,48 @@ class SoloFarmFights(AbstractFarmBehavior):
     def init(self):
         self.path = BotConfig().path
         self.path.init()
+        self.last_monster_attack_time = None
+        self.fights_per_minute = 4
         Logger().debug(f"Solo farm fights started")
         return True
 
     def makeAction(self):
         all_monster_groups = self.getAvailableResources()
-        if all_monster_groups:
-            monster_group = all_monster_groups[0]
-            self.attackMonsters(monster_group["id"], self.onFightStarted)
-        else:
+        if not all_monster_groups:
             Logger().debug("No monster group found!")
             self.moveToNextStep()
+            return
         
+        # Calculate wait time using Poisson distribution
+        current_time = time.time()  # Assuming access to time module
+        wait_time = self._calculate_wait_time(current_time)
+
+        # Ensure wait time doesn't exceed a reasonable maximum
+        max_wait_time = 60  # 1 minute (adjust as needed)
+        wait_time = min(wait_time, max_wait_time)
+
+        Logger().debug(f"Waiting for {wait_time:.2f} seconds to attack monsters")
+
+        if Kernel().worker.terminated.wait(wait_time):
+            return
+        all_monster_groups = self.getAvailableResources()
+        monster_group = all_monster_groups[0]
+        self.attackMonsters(monster_group["id"], self.onFightStarted)
+        self.last_monster_attack_time = current_time
+
+    def _calculate_wait_time(self, current_time):
+        if not self.last_monster_attack_time:
+            # No previous attack, use full wait time based on rate
+            return np.random.poisson(self.fights_per_minute / 60)
+
+        time_since_last_attack = current_time - self.last_monster_attack_time
+        expected_attacks_since_last = self.fights_per_minute * time_since_last_attack / 60
+
+        # Adjust wait time based on expected attacks since last attack
+        wait_time = max(0, np.random.poisson(expected_attacks_since_last))
+
+        return wait_time
+
     def getAvailableResources(self):
         if not Kernel().roleplayEntitiesFrame._monstersIds:
             return []

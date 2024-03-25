@@ -916,7 +916,7 @@ class BotFightFrame(Frame):
         self._isRequestingMovement = False
         CurrentPlayedFighterManager().playerManager = PlayedCharacterManager.getInstance(self.currentPlayer.login)
         CurrentPlayedFighterManager().currentFighterId = self._currentPlayerId
-        CurrentPlayedFighterManager.conn = self.connection
+        CurrentPlayedFighterManager().conn = self.connection
         CurrentPlayedFighterManager().resetPlayerSpellList()
         SpellWrapper.refreshAllPlayerSpellHolder(self._currentPlayerId)
         SpellInventoryManagementFrame().applySpellGlobalCoolDownInfo(self._currentPlayerId)

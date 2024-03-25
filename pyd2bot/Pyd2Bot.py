@@ -151,6 +151,8 @@ class Pyd2Bot(DofusClient):
             return SessionStatus.TERMINATED
         if not ConnectionsHandler.getInstance(self.name) or \
             ConnectionsHandler.getInstance(self.name).connectionType == ConnectionType.DISCONNECTED:
+            if self._banned:
+                return SessionStatus.BANNED
             return SessionStatus.DISCONNECTED
         elif ConnectionsHandler.getInstance(self.name).connectionType == ConnectionType.TO_LOGIN_SERVER:
             return SessionStatus.AUTHENTICATING

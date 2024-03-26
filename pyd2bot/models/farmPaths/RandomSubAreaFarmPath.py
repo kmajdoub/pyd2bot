@@ -1,4 +1,3 @@
-import collections
 import random
 import time
 from typing import Iterator, Set

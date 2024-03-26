@@ -28,7 +28,7 @@ class SoloFarmFights(AbstractFarmBehavior):
         self.path = BotConfig().path
         self.path.init()
         self.last_monster_attack_time = None
-        self.fights_per_minute = 4
+        self.fights_per_minute = 2
         Logger().debug(f"Solo farm fights started")
         return True
 

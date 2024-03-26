@@ -144,6 +144,7 @@ function updateRunningBots() {
                         <td>${bot.level}</td>
                         <td>${bot.kamas}</td>
                         <td>${bot.pods}%</td>
+                        <td>${bot.path_name}</td>
                         <td>${bot.activity}</td>
                         <td>${bot.runTime}</td>
                         <td>${bot.status}</td>

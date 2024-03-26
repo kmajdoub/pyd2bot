@@ -166,6 +166,7 @@ class Session:
     jobFilters: Optional[List[JobFilter]] = None
     cert: Optional[Certificate] = None
     pathsList: Optional[List[Path]] = None
+    fights_per_minute: Optional[float] = None
 
 @dataclass_json
 @dataclass

@@ -1,4 +1,3 @@
-
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
 from pyd2bot.logic.roleplay.behaviors.fight.MuleFighter import MuleFighter
 from pydofus2.com.ankamagames.atouin.managers.MapDisplayManager import \
@@ -12,7 +11,6 @@ from pydofus2.com.ankamagames.jerakine.metaclasses.Singleton import Singleton
 class PlayerAPI(metaclass=Singleton):
     def __init__(self):
         pass
-
 
     def status(self, instanceId) -> str:
         for behavior in AbstractBehavior.getSubs(instanceId):

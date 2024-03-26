@@ -35,6 +35,7 @@ class BotEventsManager(EventsHandler, metaclass=Singleton):
     def onceAllPartyMembersIdle(self, callback, args=[], originator=None):
         def onEvt(e):
             callback(e, *args)
+
         return self.once(BotEventsManager.ALL_PARTY_MEMBERS_IDLE, onEvt, originator=originator)
 
     def oncePartyMemberShowed(self, callback, args=[], originator=None):

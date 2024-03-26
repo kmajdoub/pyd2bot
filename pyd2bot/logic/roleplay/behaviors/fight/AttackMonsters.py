@@ -74,7 +74,7 @@ class AttackMonsters(AbstractBehavior):
             return self.onceFramePushed("RoleplayEntitiesFrame", self._start)
         cellId = self.getEntityCellId()
         if not cellId:
-            return self.finish(self.ENTITY_VANISHED, "Entity not more on the map")
+            return self.finish(self.ENTITY_VANISHED, "Fight with entity taken by another player!")
         Logger().info(f"[AttackMonsters] Moving to monster {self.entityId} cell {cellId}")
         self.mapMove(MapPoint.fromCellId(cellId), callback=self.ontargetMonsterReached)
 

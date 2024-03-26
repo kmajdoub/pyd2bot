@@ -12,7 +12,8 @@ from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterMa
     PlayedCharacterManager
 from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.astar.AStar import \
     AStar
-from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Edge import Edge
+from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Edge import \
+    Edge
 from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Vertex import \
     Vertex
 from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.WorldGraph import \
@@ -33,7 +34,7 @@ class BankInfos:
         self.npcActionId = npcActionId
         self.npcId = npcId
         self.npcMapId = npcMapId
-        self.questionsReplies = { -1: [openBankReplyId] }
+        self.questionsReplies = {-1: [openBankReplyId]}
 
     def to_json(self):
         return {
@@ -45,17 +46,17 @@ class BankInfos:
 
 
 class Localizer:
-    
+
     ZAAP_GFX = 410
-    BANK_GFX = 401 
-    
+    BANK_GFX = 401
+
     _phenixesByAreaId = dict[int, list]()
     base_dir = os.path.dirname(os.path.abspath(__file__))
     with open(os.path.join(base_dir, "areaInfos.json"), "r") as f:
         AREAINFOS: dict = json.load(f)
     with open(os.path.join(base_dir, "banks.json"), "r") as f:
         BANKS: dict = json.load(f)
-        
+
     @classmethod
     def getBankInfos(cls) -> BankInfos:
         return BankInfos(**cls.BANKS["Astrub"])
@@ -76,11 +77,18 @@ class Localizer:
                     candidates.extend(WorldGraph().getVertices(hint.mapId).values())
             if not candidates:
                 return None
-            Logger().debug(f"Found {len(candidates)} candidates maps for closest map to hint {gfx}")  
+            Logger().debug(f"Found {len(candidates)} candidates maps for closest map to hint {gfx}")
             return AStar().search(WorldGraph(), startVertex, candidates)
 
     @classmethod
-    def findPathtoClosestZaap(cls, startMapId, maxCost=float("inf"), dstZaapMapId=None, excludeMaps=None, onlyKnownZaap=True) -> list['Edge']:
+    def findPathtoClosestZaap(
+        cls,
+        startMapId,
+        maxCost=float("inf"),
+        dstZaapMapId=None,
+        excludeMaps=None,
+        onlyKnownZaap=True,
+    ) -> list["Edge"]:
         if not excludeMaps:
             excludeMaps = []
         Logger().debug(f"Searching closest zaap from map {startMapId}")
@@ -104,7 +112,7 @@ class Localizer:
                         continue
                     if dstZaapMapId:
                         cmp = MapPosition.getMapPositionById(hint.mapId)
-                        cost = 10 * int(math.sqrt((dmp.posX - cmp.posX)**2 + (dmp.posY - cmp.posY)**2))
+                        cost = 10 * int(math.sqrt((dmp.posX - cmp.posX) ** 2 + (dmp.posY - cmp.posY) ** 2))
                         if cost <= maxCost:
                             candidates.extend(WorldGraph().getVertices(hint.mapId).values())
                     else:
@@ -115,8 +123,7 @@ class Localizer:
             Logger().debug(f"Found {len(candidates)} candidates maps for closest zaap to map {startMapId}")
             return cls.findPathtoClosestVertexCandidate(startVertex, candidates)
         return None
-        
-        
+
     @classmethod
     def findPathtoClosestVertexCandidate(cls, vertex: Vertex, candidates: list[Vertex]):
         Logger().info(f"Searching closest map from vertex to one of the candidates")
@@ -131,7 +138,8 @@ class Localizer:
             Logger().warning(f"One of the candidates is the start map, returning it as closest zaap")
             return []
         return path
-    
+
+
 if __name__ == "__main__":
     Logger.logToConsole = True
     r = Localizer.findPathtoClosestZaap(startMapId=128452097, onlyKnownZaap=False)

@@ -10,6 +10,7 @@ from marshmallow import ValidationError
 from forms.schemas import FarmSessionSchema, FightSessionSchema
 from pyd2bot.logic.managers.AccountManager import AccountManager
 from pyd2bot.Pyd2Bot import Pyd2Bot
+from pyd2bot.logic.managers.BotConfig import BotConfig
 from pyd2bot.models.session.models import JobFilter, Path, Session, SessionStatus, SessionType, UnloadType
 from pydofus2.com.ankamagames.dofus.kernel.net.DisconnectionReasonEnum import DisconnectionReasonEnum
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.InventoryManager import InventoryManager
@@ -117,6 +118,7 @@ class BotManagerApp:
             "kamas": "N/A",
             "level": "N/A",
             "pods": "N/A",
+            "path_name": "N/A",
             "status": "Starting...",
             "runtime": "0s",
             "endTime": "N/A",
@@ -152,6 +154,9 @@ class BotManagerApp:
             character_id = data.get("characterId")
             path_id = data.get("pathId")
             session = self.get_basic_session(account_id, character_id, SessionType.FIGHT)
+            # check if bot already running on this accounId
+            if session.character.login in self._running_bots:
+                return jsonify({"error": f"Bot already running for account {account_id}"}), 400
             session.monsterLvlCoefDiff = data.get("monsterLvlCoefDiff")
             session.path = paths[path_id]
             self.start_bot_session(session)
@@ -187,6 +192,9 @@ class BotManagerApp:
             paths_ids = data.get("pathsIds")
             job_filters = data.get("jobFilters")
             session = self.get_basic_session(account_id, character_id, session_type)
+            # check if bot already running on this accounId
+            if session.character.login in self._running_bots:
+                return jsonify({"error": f"Bot already running for account {account_id}"}), 400
             session.type = session_type
             if session_type == SessionType.FARM:
                 if path_id not in paths:
@@ -240,8 +248,10 @@ class BotManagerApp:
                     bot_oper["status"] = bot_status.name
                     stopped = bot_status in [SessionStatus.TERMINATED, SessionStatus.CRASHED, SessionStatus.BANNED]
                     if not stopped:
+                        path = BotConfig.getInstance(bot_oper["name"]).path
                         bot_oper["endTime"] = time.time()
                         bot_oper["runTime"] = format_runtime(bot_oper["startTime"], bot_oper.get("endTime", None))
+                        bot_oper["path_name"] = path.name if path else "N/A"
                         playermanager = PlayedCharacterManager.getInstance(bot_oper["name"])
                         invManager = InventoryManager.getInstance(bot_oper["name"])
                         if invManager and invManager.inventory:

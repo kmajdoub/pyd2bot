@@ -28,10 +28,9 @@ from pydofus2.mapTools import MapTools
 
 class AutoTripUseZaap(AbstractBehavior):
     NOASSOCIATED_ZAAP = 996555
+    NO_PATH_TO_DEST = 665443
     BOT_BUSY = 8877444
     ZAAP_HINT_CAREGORY = 9
-
-    _allZaapMapIds: list[int] = None
 
     def __init__(self) -> None:
         self.src_zaap_vertex = None
@@ -65,6 +64,10 @@ class AutoTripUseZaap(AbstractBehavior):
         _, self.dist_from_currmap_to_dest, self.path_from_currmap_to_dest = self.findTravelInfos(
             self.dstVertex, src_vertex=PlayedCharacterManager().currVertex
         )
+        if self.path_from_currmap_to_dest is None:
+            err = f"No path found to dest map {self.dstMapId}!"
+            Logger().warning(err)
+            return self.finish(self.NO_PATH_TO_DEST, err)
         self.teleportCostFromCurrToDstMap = 10 * MapTools.distL2Maps(
             self.currMapId, self.dstZaapMapId
         )
@@ -90,10 +93,8 @@ class AutoTripUseZaap(AbstractBehavior):
                     )
                     if self.dist_from_currmap_to_dest <= self.dist_from_currmap_to_src_zaap + self.dist_from_dest_zaap_to_dest:
                         Logger().debug(f"Its better to walk to dest map directly.")
-                        self.travelToDestinationOnFeetWithSaveZaap()
-                        return
-                    self.travelToSrcZaapOnFeet()
-                    return
+                        return self.travelToDestinationOnFeetWithSaveZaap()
+                    return self.travelToSrcZaapOnFeet()
             Logger().debug(f"Can't use havenbag to reach dest zaap, will travel to src zaap on feet.")
             self.travelToDestinationOnFeetWithSaveZaap()
         else:

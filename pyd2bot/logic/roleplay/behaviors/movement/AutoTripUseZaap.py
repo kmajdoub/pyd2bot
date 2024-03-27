@@ -29,6 +29,7 @@ from pydofus2.mapTools import MapTools
 class AutoTripUseZaap(AbstractBehavior):
     NOASSOCIATED_ZAAP = 996555
     NO_PATH_TO_DEST = 665443
+    DST_VERTEX_NOT_FOUND = 887744
     BOT_BUSY = 8877444
     ZAAP_HINT_CAREGORY = 9
 
@@ -57,17 +58,28 @@ class AutoTripUseZaap(AbstractBehavior):
         self.withSaveZaap = withSaveZaap
         self.on(KernelEvent.ServerTextInfo, self.onServerInfo)
         self.dstZaapMapId = dstZaapMapId
-        self.dstVertex = WorldGraph().getVertex(self.dstMapId, self.dstZoneId)
-        self.dstZaapVertex, self.dist_from_dest_zaap_to_dest, self.path_from_dest_zaap_to_dest = self.findTravelInfos(
-            self.dstVertex, src_mapId=self.dstZaapMapId
-        )
-        _, self.dist_from_currmap_to_dest, self.path_from_currmap_to_dest = self.findTravelInfos(
-            self.dstVertex, src_vertex=PlayedCharacterManager().currVertex
-        )
+        if self.dstZoneId is None:
+            self.dstVertex, self.path_from_currmap_to_dest = self.findDestVertex(
+                PlayedCharacterManager().currVertex, self.dstMapId
+            )
+        else:
+            self.dstVertex = WorldGraph().getVertex(self.dstMapId, self.dstZoneId)
+            if not self.dstVertex:
+                return self.finish(self.DST_VERTEX_NOT_FOUND, f"No vertex found for map {self.dstMapId} and zone {self.dstZoneId}!")
+            _, self.path_from_currmap_to_dest = self.findTravelInfos(
+                self.dstVertex, src_vertex=PlayedCharacterManager().currVertex
+            )
         if self.path_from_currmap_to_dest is None:
             err = f"No path found to dest map {self.dstMapId}!"
             Logger().warning(err)
             return self.finish(self.NO_PATH_TO_DEST, err)
+        self.dist_from_currmap_to_dest = len(self.path_from_currmap_to_dest)
+        self.dstZoneId = self.dstVertex.zoneId
+        self.dstZaapVertex, self.path_from_dest_zaap_to_dest = self.findTravelInfos(
+            self.dstVertex, src_mapId=self.dstZaapMapId
+        )
+        self.dist_from_dest_zaap_to_dest = len(self.path_from_dest_zaap_to_dest)
+
         self.teleportCostFromCurrToDstMap = 10 * MapTools.distL2Maps(
             self.currMapId, self.dstZaapMapId
         )
@@ -271,7 +283,7 @@ class AutoTripUseZaap(AbstractBehavior):
             None, None, None
         if src_vertex is None:
             if src_mapId == dst_vertex.mapId:
-                return dst_vertex, 0, []
+                return dst_vertex, []
             rpZ = 1
             minDist = float("inf")
             final_src_vertex = None
@@ -292,7 +304,7 @@ class AutoTripUseZaap(AbstractBehavior):
                 rpZ += 1
         else:
             if src_vertex.mapId == dst_vertex.mapId:
-                return src_vertex, 0, []
+                return src_vertex, []
             path = AStar().search(
                 WorldGraph(), src_vertex, dst_vertex, maxPathLength=maxLen
             )
@@ -300,4 +312,18 @@ class AutoTripUseZaap(AbstractBehavior):
                 return None, None, None
             final_src_vertex = src_vertex
             minDist = len(path)
-        return final_src_vertex, minDist, path
+        return final_src_vertex, path
+
+    @classmethod
+    def findDestVertex(cls, src_vertex, dst_mapId: Vertex) -> Tuple[Vertex, list[Edge]]:
+        rpZ = 1
+        while True:
+            Logger().debug(f"Looking for dest vertex in map {dst_mapId} with rpZ {rpZ}")
+            dst_vertex = WorldGraph().getVertex(dst_mapId, rpZ)
+            if not dst_vertex:
+                break
+            path = AStar().search(WorldGraph(), src_vertex, dst_vertex)
+            if path is not None:
+                return dst_vertex, path
+            rpZ += 1
+        return None, None

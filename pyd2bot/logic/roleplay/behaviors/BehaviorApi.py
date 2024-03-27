@@ -45,7 +45,7 @@ class BehaviorApi:
                 return info
         return None
 
-    def autotripUseZaap(self, dstMapId, dstZoneId=1, withSaveZaap=False, maxCost=None, excludeMaps=[], callback=None):
+    def autotripUseZaap(self, dstMapId, dstZoneId=None, withSaveZaap=False, maxCost=None, excludeMaps=[], callback=None):
         from pyd2bot.logic.roleplay.behaviors.movement.AutoTripUseZaap import \
             AutoTripUseZaap
             
@@ -97,7 +97,7 @@ class BehaviorApi:
                 callback=onDstZaapTrip,
             )
 
-        Logger().debug(f"Dst zaap at {dstZaapVertex} is found in known ZAAPS, Autotriping with zaaps to {dstMapId}, ")
+        Logger().debug(f"Dst zaap at {dstZaapVertex} is found in known ZAAPS, Autotriping with zaaps to {dstMapId}, zoneId={dstZoneId}")
 
         AutoTripUseZaap().start(
             dstMapId,

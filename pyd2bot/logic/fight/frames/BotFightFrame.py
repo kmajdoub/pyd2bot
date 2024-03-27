@@ -96,7 +96,7 @@ from pydofus2.com.ankamagames.jerakine.types.positions.MapPoint import MapPoint
 from pydofus2.com.ankamagames.jerakine.types.positions.MovementPath import \
     MovementPath
 from pydofus2.com.ankamagames.jerakine.types.zones.Cross import Cross
-from pydofus2.com.ankamagames.jerakine.types.zones.IZone import IZone
+from pydofus2.com.ankamagames.jerakine.types.zones.DisplayZone import DisplayZone
 from pydofus2.com.ankamagames.jerakine.types.zones.Lozenge import Lozenge
 from pydofus2.com.ankamagames.jerakine.utils.display.spellZone.SpellShapeEnum import \
     SpellShapeEnum
@@ -516,25 +516,23 @@ class BotFightFrame(Frame):
                     break
         return self._spellShape
 
-    def getSpellZone(self, spellw: SpellWrapper) -> IZone:
-        range = self.getActualSpellRange(spellw)
+    def getSpellZone(self, spellw: SpellWrapper) -> DisplayZone:
+        range = spellw["range"]
         minRange = spellw["minRange"]
         if range is None or minRange is None:
             raise Exception(f"Spell range is None, {minRange} {range}")
+        if range < minRange:
+            range = minRange;
         spellShape = self.getSpellShape(spellw)
         castInLine = spellw["castInLine"] or (spellShape == SpellShapeEnum.l)
         if castInLine:
             if spellw["castInDiagonal"]:
-                shapePlus = Cross(minRange, range, DataMapProvider())
-                shapePlus.allDirections = True
-                return shapePlus
-            return Cross(minRange, range, DataMapProvider())
+                return Cross(SpellShapeEnum.UNKNOWN, minRange, range, DataMapProvider(), False, True)
+            return Cross(SpellShapeEnum.UNKNOWN, minRange, range, DataMapProvider(), True)
         elif spellw["castInDiagonal"]:
-            shapePlus = Cross(minRange, range, DataMapProvider())
-            shapePlus.diagonal = True
-            return shapePlus
+            return Cross(SpellShapeEnum.UNKNOWN, minRange, range, DataMapProvider(), True)
         else:
-            return Lozenge(minRange, range, DataMapProvider())
+            return Lozenge(SpellShapeEnum.UNKNOWN, minRange, range, DataMapProvider())
 
     def addTurnAction(self, fct: FunctionType, args: list) -> None:
         self._turnAction.append({"fct": fct, "args": args})

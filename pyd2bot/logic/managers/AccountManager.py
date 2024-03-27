@@ -69,7 +69,7 @@ class AccountManager:
 
     @classmethod
     def fetch_account(cls, game, apikey, certid="", certhash="", with_characters_fetch=True) -> Account:
-        print(f"Fetching account for game {game}, apikey {apikey}, certid {certid}, certhash {certhash}")
+        Logger().debug(f"Fetching account for game {game}, apikey {apikey}, certid {certid}, certhash {certhash}")
         if not cls._zaap:
             cls._zaap = ZaapDecoy(apikey)
             r = cls._zaap.mainAccount
@@ -125,5 +125,5 @@ class AccountManager:
             try:
                 AccountManager.fetch_account(GameID.DOFUS, apikey, certid, certhash, with_characters_fetch)
             except Exception as exc:
-                raise Exception(f"Failed to fetch characters from game server:\n{exc}")
+                Logger().error(f"Failed to fetch characters from game server:\n{exc}", exc_info=True)
         return cls.accounts

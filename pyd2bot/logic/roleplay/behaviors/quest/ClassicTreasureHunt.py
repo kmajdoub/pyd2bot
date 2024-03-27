@@ -2,6 +2,7 @@ import json
 import os
 
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
+from pyd2bot.logic.roleplay.behaviors.movement.AutoTripUseZaap import AutoTripUseZaap
 from pyd2bot.logic.roleplay.behaviors.quest.FindHintNpc import FindHintNpc
 from pyd2bot.logic.roleplay.behaviors.teleport.UseTeleportItem import \
     UseTeleportItem
@@ -340,7 +341,7 @@ class ClassicTreasureHunt(AbstractBehavior):
 
     def onNextHintMapReached(self, code, err):
         if err:
-            if code == FindHintNpc.UNABLE_TO_FIND_HINT:
+            if code in [FindHintNpc.UNABLE_TO_FIND_HINT, AutoTripUseZaap.NO_PATH_TO_DEST]:
                 Logger().warning(err)
                 return self.digTreasure()
             return self.finish(code, err)

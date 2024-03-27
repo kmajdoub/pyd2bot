@@ -1,5 +1,4 @@
 import heapq
-import numpy as np
 import time
 from prettytable import PrettyTable
 
@@ -58,15 +57,12 @@ class SoloFarmFights(AbstractFarmBehavior):
 
     def _calculate_wait_time(self, current_time):
         if not self.last_monster_attack_time:
-            # No previous attack, use full wait time based on rate
-            return np.random.poisson(self.fights_per_minute / 60)
-
+            # No previous attack, use a default initial wait or start immediately
+            return 0
         time_since_last_attack = current_time - self.last_monster_attack_time
-        expected_attacks_since_last = self.fights_per_minute * time_since_last_attack / 60
-
-        # Adjust wait time based on expected attacks since last attack
-        wait_time = max(0, np.random.poisson(expected_attacks_since_last))
-
+        desired_interval = 60 / self.fights_per_minute  # Seconds between fights
+        # Calculate wait time to maintain desired rate, ensuring non-negative
+        wait_time = max(desired_interval - time_since_last_attack, 0)
         return wait_time
 
     def getAvailableResources(self):

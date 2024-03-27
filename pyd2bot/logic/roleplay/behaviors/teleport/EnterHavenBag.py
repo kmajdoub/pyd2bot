@@ -62,4 +62,3 @@ class EnterHavenBag(AbstractBehavior):
     
         self.on(KernelEvent.ServerTextInfo, self.onServerTextInfo)
         self.useEnterHavenBagShortcut()
-        

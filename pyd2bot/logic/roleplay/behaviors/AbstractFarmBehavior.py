@@ -45,6 +45,7 @@ class AbstractFarmBehavior(AbstractBehavior):
         self.forbidenActions = set()
         self.forbidenEdges = set()
         self._currEdge = None
+        self._deactivate_riding = False
         super().__init__()
 
     def run(self, *args, **kwargs):
@@ -189,15 +190,11 @@ class AbstractFarmBehavior(AbstractBehavior):
     def getResourcesTableHeaders(self) -> list[str]:
         raise NotImplementedError()
 
-    def onPlayerRidingMount(self, event, riding):
-        if not riding:
-            Logger().error(f"Player dismounted when asked to mount!")
-        self.autotripUseZaap(
-            self.currentVertex.mapId,
-            self.currentVertex.zoneId,
-            True,
-            callback=self.main,
-        )
+    def onPlayerRidingMount(self, code, err):
+        if err:
+            Logger().error(f"Error[{code}] while riding mount: {err}")
+            self._deactivate_riding = True
+        self.main()
 
     def onRevived(self, code, error):
         if error:
@@ -218,7 +215,7 @@ class AbstractFarmBehavior(AbstractBehavior):
             if code == AutoTrip.PLAYER_IN_COMBAT:
                 Logger().error("Player in combat")
                 return
-            elif AutoTrip.NO_PATH_FOUND:
+            elif code == AutoTrip.NO_PATH_FOUND:
                 Logger().error("No path found to last map!")
                 return self.onBotOutOfFarmPath()
             return KernelEventsManager().send(KernelEvent.ClientRestart, err)
@@ -237,27 +234,29 @@ class AbstractFarmBehavior(AbstractBehavior):
 
     def main(self, event=None, error=None):
         Logger().debug(f"Farmer main loop called")
+
         if not self.running.is_set():
             Logger().error(f"Is not running!")
             return
+
         if PlayedCharacterManager().currentMap is None:
             return self.onceMapProcessed(callback=self.main)
+
         if self.inFight:
             return
+
         if PlayedCharacterManager().isDead():
             Logger().warning(f"Player is dead.")
             return self.autoRevive(callback=self.onRevived)
-        if (
-            not PlayerManager().isBasicAccount()
-            and PlayedCharacterApi.getMount()
-            and not PlayedCharacterApi.isRiding()
-        ):
-            Logger().info(f"Mounting {PlayedCharacterManager().mount.name}")
-            KernelEventsManager().once(KernelEvent.MountRiding, self.main)
-            return Kernel().mountFrame.mountToggleRidingRequest()
+
+        if not self._deactivate_riding and PlayedCharacterApi.canRideMount():
+            Logger().info(f"Mounting {PlayedCharacterManager().mount.name} ...")
+            return self.toggleRideMount(wanted_ride_state=True, callback=self.onPlayerRidingMount)
+
         if PlayedCharacterManager().isPodsFull():
             Logger().warning(f"Inventory is almost full will trigger auto unload ...")
             return self.unloadInBank(callback=self.onBotUnloaded)
+
         if not self.initialized:
             Logger().debug(f"Initializing behavior...")
             self.initialized = True
@@ -268,12 +267,15 @@ class AbstractFarmBehavior(AbstractBehavior):
                 )
             else:
                 self.currentVertex = self.path.currentVertex
+
         if self.timeout and perf_counter() - self.startTime > self.timeout:
             Logger().warning(f"Ending Behavior for reason : Timeout reached")
             return self.finish(True, None)
+
         if PlayedCharacterManager().currVertex not in self.path:
             Logger().debug(f"Bot is out of farming area")
             return self.onBotOutOfFarmPath()
+
         self.makeAction()
 
     def makeAction(self):

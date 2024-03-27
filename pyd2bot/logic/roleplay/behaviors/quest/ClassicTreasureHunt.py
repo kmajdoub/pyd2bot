@@ -29,6 +29,7 @@ from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterMa
     PlayedCharacterManager
 from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.WorldGraph import \
     WorldGraph
+from pydofus2.com.ankamagames.dofus.network.enums.TreasureHuntDigRequestEnum import TreasureHuntDigRequestEnum
 from pydofus2.com.ankamagames.dofus.network.enums.TreasureHuntFlagRequestEnum import \
     TreasureHuntFlagRequestEnum
 from pydofus2.com.ankamagames.dofus.network.enums.TreasureHuntFlagStateEnum import \
@@ -59,9 +60,10 @@ class ClassicTreasureHunt(AbstractBehavior):
     TREASURE_HUNT_ATM_IEID = 484993
     TREASURE_HUNT_ATM_SKILLUID = 152643320
     RAPPEL_POTION_GUID = 548
-    CHESTS_GUID = [15260, 15248, 15261, 15262]
+    CHESTS_GUID = [15260, 15248, 15261, 15262, 15560, 15270]
     ZAAP_HUNT_MAP = 142087694
     REST_TIME_BETWEEN_HUNTS = 60 * 5
+    STEP_DIDNT_CHANGE = 47555822
 
     with open(HINTS_FILE, "r") as fp:
         hint_db = json.load(fp)
@@ -83,6 +85,7 @@ class ClassicTreasureHunt(AbstractBehavior):
         self.guessMode = False
         self.guessedAnswers = []
         self._chests_to_open = []
+        self._deactivate_riding = False
 
     def submitet_flag_maps(self):
         return [
@@ -110,8 +113,9 @@ class ClassicTreasureHunt(AbstractBehavior):
             return self.solveNextStep()
         self.goToHuntAtm()
 
-    def onDigAnswer(self, event, questType, result, text):
-        pass
+    def onDigAnswer(self, event, wrongFlagCount, result, treasureHuntDigAnswerText):
+        if result == TreasureHuntDigRequestEnum.TREASURE_HUNT_DIG_WRONG_AND_YOU_KNOW_IT:
+            return self.finish(result, f"Treasure hunt dig failed for reason : {treasureHuntDigAnswerText}")
 
     def onFlagRequestAnswer(self, event, result, err):
         if result == TreasureHuntFlagRequestEnum.TREASURE_HUNT_FLAG_OK:
@@ -286,25 +290,16 @@ class ClassicTreasureHunt(AbstractBehavior):
                     if transition.direction != -1 and transition.direction == direction:
                         return edge.dst.mapId
 
-    def onPlayerRidingMount(self, event, riding, ignoreSame):
-        if not riding:
-            Logger().error(f"Player dismounted when asked to mount!")
+    def onPlayerRidingMount(self, code, err, ignoreSame):
+        if err:
+            Logger().error(f"Error[{code}] while riding mount: {err}")
+            self._deactivate_riding = True
         self.solveNextStep(ignoreSame)
 
     def onRevived(self, code, error, ignoreSame=False):
         if error:
             return KernelEventsManager().send(KernelEvent.ClientShutdown, f"Error while auto-reviving player: {error}")
         Logger().debug(f"Bot back on form, can continue treasure hunt")
-        if (
-            not PlayerManager().isBasicAccount()
-            and PlayedCharacterApi.getMount()
-            and not PlayedCharacterApi.isRiding()
-        ):
-            Logger().info(f"Mounting {PlayedCharacterManager().mount.name}")
-            KernelEventsManager().once(
-                KernelEvent.MountRiding, lambda e, r: self.onPlayerRidingMount(e, r, ignoreSame)
-            )
-            return Kernel().mountFrame.mountToggleRidingRequest()
         self.solveNextStep(ignoreSame)
 
     def solveNextStep(self, ignoreSame=False):
@@ -316,6 +311,9 @@ class ClassicTreasureHunt(AbstractBehavior):
         if PlayedCharacterManager().isDead():
             Logger().warning(f"Player is dead.")
             return self.autoRevive(callback=lambda code, err: self.onRevived(code, err, ignoreSame))
+        if not self._deactivate_riding and PlayedCharacterApi.canRideMount():
+            Logger().info(f"Mounting {PlayedCharacterManager().mount.name} ...")
+            return self.toggleRideMount(wanted_ride_state=True, callback=lambda e, r: self.onPlayerRidingMount(e, r, ignoreSame))
         lastStep = self.currentStep
         idx = self.getCurrentStepIndex()
         if idx is None:
@@ -323,7 +321,7 @@ class ClassicTreasureHunt(AbstractBehavior):
         else:
             self.currentStep = self.infos.stepList[idx]
             if not ignoreSame and lastStep == self.currentStep:
-                return KernelEventsManager().send(KernelEvent.ClientShutdown, "Step didnt change after update!")
+                return self.finish(self.STEP_DIDNT_CHANGE, "Step didnt change after update!")
             self.startMapId = self.infos.stepList[idx - 1].mapId
         Logger().debug(f"Infos:\n{self.infos}")
         if self.currentStep is not None:
@@ -380,6 +378,7 @@ class ClassicTreasureHunt(AbstractBehavior):
                         f"Unable to find Map of poi {self.currentStep.poiLabel} from start map {self.startMapId} in guess mode!"
                     )
                     return self.digTreasure()
+            Logger().debug(f"Next hint map is {nextMapId}, will travel to it.")
             self.autotripUseZaap(nextMapId, maxCost=self.maxCost, callback=self.onNextHintMapReached)
         elif self.currentStep.type == TreasureHuntStepTypeEnum.DIRECTION_TO_HINT:
             FindHintNpc().start(

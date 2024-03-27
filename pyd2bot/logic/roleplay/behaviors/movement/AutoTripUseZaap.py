@@ -2,7 +2,7 @@ from typing import Tuple
 
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
 from pyd2bot.logic.roleplay.behaviors.movement.AutoTrip import AutoTrip
-from pyd2bot.logic.roleplay.behaviors.movement.EnterHavenBag import EnterHavenBag
+from pyd2bot.logic.roleplay.behaviors.teleport.EnterHavenBag import EnterHavenBag
 from pyd2bot.logic.roleplay.behaviors.skill.UseSkill import UseSkill
 from pyd2bot.logic.roleplay.behaviors.teleport.UseZaap import UseZaap
 from pyd2bot.misc.Localizer import Localizer
@@ -70,9 +70,7 @@ class AutoTripUseZaap(AbstractBehavior):
                 self.dstVertex, src_vertex=PlayedCharacterManager().currVertex
             )
         if self.path_from_currmap_to_dest is None:
-            err = f"No path found to dest map {self.dstMapId}!"
-            Logger().warning(err)
-            return self.finish(self.NO_PATH_TO_DEST, err)
+            return self.finish(self.NO_PATH_TO_DEST, f"No path found from start vertex {PlayedCharacterManager().currVertex} to dest map {self.dstMapId}!")
         self.dist_from_currmap_to_dest = len(self.path_from_currmap_to_dest)
         self.dstZoneId = self.dstVertex.zoneId
         self.dstZaapVertex, self.path_from_dest_zaap_to_dest = self.findTravelInfos(
@@ -141,7 +139,7 @@ class AutoTripUseZaap(AbstractBehavior):
         if textId == 592304:  # Player is busy
             self.finish(
                 self.BOT_BUSY,
-                "Player is busy so we cant use zaap and walking might raise unexpected errors!!",
+                "Player is busy so we cant use zaap and walking might raise unexpected errors!"
             )
 
     def travelToSrcZaapOnFeet(self):
@@ -154,9 +152,6 @@ class AutoTripUseZaap(AbstractBehavior):
         
     def onInsideHavenbag(self, code, err):
         if err:
-            Logger().warning(
-                f"Unable to use haven bag for reason {err}, so we will travel to destinaton on feet!"
-            )
             if code == EnterHavenBag.CANT_USE_IN_CURRENT_MAP and self._wants_to_use_havenbag and self._path_index < len(self.path_from_currmap_to_dest):
                 Logger().warning(f"Player can't use haven bag in current map, will try to use it in next map of path.")
                 for i, edge in enumerate(self.path_from_currmap_to_dest[self._path_index + 1:]):

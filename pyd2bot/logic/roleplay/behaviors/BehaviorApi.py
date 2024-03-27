@@ -30,6 +30,7 @@ class BehaviorApi:
     ASTRUB_AREAID = 95
     SPECIAL_AREA_INFOS_NOT_FOUND_ERROR = 89091
     PLAYER_IN_FIGHT_ERROR = 89090
+    CELECTIAL_SUBAREA_ID = 446
 
     def __init__(self) -> None:
         pass
@@ -56,10 +57,10 @@ class BehaviorApi:
         dstsubArea = SubArea.getSubAreaByMapId(dstMapId)
         
         if PlayerManager().isBasicAccount() and not dstsubArea.basicAccountAllowed:
-            return callback(0, "Destination map is not allowed for basic account")
+            return callback(0, "Destination map is not allowed for basic accounts!")
             
-        if PlayedCharacterManager().currentSubArea.id == 446 and dstsubArea.id != 446:
-            Logger().info(f"Player is in celestial dimension, we have to get him outta there.")
+        if PlayedCharacterManager().currentSubArea.id == self.CELECTIAL_SUBAREA_ID and dstsubArea.id != self.CELECTIAL_SUBAREA_ID:
+            Logger().info(f"Player is in celestial dimension, and wants to get out of there.")
 
             def onOutOfCelestialDim(code, err):
                 if err:
@@ -99,21 +100,29 @@ class BehaviorApi:
 
         Logger().debug(f"Dst zaap at {dstZaapVertex} is found in known ZAAPS, Autotriping with zaaps to {dstMapId}, zoneId={dstZoneId}")
 
+        def onAutoTripUseZaapEnd(code, err):
+            if err and code == AutoTripUseZaap.NO_PATH_TO_DEST:
+                Logger().warning(err)
+                Logger().info("Trying to reach the destination with classic auto trip as last resort.")
+                return self.autoTrip(dstMapId, dstZoneId, callback=callback)
+            return callback(code, err)
+
         AutoTripUseZaap().start(
             dstMapId,
             dstZoneId,
             dstZaapVertex.mapId,
             withSaveZaap=withSaveZaap,
             maxCost=maxCost,
-            callback=callback,
+            callback=onAutoTripUseZaapEnd,
             parent=self,
         )
 
     def autoTrip(self, dstMapId, dstZoneId, path: list["Edge"] = None, callback=None):
         from pyd2bot.logic.roleplay.behaviors.movement.AutoTrip import AutoTrip
         from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
-
+        Logger().info(f"Basic auto trip to map {dstMapId} called.")
         if Kernel().fightContextFrame:
+            Logger().error(f"Player is in Fight ==> Can't auto trip.")
             return callback(self.PLAYER_IN_FIGHT_ERROR, "Player is in Fight")
 
         srcSubArea = SubArea.getSubAreaByMapId(PlayedCharacterManager().currentMap.mapId)
@@ -127,12 +136,11 @@ class BehaviorApi:
             self.autoTrip(dstMapId, dstZoneId, callback=callback)
 
         if srcAreaId == self.ANKARNAM_AREAID and dstAreaId != self.ANKARNAM_AREAID:
-            Logger().info(f"Auto trip to Astrub out of ankarnoob.")
+            Logger().info(f"Auto trip to Astrub out of Ankarnoob!")
             infos = self.getSpecialDestination(self.ASTRUB_AREAID)
             if not infos:
-                Logger().error(f"Could not find astrub special destination infos!")
                 return callback(
-                    self.SPECIAL_AREA_INFOS_NOT_FOUND_ERROR, f"Could not find astrub special destination infos!"
+                    self.SPECIAL_AREA_INFOS_NOT_FOUND_ERROR, f"Need to go from Ankarnam to Astrub but could not find Astrub special destination infos!"
                 )
             return self.goToSpecialDestination(
                 infos,
@@ -143,7 +151,7 @@ class BehaviorApi:
 
         infos = self.getSpecialDestination(dstAreaId)
 
-        if infos and srcAreaId != dstAreaId:
+        if srcAreaId != dstAreaId and infos:
             return self.goToSpecialDestination(
                 infos,
                 callback=onSpecialDestReached,
@@ -151,7 +159,7 @@ class BehaviorApi:
             )
 
         AutoTrip().start(dstMapId, dstZoneId, path, callback=callback, parent=self)
-
+    
     def goToSpecialDestination(self, infos, useZaap=True, callback=None, dstSubAreaName=""):
         Logger().info(f"Auto trip to a special destination ({dstSubAreaName}).")
 
@@ -179,11 +187,16 @@ class BehaviorApi:
         ChangeMap().start(transition, edge, dstMapId, callback=callback, parent=self)
 
     def enterHavenBag(self, callback=None):
-        from pyd2bot.logic.roleplay.behaviors.movement.EnterHavenBag import \
+        from pyd2bot.logic.roleplay.behaviors.teleport.EnterHavenBag import \
             EnterHavenBag
 
         EnterHavenBag().start(callback=callback, parent=self)
     
+    def toggleRideMount(self, wanted_ride_state=None, callback=None):
+        from pyd2bot.logic.roleplay.behaviors.mount.ToggleRideMount import ToggleRideMount
+
+        ToggleRideMount().start(wanted_ride_state=wanted_ride_state, callback=callback, parent=self)
+
     def mapMove(
         self,
         destCell,

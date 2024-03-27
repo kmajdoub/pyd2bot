@@ -1,4 +1,5 @@
 import heapq
+import random
 import time
 from prettytable import PrettyTable
 
@@ -40,7 +41,7 @@ class SoloFarmFights(AbstractFarmBehavior):
         
         # Calculate wait time using Poisson distribution
         current_time = time.time()  # Assuming access to time module
-        wait_time = self._calculate_wait_time(current_time)
+        wait_time = self._calculate_wait_time(current_time) + abs(random.gauss(0, 10)) # Add some noise
 
         # Ensure wait time doesn't exceed a reasonable maximum
         max_wait_time = 60  # 1 minute (adjust as needed)

@@ -118,6 +118,9 @@ class BotManagerApp:
             "kamas": "N/A",
             "level": "N/A",
             "pods": "N/A",
+            "fights_count": 0,
+            "earned_kamas": 0,
+            "earned_levels": 0,
             "path_name": "N/A",
             "status": "Starting...",
             "runtime": "0s",
@@ -252,6 +255,9 @@ class BotManagerApp:
                         bot_oper["endTime"] = time.time()
                         bot_oper["runTime"] = format_runtime(bot_oper["startTime"], bot_oper.get("endTime", None))
                         bot_oper["path_name"] = path.name if path else "N/A"
+                        bot_oper["fights_count"] = bot._nbrFightsDone
+                        bot_oper["earned_kamas"] = bot._earnedKamas
+                        bot_oper["earned_levels"] = bot._earnedLevels
                         playermanager = PlayedCharacterManager.getInstance(bot_oper["name"])
                         invManager = InventoryManager.getInstance(bot_oper["name"])
                         if invManager and invManager.inventory:

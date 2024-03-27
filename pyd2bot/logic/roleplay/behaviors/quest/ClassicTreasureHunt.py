@@ -1,5 +1,6 @@
 import json
 import os
+import random
 
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
 from pyd2bot.logic.roleplay.behaviors.movement.AutoTripUseZaap import AutoTripUseZaap
@@ -193,8 +194,9 @@ class ClassicTreasureHunt(AbstractBehavior):
                 Kernel().inventoryManagementFrame.useItem(iw)
                 BenchmarkTimer(3, lambda: self.onHuntFinished(event, questType)).start()
         else:
-            Logger().debug(f"Sleeping for 5 minutes before going to the next hunt, to avoid being kicked")
-            BenchmarkTimer(self.REST_TIME_BETWEEN_HUNTS, lambda: self.goToHuntAtm()).start()
+            wait_time = self.REST_TIME_BETWEEN_HUNTS + abs(random.gauss(0, self.REST_TIME_BETWEEN_HUNTS)) # Add some noise
+            Logger().debug(f"Sleeping for {round(wait_time / 60)} minutes before going to the next hunt, to avoid being kicked.")
+            BenchmarkTimer(wait_time, lambda: self.goToHuntAtm()).start()
 
     def onTakeQuestMapReached(self, code, err):
         if err:

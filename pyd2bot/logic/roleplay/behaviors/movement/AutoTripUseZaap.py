@@ -78,8 +78,9 @@ class AutoTripUseZaap(AbstractBehavior):
         self.dstZaapVertex, self.path_from_dest_zaap_to_dest = self.findTravelInfos(
             self.dstVertex, src_mapId=self.dstZaapMapId
         )
-        self.dist_from_dest_zaap_to_dest = len(self.path_from_dest_zaap_to_dest)
-
+        if self.path_from_dest_zaap_to_dest is None:
+            Logger().warning(f"No path found to dest zaap {self.dstZaapMapId}, will travel to final dest on feet.")
+            return self.travelToDestOnFeet()
         self.teleportCostFromCurrToDstMap = 10 * MapTools.distL2Maps(
             self.currMapId, self.dstZaapMapId
         )

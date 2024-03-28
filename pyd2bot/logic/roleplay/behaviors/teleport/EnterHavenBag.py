@@ -43,14 +43,16 @@ class EnterHavenBag(AbstractBehavior):
         Kernel().worker.terminated.wait(0.5)
         Kernel().roleplayContextFrame.havenbagEnter()
         
-    def run(self) -> bool:
+    def run(self, wanted_state=None) -> bool:
         if PlayedCharacterManager().infos.level < 10:
             return self.finish(self.NEED_LVL_10, "Need to be level 10 to enter haven bag")
-        elif PlayerManager().isMapInHavenbag(PlayedCharacterManager().currentMap.mapId):
-            return self.finish(self.ALREADY_IN, "Already in haven bag")
-        elif PlayerManager().isBasicAccount():
+        if PlayerManager().isBasicAccount():
             return self.finish(self.ONLY_SUBSCRIBED, "Only subscribed accounts can enter haven bag")
-        
+        if wanted_state is not None:
+            if wanted_state and PlayerManager().isMapInHavenbag(PlayedCharacterManager().currentMap.mapId):
+                return self.finish(self.ALREADY_IN, "Already in haven bag")
+            elif not wanted_state and not PlayerManager().isMapInHavenbag(PlayedCharacterManager().currentMap.mapId):
+                return self.finish(self.ALREADY_IN, "Not in haven bag already")
         self.havenBagListener = self.once(
             KernelEvent.InHavenBag,
             self.finish,
@@ -59,6 +61,5 @@ class EnterHavenBag(AbstractBehavior):
             retryAction=self.onHeavenBagEnterTimeout,
             ontimeout=lambda _: self.finish(self.TIMEDOUT, "Haven bag enter timedout too many times"),
         )
-    
         self.on(KernelEvent.ServerTextInfo, self.onServerTextInfo)
         self.useEnterHavenBagShortcut()

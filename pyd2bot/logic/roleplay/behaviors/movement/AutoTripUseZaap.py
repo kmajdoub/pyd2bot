@@ -21,6 +21,8 @@ from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Vertex impor
     Vertex
 from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.WorldGraph import \
     WorldGraph
+from pydofus2.com.ankamagames.dofus.uiApi.PlayedCharacterApi import PlayedCharacterApi
+from pydofus2.com.ankamagames.jerakine.benchmark.BenchmarkTimer import BenchmarkTimer
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 from pydofus2.com.ankamagames.jerakine.types.positions.MapPoint import MapPoint
 from pydofus2.mapTools import MapTools
@@ -52,7 +54,7 @@ class AutoTripUseZaap(AbstractBehavior):
     ):
         if not dstMapId:
             raise ValueError(f"Invalid MapId value {dstMapId}!")
-        self.maxCost = maxCost
+        self.maxCost = min(maxCost, PlayedCharacterApi.inventoryKamas())
         self.dstMapId = dstMapId
         self.dstZoneId = dstZoneId
         self.withSaveZaap = withSaveZaap
@@ -208,7 +210,7 @@ class AutoTripUseZaap(AbstractBehavior):
             self.dstMapId, self.dstZoneId, callback=self.finish
         )
         
-    def travelToDestinationOnFeetWithSaveZaap(self):
+    def travelToDestinationOnFeetWithSaveZaap(self, code=None, err=None):
         if self.withSaveZaap:
             Logger().debug(f"Will trip to dest zaap at {self.dstZaapVertex.mapId} on feet to save it before travelling to dest on feet.")
             self.travelToDstZaapOnFeet()
@@ -221,8 +223,9 @@ class AutoTripUseZaap(AbstractBehavior):
             if code == UseZaap.NOT_RICH_ENOUGH:
                 Logger().warning(err)
                 if PlayerManager().isMapInHavenbag(self.currMapId):
-                    Logger().debug(f"Player doesnt have enough kamas to use haven bag to join the dest zaap so it will quit the haven bag.")
-                    return self.enterHavenBag(self.travelToDestinationOnFeetWithSaveZaap)
+                    Logger().warning(f"Player will quit the haven bag and continue on feet.")
+                    BenchmarkTimer(0.5, lambda: self.enterHavenBag(wanted_state=False, callback=self.travelToDestinationOnFeetWithSaveZaap)).start()
+                    return
                 else:
                     return self.travelToDestinationOnFeetWithSaveZaap()
 
@@ -267,7 +270,7 @@ class AutoTripUseZaap(AbstractBehavior):
                     callback=self.onDstZaap_zaapTrip            
                 )
             elif self.canUseHavenBag():
-                self.enterHavenBag(self.onInsideHavenbag)
+                self.enterHavenBag(wanted_state=True, callback=self.onInsideHavenbag)
             else:
                 Logger().warning(f"Can't use a Zaap or haven bag to reach dest zaap, will travel to it on feet.")
                 self.travelToDestinationOnFeetWithSaveZaap()

@@ -135,7 +135,7 @@ class MapMove(AbstractBehavior):
             return self.fail(reason)
         Logger().warning(f"Server rejected movement for reason {reason.name}")
         KernelEventsManager().clearAllByOrigin(self)
-        RequestMapData().start(callback=lambda code, error: self.move())
+        self.requestMapData(callback=lambda code, error: self.move())
 
     def sendMoveRequest(self):
         if PlayedCharacterManager().isFighting:

@@ -33,7 +33,7 @@ class ResourceFarm(AbstractFarmBehavior):
 
     def init(self):
         self.jobFilter = BotConfig().jobFilter
-        self.path = BotConfig().path
+        self.path = BotConfig().curr_path
         self.path.init()
         self.currentTarget: CollectableResource = None
         KernelEventsManager().on(KernelEvent.PlayerStatusUpdate, self.onPlayerStatusUpdate)
@@ -90,16 +90,17 @@ class ResourceFarm(AbstractFarmBehavior):
         if not self.running.is_set():
             return
         if error:
+            if code in [UseSkill.ELEM_BEING_USED, UseSkill.ELEM_TAKEN]:
+                Logger().warning(f"Error while collecting resource: {error}, not a fatal error, restarting.")
+                return self.requestMapData(callback=lambda code, err: self.main())
             if code in [
-                UseSkill.ELEM_BEING_USED,
-                UseSkill.ELEM_TAKEN,
                 UseSkill.CANT_USE,
                 UseSkill.USE_ERROR,
                 UseSkill.NO_ENABLED_SKILLS,
                 UseSkill.ELEM_UPDATE_TIMEOUT,
                 MovementFailError.MOVE_REQUEST_REJECTED,
             ]:
-                Logger().warning(f"Error while collecting resource: {error}, not a fatal error, restarting.")
+                Logger().warning(f"Error while collecting resource: {error}, will forbid the resource.")
                 self.forbidenActions.add(self.currentTarget.uid)
                 return self.main()
             return self.send(KernelEvent.ClientShutdown, error)

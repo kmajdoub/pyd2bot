@@ -239,11 +239,13 @@ function adjustFormForSessionType(selectedType) {
 function submitFarmForm() {
     const accountId = document.getElementById('farmAccountId').value;
     const characterId = document.getElementById('farmCharacterId').value;
+    const minute_per_path = document.getElementById('minute_per_path').value;
 
     // Initialize your session object
     let sessionData = {
         accountId: accountId,
         characterId: characterId,
+        minute_per_path: minute_per_path,
         type: parseInt(document.getElementById('sessionTypeSelect').value),
         jobFilters: getSelectedJobsAndResources()
     };

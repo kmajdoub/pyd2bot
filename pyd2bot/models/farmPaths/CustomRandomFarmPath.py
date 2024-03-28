@@ -61,7 +61,7 @@ class CustomRandomFarmPath(AbstractFarmPath):
                         ret.append(edge)
         return ret
     
-    def getNextVertex(self, forbidenEdges=None, onlyNonRecent=False) -> Vertex:
+    def getNextEdge(self, forbidenEdges=None, onlyNonRecent=False) -> Edge:
         outgoingEdges = list(self.outgoingEdges(onlyNonRecentVisited=onlyNonRecent))
         if forbidenEdges is None:
             forbidenEdges = []

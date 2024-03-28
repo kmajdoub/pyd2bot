@@ -236,10 +236,10 @@ class BehaviorApi:
         AttackMonsters().start(entityId, callback=callback, parent=self)
 
     def farmFights(self, timeout=None, callback=None):
-        from pyd2bot.logic.roleplay.behaviors.fight.FarmFights import \
-            FarmFights
+        from pyd2bot.logic.roleplay.behaviors.fight.GroupLeaderFarmFights import \
+            GroupLeaderFarmFights
 
-        FarmFights().start(timeout=timeout, callback=callback, parent=self)
+        GroupLeaderFarmFights().start(timeout=timeout, callback=callback, parent=self)
 
     def muleFighter(self, leader, callback=None):
         from pyd2bot.logic.roleplay.behaviors.fight.MuleFighter import \

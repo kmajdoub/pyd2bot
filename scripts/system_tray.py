@@ -1,19 +1,23 @@
 from PyQt5 import QtWidgets
+from pyd2bot.Pyd2Bot import Pyd2Bot
 
 
 class SystemTrayIcon(QtWidgets.QSystemTrayIcon):
     
-    def __init__(self, icon, bot, parent=None):
+    def __init__(self, icon, bots: list[Pyd2Bot], parent=None):
         super(SystemTrayIcon, self).__init__(icon, parent)
-        self.setToolTip(bot.name)
+        self.setToolTip("bots")
         
         menu = QtWidgets.QMenu(parent)
         exit_action = menu.addAction("Stop Bot")
         exit_action.triggered.connect(self.stop_bot)
-        self.bot = bot
+        self.bots = bots
         self.setContextMenu(menu)
 
     def stop_bot(self):
-        print("Stopping the bot...")
-        self.bot.shutdown("User wanted to stop the bot")
-        self.bot.join()
+        print("Stopping the bots ...")
+        for bot in self.bots:
+            bot.shutdown("User wanted to stop the bot")
+        for bot in self.bots:
+            bot.join()
+        QtWidgets.QApplication.quit()

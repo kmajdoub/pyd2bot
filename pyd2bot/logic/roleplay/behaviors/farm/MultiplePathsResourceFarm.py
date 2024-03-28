@@ -6,14 +6,18 @@ from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 
 class MultiplePathsResourceFarm(AbstractBehavior):
 
-    def __init__(self, timeout=None) -> None:
-        self.timeout = timeout
+    def __init__(self) -> None:
+        self.default_minutes_per_path = 5
         self.forbiden_paths = []
         super().__init__()
 
     def run(self) -> bool:
         self.pathsList = BotConfig().pathsList
         self.iterPathsList = iter(self.pathsList)
+        if BotConfig().session.minute_per_path:
+            self.timeout = BotConfig().session.minute_per_path * 60
+        else:
+            self.timeout = self.default_minutes_per_path * 60
         Logger().info(f"Starting multiple paths resource farm with {len(self.pathsList)} paths with timeout {self.timeout // 60} minutes")
         self.startNextPath(None, None)
 
@@ -30,5 +34,5 @@ class MultiplePathsResourceFarm(AbstractBehavior):
                 return self.finish(1, "All paths are forbiden")
             self.iterPathsList = iter([p for p in self.pathsList if p not in self.forbiden_paths])
             self.currentPath = next(self.iterPathsList)
-        BotConfig().path = self.currentPath
+        BotConfig().curr_path = self.currentPath
         ResourceFarm(self.timeout).start(callback=self.startNextPath)

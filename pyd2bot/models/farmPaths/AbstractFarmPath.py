@@ -53,7 +53,7 @@ class AbstractFarmPath:
     def __next__(self) -> Transition:
         raise NotImplementedError()
     
-    def getNextVertex(self, forbidenEdges=None, onlyNonRecent=False) -> 'Vertex':
+    def getNextEdge(self, forbidenEdges=None, onlyNonRecent=False) -> 'Edge':
         raise NotImplementedError()
     
     def __iter__(self) -> Iterator['Vertex']:

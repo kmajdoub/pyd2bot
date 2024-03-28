@@ -185,7 +185,7 @@ class ChangeMap(AbstractBehavior):
                 return self.finish(False, error)
             self.onMapRequestFailed(reason)
 
-        RequestMapData().start(callback=onResult, parent=self)
+        self.requestMapData(callback=onResult)
 
     def onMapRequestFailed(self, reason: MovementFailError):
         Logger().warning(f"Request failed for reason: {reason.name}")

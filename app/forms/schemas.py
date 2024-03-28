@@ -18,6 +18,7 @@ class FarmSessionSchema(Schema):
     pathId = fields.Str(allow_none=True)
     pathsIds = fields.List(fields.Str(), allow_none=True)
     jobFilters = fields.List(fields.Nested(JobFilterSchema), required=True)
+    minute_per_path = fields.Int(allow_none=True)
 
     def get_session_type(self, obj):
         return obj.value

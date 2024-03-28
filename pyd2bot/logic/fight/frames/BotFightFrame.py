@@ -171,11 +171,7 @@ class BotFightFrame(Frame):
                 gfotmsg = GameFightOptionToggleMessage()
                 gfotmsg.init(FightOptionsEnum.FIGHT_OPTION_SET_SECRET)
                 ConnectionsHandler().send(gfotmsg)
-                if BotConfig().followers:
-                    gfotmsg = GameFightOptionToggleMessage()
-                    gfotmsg.init(FightOptionsEnum.FIGHT_OPTION_SET_TO_PARTY_ONLY)
-                    ConnectionsHandler().send(gfotmsg)
-                else:
+                if not BotConfig().followers:
                     gfotmsg = GameFightOptionToggleMessage()
                     gfotmsg.init(FightOptionsEnum.FIGHT_OPTION_SET_CLOSED)
                     ConnectionsHandler().send(gfotmsg)
@@ -577,7 +573,10 @@ class BotFightFrame(Frame):
             return Logger().warning("Fight resumed so wont check if members joined or not.")
         if self.fightReadySent:
             return Logger().warning("Fight ready already sent so we wont check if members joined or not.")
-        PlayedCharacterManager.getInstance(player.login).isFighting = True
+        playerManager = PlayedCharacterManager.getInstance(player.login)
+        if not playerManager:
+            return Logger().warning(f"Player manager not found for {player.name}, probably diconnected")
+        playerManager.isFighting = True
         self.sendFightReady(ConnectionsHandler.getInstance(player.login))
         if self.allMembersJoinedFight():
             Logger().info(f"All party members joined fight.")
@@ -607,6 +606,11 @@ class BotFightFrame(Frame):
 
         elif isinstance(msg, GameFightEndMessage):
             self._inFight = False
+            if BotConfig().followers:
+                for player in BotConfig().followers:
+                    playerManager = PlayedCharacterManager.getInstance(player.login)
+                    if playerManager:
+                        playerManager.isFighting = False
             Kernel().worker.removeFrame(self)
             return True
 
@@ -904,9 +908,9 @@ class BotFightFrame(Frame):
             if spellCastManager:
                 spellCastManager.nextTurn()
         self.currentPlayer = None
-        turnEnd = GameFightTurnReadyMessage()
-        turnEnd.init(True)
-        ConnectionsHandler().send(turnEnd)
+        turnReadyMsg = GameFightTurnReadyMessage()
+        turnReadyMsg.init(True)
+        ConnectionsHandler().send(turnReadyMsg)
 
     def preparePlayableCharacter(self) -> None:
         self._spellCastFails = False

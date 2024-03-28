@@ -2,10 +2,6 @@
 from time import perf_counter
 
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
-from pyd2bot.logic.roleplay.behaviors.movement.AutoTripUseZaap import \
-    AutoTripUseZaap
-from pyd2bot.logic.roleplay.behaviors.movement.GetOutOfAnkarnam import \
-    GetOutOfAnkarnam
 from pyd2bot.logic.roleplay.behaviors.movement.MapMove import MapMove
 from pyd2bot.misc.BotEventsmanager import BotEventsManager
 from pyd2bot.models.session.models import Character
@@ -14,7 +10,6 @@ from pydofus2.com.ankamagames.berilia.managers.EventsHandler import (Event,
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
 from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import \
     KernelEventsManager
-from pydofus2.com.ankamagames.dofus.datacenter.world.SubArea import SubArea
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
 from pydofus2.com.ankamagames.dofus.kernel.net.ConnectionsHandler import \
     ConnectionsHandler
@@ -33,15 +28,14 @@ from pydofus2.com.ankamagames.jerakine.types.positions.MapPoint import MapPoint
 class MuleFighter(AbstractBehavior):
     FIGHT_JOIN_TIMEOUT = 3
 
-    def __init__(self):
+    def __init__(self, leader: Character):
         super().__init__()
         self.joinFightListener = None
-    
-    def run(self, leader: Character):
         self.leader = leader
-        self.running.set()
+    
+    def run(self):
         self.checkIfLeaderInFight()
-        self.on(KernelEvent.FightSwordShowed, self.onceFightStarted)
+        self.on(KernelEvent.FightSwordShowed, self.onFightStarted)
         self.on(KernelEvent.ServerTextInfo, self.onServerNotif)
         BotEventsManager().on(BotEventsManager.MOVE_TO_VERTEX, self.onMoveToVertex, originator=self)
     
@@ -52,25 +46,16 @@ class MuleFighter(AbstractBehavior):
             return behavior.onFinish(lambda: self.onMoveToVertex(event, vertex))
         if PlayedCharacterManager().currVertex is not None:
             if PlayedCharacterManager().currVertex.UID != vertex.UID:
-                def onPosReached(code, error):
-                    if error:
-                        Logger().error(error)
-                srcSubArea = SubArea.getSubAreaByMapId(PlayedCharacterManager().currentMap.mapId)
-                srcAreaId = srcSubArea._area.id
-                dstSubArea = SubArea.getSubAreaByMapId(vertex.mapId)
-                dstAreaId = dstSubArea._area.id
-                if dstAreaId != GetOutOfAnkarnam.ankarnamAreaId and srcAreaId == GetOutOfAnkarnam.ankarnamAreaId:
-                    Logger().info(f"Auto trip to an Area ({dstSubArea._area.name}) out of {srcSubArea._area.name}.")
-                    def onGotOutOfAnkarnam(code, error):
-                        if error:
-                            return self.finish(code, error)
-                        AutoTripUseZaap().start(vertex.mapId, vertex.zoneId, parent=self.parent, callback=onPosReached)
-                    return GetOutOfAnkarnam().start(callback=onGotOutOfAnkarnam, parent=self)
-                AutoTripUseZaap().start(vertex.mapId, vertex.zoneId, parent=self.parent, callback=onPosReached)
+                self.autotripUseZaap(vertex.mapId, vertex.zoneId, callback=self.onDestvertexTrip)
             else:
                 Logger().info("Dest vertex is the same as the current player vertex")
         else:
             Logger().error("Can't move with unknown player vertex")
+            self.onceMapProcessed(lambda: self.onMoveToVertex(event, vertex))
+
+    def onDestvertexTrip(self, code, error):
+        if error:
+            Logger().error(f"Error while trying to move to destination vertex : {error}")
 
     def onServerNotif(self, event, msgId, msgType, textId, text, params):
         if textId == 773221:
@@ -99,13 +84,13 @@ class MuleFighter(AbstractBehavior):
                 self.joinFight()
             self.mapMove(MapPoint.fromCoords(x, y).cellId, callback=onMoved)
                 
-    def onceFightStarted(self, event: Event, infos: FightCommonInformations):
+    def onFightStarted(self, event: Event, infos: FightCommonInformations):
         for team in infos.fightTeams:
             if team.leaderId == self.leader.id:
                 self.fightId = infos.fightId
                 return self.joinFight()
     
-    def onfight(event_id) -> None:
+    def onfight(self, event) -> None:
         Logger().info("Leader fight joigned successfully")
 
     def onJoinFightTimeout(self, listener: Listener) -> None:

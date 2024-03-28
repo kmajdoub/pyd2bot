@@ -1,4 +1,5 @@
 import json
+import threading
 from typing import TYPE_CHECKING
 
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
@@ -33,7 +34,10 @@ class WaitForMembersIdle(AbstractBehavior):
     def run(self, members: list[Character]) -> bool:
         self.members = members
         Logger().debug("Waiting for party members Idle.")
-        self.fetchStatuses()
+        thread_name = threading.current_thread().name
+        self.status_thread = threading.Thread(target=self.fetchStatuses, name=thread_name)
+        self.status_thread.daemon = True
+        self.status_thread.start()
         
     def fetchStatuses(self):
         if not self.isRunning():
@@ -43,9 +47,11 @@ class WaitForMembersIdle(AbstractBehavior):
             Logger().info(json.dumps(self.memberStatus, indent=2))
             if any(status != "idle" for status in self.memberStatus.values()):
                 if any(status == "disconnected" for status in self.memberStatus.values()):
-                    if Kernel().worker.terminated.wait(20): return
+                    if Kernel().worker.terminated.wait(20): 
+                        return
                 else:
-                    if Kernel().worker.terminated.wait(2): return
+                    if Kernel().worker.terminated.wait(2): 
+                        return
             else:
                 Logger().info(f"All members are idle.")
                 return self.finish(True, None)

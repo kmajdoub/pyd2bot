@@ -263,7 +263,7 @@ class BotManagerApp:
                         playermanager = PlayedCharacterManager.getInstance(bot_oper["name"])
                         invManager = InventoryManager.getInstance(bot_oper["name"])
                         if invManager and invManager.inventory:
-                            bot_oper["kamas"] = invManager.inventory.kamas // 1000
+                            bot_oper["kamas"] = invManager.inventory.kamas
                         if playermanager and playermanager.infos:
                             bot_oper["level"] = playermanager.infos.level
                         if playermanager and playermanager.inventoryWeightMax:

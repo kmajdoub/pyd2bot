@@ -36,9 +36,13 @@ class AutoTrip(AbstractBehavior):
         self.dstRpZone = None
         self._nbr_follow_edge_fails = 0
 
-    def run(self, dstMapId, dstZoneId, path: list[Edge] = None):
+    def run(self, dstMapId, dstZoneId=None, path: list[Edge] = None):
         self.dstMapId = dstMapId
         self.dstRpZone = dstZoneId
+        if self.dstRpZone is not None:
+            self.destVertex = WorldGraph().getVertex(self.dstMapId, self.dstRpZone)
+            if self.destVertex is None:
+                Logger().warning(f"Destination vertex not found for map {self.dstMapId} and zone {self.dstRpZone}")
         self.path = path
         AStar().resetForbinedEdges()
         self.walkToNextStep()
@@ -87,8 +91,10 @@ class AutoTrip(AbstractBehavior):
         if self.path:
             self.state = AutoTripState.FOLLOWING_EDGE
             currMapId = PlayedCharacterManager().currentMap.mapId
+            currZoneId = PlayedCharacterManager().currentZoneRp
             dstMapId = self.path[-1].dst.mapId
-            if currMapId == dstMapId:
+            dstZoneId = self.path[-1].dst.zoneId
+            if (not self.dstRpZone and currMapId == dstMapId) or (self.dstRpZone and currMapId == dstMapId and currZoneId == dstZoneId):
                 Logger().info(f"Trip reached destination Map : {dstMapId}")
                 return self.finish(True, None)
             currentIndex = self.currentEdgeIndex()
@@ -105,9 +111,9 @@ class AutoTrip(AbstractBehavior):
             self.state = AutoTripState.CALCULATING_PATH
             self.findPath(self.dstMapId, self.dstRpZone, self.onPathFindResul)
 
-    def onPathFindResul(self, path, error):
+    def onPathFindResul(self, code, error, path):
         if error:
-            return self.finish(path, error)
+            return self.finish(code, error)
         if len(path) == 0:
             Logger().debug(f"Empty path found")
             return self.finish(True, None)
@@ -118,25 +124,25 @@ class AutoTrip(AbstractBehavior):
         self.path = path
         self.walkToNextStep()
 
-    def findPath(self, dst: float, linkedZone: int, callback) -> None:
-        if linkedZone is None:
-            linkedZone = 1
+    def findPath(self, dstMapId, linkedZone, callback) -> None:
         src = PlayedCharacterManager().currVertex
         if src is None:
-            return self.onceMapProcessed(self.findPath, [dst, linkedZone, callback])
-        Logger().info(f"[WoldPathFinder] Start searching path from {src} to destMapId {dst}")
-        if PlayedCharacterManager().currentMap.mapId == dst:
-            return callback([], None)
-        while True:
-            dstV = WorldGraph().getVertex(dst, linkedZone)
-            if dstV is None:
-                return callback(self.NO_PATH_FOUND, "Unable to find path to dest map")
+            return self.onceMapProcessed(self.findPath, [dstMapId, linkedZone, callback])
+        Logger().info(f"Start searching path from {src} to destMapId {dstMapId}, linkedZone {linkedZone}")
+        if linkedZone is None and PlayedCharacterManager().currentMap.mapId == dstMapId:
+            return callback(0, None, [])
+        if linkedZone is None:
+            verticies = WorldGraph().getVertices(dstMapId).values()
+        else:
+            verticies = [WorldGraph().getVertex(dstMapId, linkedZone)]
+        for dest_vertex in verticies:
             start = perf_counter()
-            path = AStar().search(WorldGraph(), src, dstV)
-            if path:
-                Logger().info(f"[WoldPathFinder] Path to map {str(dst)} found in {perf_counter() - start}s")
-                return callback(path, None)
-            linkedZone += 1
+            path = AStar().search(WorldGraph(), src, dest_vertex)
+            if path is not None:
+                Logger().info(f"Path to map {str(dstMapId)} found in {perf_counter() - start}s")
+                callback(0, None, path)
+                return
+        callback(self.NO_PATH_FOUND, f"Unable to find path to dest map", None)
 
     def getState(self):
         return self.state.name

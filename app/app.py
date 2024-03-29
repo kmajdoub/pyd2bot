@@ -194,7 +194,7 @@ class BotManagerApp:
             path_id = data.get("pathId")
             paths_ids = data.get("pathsIds")
             job_filters = data.get("jobFilters")
-            minute_per_path = data.get("minute_per_path")
+            number_of_covers = data.get("number_of_covers")
             session = self.get_basic_session(account_id, character_id, session_type)
             # check if bot already running on this accounId
             if session.character.login in self._running_bots:
@@ -208,7 +208,7 @@ class BotManagerApp:
                 for path_id in paths_ids:
                     if path_id not in paths:
                         return jsonify({"error": f"Path {path_id} not found"}), 400
-                session.minute_per_path = minute_per_path
+                session.number_of_covers = number_of_covers
                 session.pathsList = [paths[path_id] for path_id in paths_ids]
             else:
                 return jsonify({"error": f"Invalid session type: {session_type}"}), 400

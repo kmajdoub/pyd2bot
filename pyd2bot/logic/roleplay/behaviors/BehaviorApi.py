@@ -23,6 +23,8 @@ __dir__ = os.path.dirname(os.path.abspath(__file__))
 SPECIAL_DESTINATIONS_PATH = os.path.join(__dir__, "special_destinations.json")
 with open(SPECIAL_DESTINATIONS_PATH, "r") as f:
     SPECIAL_DESTINATIONS = json.load(f)
+# Sort the dictionary items by 'pereference' in descending order
+SPECIAL_DESTINATIONS = sorted(SPECIAL_DESTINATIONS.items(), key=lambda x: x[1]['pereference'], reverse=True)
 
 
 class BehaviorApi:
@@ -36,14 +38,13 @@ class BehaviorApi:
     def __init__(self) -> None:
         pass
 
-    def getSpecialDestination(self, srcAreaId, dstAreaId, key=None):
-        if key:
-            info = SPECIAL_DESTINATIONS.get(key)
-            info["replies"] = {int(k): v for k, v in info["replies"].items()}
-            return info
-        for key, info in SPECIAL_DESTINATIONS.items():
-            if dstAreaId == info["dstAreaId"] and (info["srcAreaId"] == "*" or srcAreaId in info["srcAreaId"]):
+    def getSpecialDestination(self, srcAreaId, dstAreaId):
+        for _, info in SPECIAL_DESTINATIONS:
+            if info["exclude_self"] and srcAreaId == dstAreaId:
+                continue
+            if (info["dstAreaId"] == "*" or dstAreaId in info["dstAreaId"]) and (info["srcAreaId"] == "*" or srcAreaId in info["srcAreaId"]):
                 info["replies"] = {int(k): v for k, v in info["replies"].items()}
+                Logger().info(f"Special destination matched for srcAreaId={srcAreaId}, dstAreaId={dstAreaId} : {info}")
                 return info
         return None
 
@@ -56,7 +57,7 @@ class BehaviorApi:
                 return
             
         if not maxCost:
-            maxCost = InventoryManager().inventory.kamas
+            maxCost = InventoryManager().inventory.kamas * 0.3
             Logger().debug(f"Player max teleport cost is {maxCost}")
 
         dstsubArea = SubArea.getSubAreaByMapId(dstMapId)
@@ -122,12 +123,12 @@ class BehaviorApi:
             parent=self,
         )
 
-    def autoTrip(self, dstMapId, dstZoneId, path: list["Edge"] = None, check_special_dest=True, callback=None):
+    def autoTrip(self, dstMapId, dstZoneId=None, path: list["Edge"] = None, check_special_dest=True, callback=None):
         from pyd2bot.logic.roleplay.behaviors.movement.AutoTrip import AutoTrip
         from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
-        Logger().info(f"Basic auto trip to map {dstMapId} called.")
+        Logger().info(f"Basic auto trip to map {dstMapId}, rpzone {dstZoneId} called.")
         if Kernel().fightContextFrame:
-            Logger().error(f"Player is in Fight ==> Can't auto trip.")
+            Logger().error(f"Player is in Fight => Can't auto trip.")
             return callback(self.PLAYER_IN_FIGHT_ERROR, "Player is in Fight")
 
         if check_special_dest:
@@ -314,9 +315,9 @@ class BehaviorApi:
             NpcDialog().start(npcMapId, npcId, npcOpenDialogId, npcQuestionsReplies, callback=callback, parent=self)
 
         if useZaap:
-            self.autotripUseZaap(npcMapId, dstZoneId=1, callback=onNPCMapReached)
+            self.autotripUseZaap(npcMapId, callback=onNPCMapReached)
         else:
-            self.autoTrip(npcMapId, 1, check_special_dest=check_special_dest, callback=onNPCMapReached)
+            self.autoTrip(npcMapId, check_special_dest=check_special_dest, callback=onNPCMapReached)
 
     def getOutOfAnkarnam(self, callback=None):
         from pyd2bot.logic.roleplay.behaviors.movement.GetOutOfAnkarnam import \

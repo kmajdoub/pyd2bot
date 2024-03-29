@@ -167,7 +167,7 @@ class Session:
     cert: Optional[Certificate] = None
     pathsList: Optional[List[Path]] = None
     fights_per_minute: Optional[float] = None
-    minute_per_path: Optional[int] = None
+    number_of_covers: Optional[int] = None
 
 @dataclass_json
 @dataclass

@@ -1,7 +1,9 @@
 {
     "old_valonia_from_amanka": {
         "srcAreaId": [0, 5, 6, 18, 7, 8, 11, 15, 28],
-        "dstAreaId": 1023,
+        "dstAreaId": [1023],
+        "pereference": 100,
+        "exclude_self": true,
         "npcMapId": 88213267.0,
         "npcId": -20001,
         "openDialiogActionId": 3,
@@ -16,8 +18,10 @@
         }
     },
     "new_valonia_from_madrestam": {
-        "srcAreaId": [0, 5, 6, 18, 7, 8, 11, 15, 28],
-        "dstAreaId": 93,
+        "srcAreaId": [0, 5, 6, 18, 7, 8, 11, 15, 28, 45],
+        "dstAreaId": [93],
+        "pereference": 100,
+        "exclude_self": true,
         "npcMapId": 68421124.0,
         "npcId": -20004,
         "openDialiogActionId": 3,
@@ -30,7 +34,9 @@
     },
     "madrestam_from_new_valonia": {
         "srcAreaId": [93],
-        "dstAreaId": 0,
+        "dstAreaId": [0, 5, 6, 18, 7, 8, 11, 15, 28, 45],
+        "pereference": 100,
+        "exclude_self": true,
         "npcMapId": 223347712.0,
         "npcId": -20000,
         "openDialiogActionId": 3,
@@ -43,7 +49,9 @@
     },
     "astrub_from_ankarnam": {
         "srcAreaId": [45],
-        "dstAreaId": 95,
+        "dstAreaId": "*",
+        "exclude_self": true,
+        "pereference": 1000,
         "npcMapId": 153880835.0,
         "npcId": -20001,
         "openDialiogActionId": 3,

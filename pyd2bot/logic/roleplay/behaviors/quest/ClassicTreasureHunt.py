@@ -58,6 +58,7 @@ class ClassicTreasureHunt(AbstractBehavior):
     UNABLE_TO_FIND_HINT = 475556
     UNSUPPORTED_THUNT_TYPE = 475557
     TAKE_QUEST_MAPID = 128452097
+    TAKE_QUEST_ZONEID = 1
     TREASURE_HUNT_ATM_IEID = 484993
     TREASURE_HUNT_ATM_SKILLUID = 152643320
     RAPPEL_POTION_GUID = 548
@@ -65,6 +66,7 @@ class ClassicTreasureHunt(AbstractBehavior):
     ZAAP_HUNT_MAP = 142087694
     REST_TIME_BETWEEN_HUNTS = 20
     STEP_DIDNT_CHANGE = 47555822
+    Rose_of_the_Sands_GUID = 15263
 
     with open(HINTS_FILE, "r") as fp:
         hint_db = json.load(fp)
@@ -82,11 +84,20 @@ class ClassicTreasureHunt(AbstractBehavior):
         super().__init__()
         self.infos: TreasureHuntWrapper = None
         self.currentStep: TreasureHuntStepWrapper = None
-        self.maxCost = 800
+        self.defaultMaxCost = None
         self.guessMode = False
         self.guessedAnswers = []
         self._chests_to_open = []
         self._deactivate_riding = False
+        self._hunts_done = 0
+        self._gained_kamas = 0
+
+    @property
+    def maxCost(self):
+        if not self._hunts_done:
+            return self.defaultMaxCost
+        average_gain = 0.6 * self._gained_kamas // self._hunts_done
+        return min(average_gain, self.defaultMaxCost)
 
     def submitet_flag_maps(self):
         return [
@@ -109,11 +120,17 @@ class ClassicTreasureHunt(AbstractBehavior):
         self.on(KernelEvent.ObjectAdded, self.onObjectAdded)
         self.on(KernelEvent.TreasureHuntFlagRequestAnswer, self.onFlagRequestAnswer)
         self.on(KernelEvent.TreasureHuntDigAnswer, self.onDigAnswer)
+        self.on(KernelEvent.ServerTextInfo, self.onTextInformation)
+        self.defaultMaxCost = min(PlayedCharacterApi.inventoryKamas(), 800)
         self.infos = Kernel().questFrame.getTreasureHunt(TreasureHuntTypeEnum.TREASURE_HUNT_CLASSIC)
         if self.infos is not None:
             return self.solveNextStep()
         self.goToHuntAtm()
 
+    def onTextInformation(self, event, msgId, msgType, textId, msgContent, params):
+        if textId == 325840:
+            self._gained_kamas += int(params[0])
+            
     def onDigAnswer(self, event, wrongFlagCount, result, treasureHuntDigAnswerText):
         if result == TreasureHuntDigRequestEnum.TREASURE_HUNT_DIG_WRONG_AND_YOU_KNOW_IT:
             return self.finish(result, f"Treasure hunt dig failed for reason : {treasureHuntDigAnswerText}")
@@ -147,7 +164,7 @@ class ClassicTreasureHunt(AbstractBehavior):
                 self.TAKE_QUEST_MAPID, withSaveZaap=True, maxCost=self.maxCost, callback=self.onTakeQuestMapReached
             )
         else:
-            self.autoTrip(self.TAKE_QUEST_MAPID, 1, callback=self.onTakeQuestMapReached)
+            self.autoTrip(self.TAKE_QUEST_MAPID, self.TAKE_QUEST_ZONEID, callback=self.onTakeQuestMapReached)
 
     def goToHuntAtm(self):
         Logger().debug(f"AutoTravelling to treasure hunt ATM")
@@ -173,11 +190,18 @@ class ClassicTreasureHunt(AbstractBehavior):
 
     def onObjectAdded(self, event, iw: ItemWrapper):
         Logger().info(f"{iw.name}, gid {iw.objectGID}, uid {iw.objectUID}, {iw.description} added to inventory")
+        if iw.objectGID == self.Rose_of_the_Sands_GUID:
+            averageKamasWon = (
+                Kernel().averagePricesFrame.getItemAveragePrice(iw.objectGID) * iw.quantity
+            )
+            Logger().debug(f"Average kamas won: {averageKamasWon}")
+            self._gained_kamas += averageKamasWon
         if iw.objectGID in self.CHESTS_GUID:
             self._chests_to_open.append(iw)
 
     def onHuntFinished(self, event, questType):
         Logger().debug(f"Treasure hunt finished")
+        self._hunts_done += 1
         if not Kernel().roleplayContextFrame:
             Logger().debug(f"Waiting for roleplay to start")
             return self.onceMapProcessed(lambda: self.onHuntFinished(event, questType))

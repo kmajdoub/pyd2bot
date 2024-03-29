@@ -21,13 +21,13 @@ class CustomRandomFarmPath(AbstractFarmPath):
         super().__init__()
         self.name = name
         self._mapIds = mapIds
+        self.startVertex = WorldGraph().getVertex(self._mapIds[0], 1)
 
     @property
     def mapIds(self) -> list[int]:
         return self._mapIds
     
     def init(self):
-        self.startVertex = WorldGraph().getVertex(self.mapIds[0], 1)
         Logger().info(f"CustomRandomFarmPath {self.name} initialized with {len(self.verticies)} verticies")
 
     def __next__(self, forbidenEdges=None) -> Edge:

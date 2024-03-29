@@ -139,7 +139,7 @@ function updateRunningBots() {
                 lastUpdate = data;
                 let botsTable = document.getElementById('runningBotsTable').querySelector('tbody');
                 botsTable.innerHTML = data.map(bot => `
-                    <tr>
+                    <tr class="${bot.status == 'BANNED' ? 'banned' : ''}">
                         <td>${bot.character}</td>
                         <td>${bot.level}</td>
                         <td>${bot.kamas}</td>
@@ -157,6 +157,7 @@ function updateRunningBots() {
                         </td>
                     </tr>
                 `).join('');
+            
             }
         })
         .catch(error => console.error('Error:', error));
@@ -239,13 +240,13 @@ function adjustFormForSessionType(selectedType) {
 function submitFarmForm() {
     const accountId = document.getElementById('farmAccountId').value;
     const characterId = document.getElementById('farmCharacterId').value;
-    const minute_per_path = document.getElementById('minute_per_path').value;
+    const number_of_covers = document.getElementById('number_of_covers').value;
 
     // Initialize your session object
     let sessionData = {
         accountId: accountId,
         characterId: characterId,
-        minute_per_path: minute_per_path,
+        number_of_covers: number_of_covers,
         type: parseInt(document.getElementById('sessionTypeSelect').value),
         jobFilters: getSelectedJobsAndResources()
     };

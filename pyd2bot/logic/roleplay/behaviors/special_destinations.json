@@ -24,6 +24,7 @@
         "exclude_self": true,
         "npcMapId": 68421124.0,
         "npcId": -20004,
+        "kamas_cost": 100,
         "openDialiogActionId": 3,
         "landingMapId": 223347712.0,
         "replies": {
@@ -38,6 +39,7 @@
         "pereference": 100,
         "exclude_self": true,
         "npcMapId": 223347712.0,
+        "kamas_cost": 100,
         "npcId": -20000,
         "openDialiogActionId": 3,
         "landingMapId": 68421124.0,

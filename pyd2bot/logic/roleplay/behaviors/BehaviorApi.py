@@ -153,6 +153,10 @@ class BehaviorApi:
 
         infos = self.getSpecialDestination(srcAreaId, dstAreaId)
         if infos:
+            kamas_cost = infos.get("kamas_cost", 0)
+            if kamas_cost > InventoryManager().inventory.kamas:
+                callback(0, f"Player does not have enough kamas to go to special destination {dstSubArea.name} ({dstMapId})")
+                return True
             self.goToSpecialDestination(
                 infos,
                 useZaap=useZaap,

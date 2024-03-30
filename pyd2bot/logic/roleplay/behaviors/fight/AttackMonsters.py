@@ -49,6 +49,7 @@ class AttackMonsters(AbstractBehavior):
         self.attackMonsterListener: Listener = None
         self.nbrFails = 0
         self._stop_message = None
+        self._wanted_player_stop = False
 
     @property
     def entityInfo(self) -> "GameContextActorInformations":

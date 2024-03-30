@@ -14,6 +14,8 @@ if TYPE_CHECKING:
 class BotConfig(metaclass=Singleton):
     SELLER_VACANT = threading.Event()
     SELLER_LOCK = threading.Lock()
+    TAKE_NAP_AFTTER_HOURS = 2
+    NAP_DURATION_MINUTES = 20
 
     defaultBreedConfig = {
         BreedEnum.Sadida: {

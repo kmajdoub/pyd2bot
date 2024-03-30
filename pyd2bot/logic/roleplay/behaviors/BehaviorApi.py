@@ -39,12 +39,12 @@ class BehaviorApi:
         pass
 
     def getSpecialDestination(self, srcAreaId, dstAreaId):
-        for _, info in SPECIAL_DESTINATIONS:
+        for label, info in SPECIAL_DESTINATIONS:
             if info["exclude_self"] and srcAreaId == dstAreaId:
                 continue
             if (info["dstAreaId"] == "*" or dstAreaId in info["dstAreaId"]) and (info["srcAreaId"] == "*" or srcAreaId in info["srcAreaId"]):
                 info["replies"] = {int(k): v for k, v in info["replies"].items()}
-                Logger().info(f"Special destination matched for srcAreaId={srcAreaId}, dstAreaId={dstAreaId} : {info}")
+                Logger().info(f"Special destination {label} matched for srcAreaId={srcAreaId}, dstAreaId={dstAreaId} :\n{info}")
                 return info
         return None
 

@@ -2,6 +2,7 @@ import os
 from time import perf_counter
 from typing import Any
 
+from pyd2bot.logic.managers.BotConfig import BotConfig
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
 from pyd2bot.logic.roleplay.behaviors.movement.AutoTrip import AutoTrip
 from pyd2bot.logic.roleplay.behaviors.movement.ChangeMap import ChangeMap
@@ -13,9 +14,6 @@ from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import \
     KernelEventsManager
 from pydofus2.com.ankamagames.dofus.internalDatacenter.items.ItemWrapper import \
     ItemWrapper
-from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
-from pydofus2.com.ankamagames.dofus.logic.common.managers.PlayerManager import \
-    PlayerManager
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import \
     PlayedCharacterManager
 from pydofus2.com.ankamagames.dofus.logic.game.roleplay.types.MovementFailError import \
@@ -28,6 +26,7 @@ from pydofus2.com.ankamagames.dofus.network.types.game.context.roleplay.job.JobE
     JobExperience
 from pydofus2.com.ankamagames.dofus.uiApi.PlayedCharacterApi import \
     PlayedCharacterApi
+from pydofus2.com.ankamagames.jerakine.benchmark.BenchmarkTimer import BenchmarkTimer
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 
 CURR_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -61,8 +60,13 @@ class AbstractFarmBehavior(AbstractBehavior):
         self.inFight = False
         self.initialized = False
         self.startTime = perf_counter()
+        self.nap_take_timer = BenchmarkTimer(BotConfig.TAKE_NAP_AFTTER_HOURS * 60 * 60, self.takeNap)
         self.init(*args, **kwargs)
+        self.nap_take_timer.start()
         self.main()
+
+    def takeNap(self):
+        KernelEventsManager().send(KernelEvent.ClientRestart, "Taking a nap for %s minutes" % BotConfig.NAP_DURATION_MINUTES, BotConfig.NAP_DURATION_MINUTES * 60)
 
     def onPartyInvited(self, event, partyId, partyType, fromId, fromName):
         pass

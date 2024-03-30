@@ -159,7 +159,7 @@ class BehaviorApi:
                 return True
             self.goToSpecialDestination(
                 infos,
-                useZaap=useZaap,
+                useZaap=infos.get("use_zaap", useZaap),
                 callback=onSpecialDestReached,
                 dstSubAreaName=dstSubArea.name,
             )

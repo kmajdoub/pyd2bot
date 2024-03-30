@@ -53,6 +53,7 @@
         "srcAreaId": [45],
         "dstAreaId": "*",
         "exclude_self": true,
+        "use_zaap": false,
         "pereference": 1000,
         "npcMapId": 153880835.0,
         "npcId": -20001,

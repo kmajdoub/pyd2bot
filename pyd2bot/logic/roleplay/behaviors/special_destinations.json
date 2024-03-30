@@ -1,30 +1,74 @@
 {
-    "old_valonia" : {
-        "dstAreaId": 1023,
+    "old_valonia_from_amanka": {
+        "srcAreaId": [0, 5, 6, 18, 7, 8, 11, 15, 28],
+        "dstAreaId": [1023],
+        "pereference": 100,
+        "exclude_self": true,
         "npcMapId": 88213267.0,
         "npcId": -20001,
         "openDialiogActionId": 3,
         "landingMapId": 223482635.0,
-        "replies" : {"51804": [69540], "51805": [69541]}
+        "replies": {
+            "51804": [
+                69540
+            ],
+            "51805": [
+                69541
+            ]
+        }
     },
     "new_valonia_from_madrestam": {
-        "dstAreaId": 93,
+        "srcAreaId": [0, 5, 6, 18, 7, 8, 11, 15, 28, 45],
+        "dstAreaId": [93],
+        "pereference": 100,
+        "exclude_self": true,
         "npcMapId": 68421124.0,
         "npcId": -20004,
+        "kamas_cost": 100,
         "openDialiogActionId": 3,
         "landingMapId": 223347712.0,
-        "replies" : {"51204": [68743]}
+        "replies": {
+            "51204": [
+                68743
+            ]
+        }
+    },
+    "madrestam_from_new_valonia": {
+        "srcAreaId": [93],
+        "dstAreaId": [0, 5, 6, 18, 7, 8, 11, 15, 28, 45],
+        "pereference": 100,
+        "exclude_self": true,
+        "npcMapId": 223347712.0,
+        "kamas_cost": 100,
+        "npcId": -20000,
+        "openDialiogActionId": 3,
+        "landingMapId": 68421124.0,
+        "replies": {
+            "51205": [
+                69451
+            ]
+        }
     },
     "astrub_from_ankarnam": {
-        "dstAreaId": 95,
+        "srcAreaId": [45],
+        "dstAreaId": "*",
+        "exclude_self": true,
+        "pereference": 1000,
         "npcMapId": 153880835.0,
         "npcId": -20001,
         "openDialiogActionId": 3,
         "landingMapId": 192416776.0,
-        "replies" : {
-            "30637": [36979, 36982], 
-            "30638": [36977],
-            "30639": [36980]
+        "replies": {
+            "30637": [
+                36979,
+                36982
+            ],
+            "30638": [
+                36977
+            ],
+            "30639": [
+                36980
+            ]
         }
     }
 }

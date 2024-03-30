@@ -171,11 +171,7 @@ class BotFightFrame(Frame):
                 gfotmsg = GameFightOptionToggleMessage()
                 gfotmsg.init(FightOptionsEnum.FIGHT_OPTION_SET_SECRET)
                 ConnectionsHandler().send(gfotmsg)
-                if BotConfig().followers:
-                    gfotmsg = GameFightOptionToggleMessage()
-                    gfotmsg.init(FightOptionsEnum.FIGHT_OPTION_SET_TO_PARTY_ONLY)
-                    ConnectionsHandler().send(gfotmsg)
-                else:
+                if not BotConfig().followers:
                     gfotmsg = GameFightOptionToggleMessage()
                     gfotmsg.init(FightOptionsEnum.FIGHT_OPTION_SET_CLOSED)
                     ConnectionsHandler().send(gfotmsg)
@@ -250,6 +246,31 @@ class BotFightFrame(Frame):
     def connection(self) -> "ConnectionsHandler":
         return ConnectionsHandler.getInstance(self.currentPlayer.login)
 
+    @property
+    def hitpoints(self) -> int:
+        stats = CurrentPlayedFighterManager().getStats()
+        return stats.getHealthPoints()
+
+    @property
+    def actionPoints(self) -> int:
+        stats = CurrentPlayedFighterManager().getStats()
+        return stats.getStatTotalValue(StatIds.ACTION_POINTS)
+
+    @property
+    def movementPoints(self) -> int:
+        stats = CurrentPlayedFighterManager().getStats()
+        return stats.getStatTotalValue(StatIds.MOVEMENT_POINTS)
+
+    @property
+    def fighterInfos(self) -> "GameFightFighterInformations":
+        return Kernel().fightEntitiesFrame.getEntityInfos(self.currentPlayer.id)
+
+    @property
+    def fighterPos(self) -> "MapPoint":
+        if EntitiesManager().getEntity(self.currentPlayer.id) is None:
+            return None
+        return EntitiesManager().getEntity(self.currentPlayer.id).position
+    
     def pulled(self) -> bool:
         self._spellw = None
         if self._reachableCells:
@@ -451,7 +472,7 @@ class BotFightFrame(Frame):
                 continue
             Logger().info(f"MP: {self.movementPoints}, AP: {self.actionPoints}, HP: {self.hitpoints}.")
             Logger().info(
-                f"Current attack spell : {self.spellw.spell.name}, range: {self.getActualSpellRange(self.spellw)}."
+                f"Current attack spell : {self.spellw.spell.name}, range: {self.spellw.maxRange}."
             )
             Logger().info(f"Found targets : {[str(tgt) for tgt in targets]}.")
             target, path = self.findPathToTarget(self.spellw, targets)
@@ -498,9 +519,6 @@ class BotFightFrame(Frame):
             else:
                 self.addTurnAction(self.turnEnd, [])
         self.nextTurnAction("play turn")
-
-    def getActualSpellRange(self, spellw: SpellWrapper) -> int:
-        return spellw.maxRange
 
     def getSpellShape(self, spellw: SpellWrapper) -> int:
         if not self._spellShape:
@@ -577,7 +595,10 @@ class BotFightFrame(Frame):
             return Logger().warning("Fight resumed so wont check if members joined or not.")
         if self.fightReadySent:
             return Logger().warning("Fight ready already sent so we wont check if members joined or not.")
-        PlayedCharacterManager.getInstance(player.login).isFighting = True
+        playerManager = PlayedCharacterManager.getInstance(player.login)
+        if not playerManager:
+            return Logger().warning(f"Player manager not found for {player.name}, probably diconnected")
+        playerManager.isFighting = True
         self.sendFightReady(ConnectionsHandler.getInstance(player.login))
         if self.allMembersJoinedFight():
             Logger().info(f"All party members joined fight.")
@@ -607,6 +628,11 @@ class BotFightFrame(Frame):
 
         elif isinstance(msg, GameFightEndMessage):
             self._inFight = False
+            if BotConfig().followers:
+                for player in BotConfig().followers:
+                    playerManager = PlayedCharacterManager.getInstance(player.login)
+                    if playerManager:
+                        playerManager.isFighting = False
             Kernel().worker.removeFrame(self)
             return True
 
@@ -728,7 +754,7 @@ class BotFightFrame(Frame):
         res = self.playerManager.getSpellById(self.spellId)
         if not res:
             Logger().error(
-                f"Plyaer {self.currentPlayer.name} doesn't have spelllist {self.playerManager.playerSpellList}"
+                f"Player {self.currentPlayer.name} doesn't have spelllist {self.playerManager.playerSpellList}"
             )
             res = SpellWrapper.create(self.spellId)
             spell = Spell.getSpellById(self.spellId)
@@ -746,34 +772,21 @@ class BotFightFrame(Frame):
 
     def onPlayer(self) -> None:
         if not self.currentPlayer:
-            return Logger().error(f"Something weird happend, called onPlayer when currrentPlayer is None")
+            Logger().error(f"Something weird happend, called onPlayer when currrentPlayer is None")
+            return
         if not self.playerManager:
             Logger().warning(f"{self.currentPlayer.name} seems to be disconnected")
-            return BotEventsManager().onceMuleJoinedFightContext(
+            BotEventsManager().onceMuleJoinedFightContext(
                 self.currentPlayer.id, lambda: self.onPlayer(), originator=self
             )
+            return
         Logger().info(f"It's {self.currentPlayer.name}'s turn to play")
         self._forbidenCells.clear()
         self._myTurn = True
         self.preparePlayableCharacter()
         self.checkCanPlay()
         self._turnPlayed += 1
-
-    @property
-    def hitpoints(self) -> int:
-        stats = CurrentPlayedFighterManager().getStats()
-        return stats.getHealthPoints()
-
-    @property
-    def actionPoints(self) -> int:
-        stats = CurrentPlayedFighterManager().getStats()
-        return stats.getStatTotalValue(StatIds.ACTION_POINTS)
-
-    @property
-    def movementPoints(self) -> int:
-        stats = CurrentPlayedFighterManager().getStats()
-        return stats.getStatTotalValue(StatIds.MOVEMENT_POINTS)
-
+    
     def checkCanPlay(self):
         if not Kernel().turnFrame or not Kernel().turnFrame.myTurn or not self.currentPlayer or not self.playerManager:
             return
@@ -801,16 +814,6 @@ class BotFightFrame(Frame):
             else:
                 Logger().warning("Dropped turn end message coz player seems to be out of server game")
 
-    @property
-    def fighterInfos(self) -> "GameFightFighterInformations":
-        return Kernel().fightEntitiesFrame.getEntityInfos(self.currentPlayer.id)
-
-    @property
-    def fighterPos(self) -> "MapPoint":
-        if EntitiesManager().getEntity(self.currentPlayer.id) is None:
-            return None
-        return EntitiesManager().getEntity(self.currentPlayer.id).position
-
     def castSpell(self, spellId: int, cellId: bool) -> None:
         Logger().info(f"Casting spell {spellId} on cell {cellId}")
         if not self.fighterPos:
@@ -829,7 +832,7 @@ class BotFightFrame(Frame):
                     Logger().warn(f"Can't cast spell {spellId} on cell {cellId} because of LOS")
                     self._turnAction.clear()
                     self._forbidenCells.add(cellId)
-                    return self.nextTurnAction("from cast spell")
+                    return self.nextTurnAction("From cast spell no LOS")
                 self._requestingCastSpell = True
                 BotEventsManager().onceFighterCastedSpell(
                     self._currentPlayerId, cellId, self.onSpellCasted, originator=self
@@ -837,8 +840,7 @@ class BotFightFrame(Frame):
                 gafcrmsg = GameActionFightCastRequestMessage()
                 gafcrmsg.init(spellId, cellId)
                 self.connection.send(gafcrmsg)
-                if random.random() < 0.9:
-                    # with probability 0.9 we simulate speel cast with shortcut
+                if random.random() < 0.98:
                     HaapiEventsManager().registerShortcutUse('useSpellLine1')
             else:
                 Logger().warning(f"Cant cast spell for reason : {reason}")
@@ -848,6 +850,8 @@ class BotFightFrame(Frame):
             Logger().info(f"Spell casted.")
             self._requestingCastSpell = False
             self.checkCanPlay()
+        else:
+            Logger().error(f"Spell casted but player didnt request a cast spell")
 
     def askMove(self, cells: list[int] = []) -> bool:
         self._isRequestingMovement = True
@@ -873,11 +877,11 @@ class BotFightFrame(Frame):
                     else:
                         unreachableCell = cells[stoppedOnCellIdx + 1]
                         Logger().warning(f"Cell {unreachableCell} is maybe unreachable")
-                        entities = Kernel().fightEntitiesFrame.hasEntity(unreachableCell)
-                        if entities:
-                            Logger().warning(f"Entites {[e.id for e in entities]} are on cell {unreachableCell}")
+                        entities_on_cell = Kernel().fightEntitiesFrame.hasEntity(unreachableCell)
+                        if entities_on_cell:
+                            Logger().warning(f"Entites {[e.id for e in entities_on_cell]} are on cell {unreachableCell}")
                             self._forbidenCells.add(unreachableCell)
-                        if unreachableCell in DataMapProvider().obstaclesCells:
+                        elif unreachableCell in DataMapProvider().obstaclesCells:
                             Logger().warning(f"Cell {unreachableCell} is an obstacle")
                             self._forbidenCells.add(unreachableCell)
                         self._turnAction.clear()
@@ -904,9 +908,9 @@ class BotFightFrame(Frame):
             if spellCastManager:
                 spellCastManager.nextTurn()
         self.currentPlayer = None
-        turnEnd = GameFightTurnReadyMessage()
-        turnEnd.init(True)
-        ConnectionsHandler().send(turnEnd)
+        turnReadyMsg = GameFightTurnReadyMessage()
+        turnReadyMsg.init(True)
+        ConnectionsHandler().send(turnReadyMsg)
 
     def preparePlayableCharacter(self) -> None:
         self._spellCastFails = False

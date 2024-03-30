@@ -8,11 +8,12 @@ from pyd2bot.logic.common.frames.BotWorkflowFrame import BotWorkflowFrame
 from pyd2bot.logic.common.rpcMessages.PlayerConnectedMessage import \
     PlayerConnectedMessage
 from pyd2bot.logic.fight.frames.BotFightFrame import BotFightFrame
+from pyd2bot.logic.fight.frames.BotMuleFightFrame import BotMuleFightFrame
 from pyd2bot.logic.managers.BotConfig import BotConfig
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
 from pyd2bot.logic.roleplay.behaviors.farm.MultiplePathsResourceFarm import MultiplePathsResourceFarm
 from pyd2bot.logic.roleplay.behaviors.farm.ResourceFarm import ResourceFarm
-from pyd2bot.logic.roleplay.behaviors.fight.FarmFights import FarmFights
+from pyd2bot.logic.roleplay.behaviors.fight.GroupLeaderFarmFights import GroupLeaderFarmFights
 from pyd2bot.logic.roleplay.behaviors.fight.MuleFighter import MuleFighter
 from pyd2bot.logic.roleplay.behaviors.fight.SoloFarmFights import \
     SoloFarmFights
@@ -90,7 +91,10 @@ class Pyd2Bot(DofusClient):
         self._totalKamas = totalKamas
         
     def onFight(self, event):
-        Kernel().worker.addFrame(BotFightFrame())
+        if not self._mule:
+            Kernel().worker.addFrame(BotFightFrame())
+        else:
+            Kernel().worker.addFrame(BotMuleFightFrame())
         self._nbrFightsDone += 1
     
     def onLvlUpdate(self, event, previousLevel, newLevel):
@@ -104,7 +108,7 @@ class Pyd2Bot(DofusClient):
             self.shutdown(DisconnectionReasonEnum.WANTED_SHUTDOWN, "main behavior ended successfully")
     
     def startSessionMainBehavior(self):
-        Logger().info(f"Starting main behavior for {self.name}")
+        Logger().info(f"Starting main behavior for {self.name}, sessionType : {self._session.type.name}")
     
         if BotConfig().isFarmSession:
             Logger().info(f"Starting farm behavior for {self.name}")
@@ -114,11 +118,13 @@ class Pyd2Bot(DofusClient):
             Logger().info(f"Starting fight behavior for {self.name}")
             if BotConfig().isLeader:
                 if BotConfig().followers:
-                    FarmFights().start(callback=self.onMainBehaviorFinish)
+                    GroupLeaderFarmFights(BotConfig().followers).start(callback=self.onMainBehaviorFinish)
                 else:
                     SoloFarmFights().start(callback=self.onMainBehaviorFinish)
-            else:
-                MuleFighter().start(callback=self.onMainBehaviorFinish)
+
+        elif BotConfig().isMuleFighter:
+            Logger().info(f"Starting mule fighter behavior for {self.name}")
+            MuleFighter(BotConfig().leader).start(callback=self.onMainBehaviorFinish)
                 
         elif BotConfig().isTreasureHuntSession:
             Logger().info(f"Starting treasure hunt behavior for {self.name}")
@@ -129,7 +135,8 @@ class Pyd2Bot(DofusClient):
             activity.start(callback=self.switchActivity)
             
         elif BotConfig().isMultiPathsFarmer:
-            MultiplePathsResourceFarm(60 * 10).start(callback=self.onMainBehaviorFinish)
+            Logger().info(f"Starting multi paths farmer behavior for {self.name}")
+            MultiplePathsResourceFarm().start(callback=self.onMainBehaviorFinish)
         
     def switchActivity(self, code, err):
         self.onReconnect(None, f"Fake disconnect and take nap", random.random() * 60 * 3)

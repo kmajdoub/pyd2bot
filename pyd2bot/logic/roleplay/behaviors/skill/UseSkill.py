@@ -17,6 +17,7 @@ from pydofus2.com.ankamagames.dofus.network.messages.game.interactive.Interactiv
     InteractiveUseRequestMessage
 from pydofus2.com.ankamagames.dofus.network.messages.game.interactive.skill.InteractiveUseWithParamRequestMessage import \
     InteractiveUseWithParamRequestMessage
+from pydofus2.com.ankamagames.jerakine.benchmark.BenchmarkTimer import BenchmarkTimer
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 
 
@@ -163,7 +164,7 @@ class UseSkill(AbstractBehavior):
             self._cells_blacklist.append(self._move_to_skillcell_landingcell.cellId)
             self._reach_skillcell_fails += 1
             Logger().warning(f"Player movement to useskill cell didn't actually get executed by server")
-            if self._reach_skillcell_fails > 5:
+            if self._reach_skillcell_fails > 3:
                 return self.finish(self.USE_ERROR, f"Use Error for element {elementId} - Server refuses to move player to skill cell")
             Logger().debug(f"retrying for {self._reach_skillcell_fails} time")
             return self.mapMove(destCell=self._curr_skill_mp.cellId, exactDistination=False, callback=self.onUseSkillCellReached, cellsblacklist=self._cells_blacklist)
@@ -172,7 +173,6 @@ class UseSkill(AbstractBehavior):
     def onUseError(self, event, elementId):
         if not self.running.is_set():
             return
-        
         if MapMove().isRunning():
             MapMove().stop()
         Logger().error(f"Use Error for element {elementId}")
@@ -192,7 +192,7 @@ class UseSkill(AbstractBehavior):
             self.currentRequestedElementId = self.elementId
         self.sendRequestSkill()
         if not self.waitForSkillUsed:
-            self.finish(True, None)
+            BenchmarkTimer(0.75, lambda: self.finish(True, None)).start()
 
     def sendRequestSkill(self, additionalParam=0):
         if additionalParam == 0:

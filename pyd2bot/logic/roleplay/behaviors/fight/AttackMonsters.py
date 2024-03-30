@@ -122,7 +122,7 @@ class AttackMonsters(AbstractBehavior):
             
     def restart(self):
         KernelEventsManager().clearAllByOrigin(self)
-        RequestMapData().start(callback=lambda code, err: self._start(), parent=self)
+        self.requestMapData(callback=lambda code, err: self._start())
 
     def requestAttackMonsters(self) -> None:
         grpamrmsg = GameRolePlayAttackMonsterRequestMessage()

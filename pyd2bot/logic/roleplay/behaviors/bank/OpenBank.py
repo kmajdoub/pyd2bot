@@ -14,6 +14,7 @@ from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 class OpenBank(AbstractBehavior):
     STORAGE_OPEN_TIMEDOUT = 9874521
     WRONG_EXCHANGE_TYPE = 556988
+    NOT_ENOUGH_KAMS = 3258253
     
     def __init__(self):
         super().__init__()
@@ -28,6 +29,7 @@ class OpenBank(AbstractBehavior):
         Logger().debug("Bank infos: %s", self.infos.__dict__)
         self._startMapId = PlayedCharacterManager().currentMap.mapId
         self._startRpZone = PlayedCharacterManager().currentZoneRp
+        self.on(KernelEvent.ServerTextInfo, self.onTextInformation)
         self.npcDialog(
             self.infos.npcMapId, 
             self.infos.npcId, 
@@ -36,6 +38,10 @@ class OpenBank(AbstractBehavior):
             callback=self.onBankManDialogEnded,
         )
 
+    def onTextInformation(self, event, msgId, msgType, textId, msgContent, params):
+        if textId == 325825:
+            self.finish(self.NOT_ENOUGH_KAMS, "Not enough kamas to open bank")
+            
     def onBankManDialogEnded(self, code, error):
         if error:
             return self.finish(code, error)

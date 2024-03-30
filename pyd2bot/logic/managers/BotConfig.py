@@ -35,8 +35,9 @@ class BotConfig(metaclass=Singleton):
     }
 
     def __init__(self) -> None:
+        self.session: Session = None
         self.character: Character = None
-        self.path: "AbstractFarmPath" = None
+        self.curr_path: "AbstractFarmPath" = None
         self.isLeader: bool = None
         self.isSeller = None
         self.isFollower = None
@@ -55,7 +56,7 @@ class BotConfig(metaclass=Singleton):
         self.followersIds = []
         self.fightPartyMembers = list[Character]()
         self.hasSellerLock = False
-        self.pathsList: list[Path] = []
+        self.pathsList: list[AbstractFarmPath] = []
 
     def releaseSellerLock(self):
         if self.hasSellerLock:
@@ -106,6 +107,10 @@ class BotConfig(metaclass=Singleton):
     @property
     def isMultiPathsFarmer(self):
         return self.sessionType == SessionType.MULTIPLE_PATHS_FARM
+    
+    @property
+    def isMuleFighter(self):
+        return self.sessionType == SessionType.MULE_FIGHT
 
     def getPlayerById(self, playerId: int) -> Character:
         if playerId == self.character.id:
@@ -123,6 +128,7 @@ class BotConfig(metaclass=Singleton):
                 return follower
 
     def initFromSession(self, session: Session):
+        self.session = session
         self.id = session.id
         if not session.jobFilters:
             session.jobFilters = []
@@ -142,7 +148,7 @@ class BotConfig(metaclass=Singleton):
         if session.pathsList:
             self.pathsList = [PathFactory.from_dto(path) for path in session.pathsList]
         if session.path:
-            self.path = PathFactory.from_dto(session.path)
+            self.curr_path = PathFactory.from_dto(session.path)
         elif session.type in [SessionType.FARM, SessionType.FIGHT]:
             raise ValueError("Session path is required for farm and fight sessions")
         if self.monsterLvlCoefDiff:

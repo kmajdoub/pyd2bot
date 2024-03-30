@@ -1,14 +1,14 @@
 {
     "Astrub": {
+        "npcMapId": 192415750.0,
         "npcActionId": 3,
         "npcId": -20001,
-        "npcMapId": 192415750.0,
         "openBankReplyId": 64361
     },
     "Bonta": {
+        "npcMapId": 217059328.0,
         "npcActionId": 3,
         "npcId": -20000,
-        "npcMapId": 217059328.0,
         "openBankReplyId": 63535
     },
     "Suffokia": {

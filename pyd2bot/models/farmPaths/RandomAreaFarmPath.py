@@ -69,7 +69,7 @@ class RandomAreaFarmPath(AbstractFarmPath):
             Logger().error(f"No unvisited vertex found")
         return bestSolution
     
-    def getNextVertex(self, forbidenEdges=None, onlyNonRecent=False) -> Vertex:
+    def getNextEdge(self, forbidenEdges=None, onlyNonRecent=False) -> Vertex:
         outgoingEdges = list(self.outgoingEdges(onlyNonRecentVisited=onlyNonRecent))
         if forbidenEdges is None:
             forbidenEdges = []

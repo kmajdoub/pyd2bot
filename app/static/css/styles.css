@@ -364,3 +364,7 @@ pre {
         transform: rotate(360deg);
     }
 }
+
+tr.banned {
+    background-color: #ffdddd; /* Light red for banned rows */
+}

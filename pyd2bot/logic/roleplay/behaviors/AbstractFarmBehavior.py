@@ -138,17 +138,20 @@ class AbstractFarmBehavior(AbstractBehavior):
         if not self.running.is_set():
             return
         try:
-            self._currEdge = self.path.getNextVertex(self.forbidenEdges, onlyNonRecent=True)
+            self._currEdge = self.path.getNextEdge(self.forbidenEdges, onlyNonRecent=True)
         except NoTransitionFound:
             Logger().error(f"No next vertex found in path, player is stuck!")
             if PlayedCharacterManager().currVertex in self.path:
-                return self.finish(self.PLAYER_STUCK, "Player is stuck in farm path without next vertex!")
-            return self.onBotOutOfFarmPath()
+                self.finish(self.PLAYER_STUCK, "Player is stuck in farm path without next vertex!")
+            else:
+                self.onBotOutOfFarmPath()
+            return None
         self.changeMap(
             edge=self._currEdge,
             dstMapId=self._currEdge.dst.mapId,
             callback=self.onNextVertexReached,
         )
+        return self._currEdge
 
     def onBotOutOfFarmPath(self):
         if not PlayedCharacterManager().currVertex:

@@ -1,38 +1,28 @@
 import random
-import time
 
-from pyd2bot.logic.common.frames.BotCharacterUpdatesFrame import \
-    BotCharacterUpdatesFrame
+from pyd2bot.BotSettings import BotSettings
+from pyd2bot.logic.roleplay.behaviors.updates.BotCharacterUpdates import BotCharacterUpdates
 from pyd2bot.logic.common.frames.BotRPCFrame import BotRPCFrame
 from pyd2bot.logic.common.frames.BotWorkflowFrame import BotWorkflowFrame
-from pyd2bot.logic.common.rpcMessages.PlayerConnectedMessage import \
-    PlayerConnectedMessage
+from pyd2bot.logic.common.rpcMessages.PlayerConnectedMessage import PlayerConnectedMessage
 from pyd2bot.logic.fight.frames.BotFightFrame import BotFightFrame
 from pyd2bot.logic.fight.frames.BotMuleFightFrame import BotMuleFightFrame
-from pyd2bot.logic.managers.BotConfig import BotConfig
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
 from pyd2bot.logic.roleplay.behaviors.farm.MultiplePathsResourceFarm import MultiplePathsResourceFarm
 from pyd2bot.logic.roleplay.behaviors.farm.ResourceFarm import ResourceFarm
 from pyd2bot.logic.roleplay.behaviors.fight.GroupLeaderFarmFights import GroupLeaderFarmFights
 from pyd2bot.logic.roleplay.behaviors.fight.MuleFighter import MuleFighter
-from pyd2bot.logic.roleplay.behaviors.fight.SoloFarmFights import \
-    SoloFarmFights
-from pyd2bot.logic.roleplay.behaviors.quest.ClassicTreasureHunt import \
-    ClassicTreasureHunt
-from pyd2bot.models.session.models import Session, SessionStatus, SessionType
-from pydofus2.com.ankamagames.atouin.managers.MapDisplayManager import \
-    MapDisplayManager
-from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
-from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import \
-    KernelEventsManager
+from pyd2bot.logic.roleplay.behaviors.fight.SoloFarmFights import SoloFarmFights
+from pyd2bot.logic.roleplay.behaviors.quest.ClassicTreasureHunt import ClassicTreasureHunt
+from pyd2bot.data.models import Session
+from pyd2bot.data.enums import SessionStatusEnum
+from pydofus2.com.ankamagames.atouin.managers.MapDisplayManager import MapDisplayManager
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
-from pydofus2.com.ankamagames.dofus.kernel.net.ConnectionsHandler import \
-    ConnectionsHandler
-from pydofus2.com.ankamagames.dofus.kernel.net.ConnectionType import \
-    ConnectionType
-from pydofus2.com.ankamagames.dofus.kernel.net.DisconnectionReasonEnum import \
-    DisconnectionReasonEnum
+from pydofus2.com.ankamagames.dofus.kernel.net.ConnectionsHandler import ConnectionsHandler
+from pydofus2.com.ankamagames.dofus.kernel.net.ConnectionType import ConnectionType
+from pydofus2.com.ankamagames.dofus.kernel.net.DisconnectionReasonEnum import DisconnectionReasonEnum
 from pydofus2.com.ankamagames.dofus.network.enums.BreedEnum import BreedEnum
+from pydofus2.com.ankamagames.jerakine.benchmark.BenchmarkTimer import BenchmarkTimer
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 from pydofus2.com.DofusClient import DofusClient
 
@@ -40,137 +30,139 @@ from pydofus2.com.DofusClient import DofusClient
 class Pyd2Bot(DofusClient):
 
     def __init__(self, session: Session):
-        if session.character.breedId not in BotConfig.defaultBreedConfig:
-            supported_breeds = [BreedEnum.get_name(b) for b in BotConfig.defaultBreedConfig.keys()]
-            raise ValueError(f"Breed {session.character.breedName} is not supported, supported breeds are {supported_breeds}")
+        if session.character.breedId not in BotSettings.defaultBreedConfig:
+            supported_breeds = [BreedEnum.get_name(breedId) for breedId in BotSettings.defaultBreedConfig]
+            raise ValueError(
+                f"Breed {session.character.breedName} is not supported, supported breeds are {supported_breeds}"
+            )
         super().__init__(session.character.login)
-        self._apikey = session.apikey
-        self._session = session
-        self._character = session.character
-        self._serverId = session.character.serverId
-        self._characterId = session.character.id
-        self._certId = session.cert.id if session.cert else ''
-        self._certHash = session.cert.hash if session.cert else ''
-        self._earnedKamas = 0
-        self._totalKamas = None
-        self._earnedLevels = 0
-        self._nbrFightsDone = 0
-        self._startTime = None
-        self._mule = (session.type == SessionType.MULE_FIGHT)
-        self._shutDownListeners = []
-
-    def onRestart(self, event, message):
-        self.onReconnect(event, message)
+        self.session = session
+        self._mule = session.isMuleFighter
+        self.setAutoServerSelection(session.character.serverId, session.character.id)
+        self.setCredentials(session.credentials.apikey, session.credentials.certId, session.credentials.certHash)
+        self._botUpdatesListeners = []
 
     def onReconnect(self, event, message, afterTime=0):
-        if BotConfig().hasSellerLock:
-            BotConfig().releaseSellerLock()
         AbstractBehavior.clearAllChilds()
         return super().onReconnect(event, message, afterTime)
-    
+
     def onInGame(self):
         Logger().info(f"Character {self.name} is now in game.")
-        if self._session.type == SessionType.SELL:
-            BotConfig.SELLER_VACANT.set()
+        if self.session.isSeller:
+            BotSettings.SELLER_VACANT.set()
         self.notifyOtherBots()
-        KernelEventsManager().on(KernelEvent.KamasUpdate, self.onKamasUpdate)
-        KernelEventsManager().on(KernelEvent.PlayerLeveledUp, self.onLvlUpdate)
         self.startSessionMainBehavior()
 
     def notifyOtherBots(self):
         for instId, inst in Kernel.getInstances():
             if instId != self.name:
                 inst.worker.process(PlayerConnectedMessage(self.name))
-                
-    def onKamasUpdate(self, event, totalKamas):
-        Logger().debug(f"Player kamas : {totalKamas}")
-        if self._totalKamas is not None:
-            diff = totalKamas - self._totalKamas
-            if diff > 0:
-                self._earnedKamas += diff
-        self._totalKamas = totalKamas
-        
+
     def onFight(self, event):
         if not self._mule:
             Kernel().worker.addFrame(BotFightFrame())
         else:
-            Kernel().worker.addFrame(BotMuleFightFrame())
-        self._nbrFightsDone += 1
-    
-    def onLvlUpdate(self, event, previousLevel, newLevel):
-        self._earnedLevels += (newLevel - previousLevel)
-    
+            Kernel().worker.addFrame(BotMuleFightFrame(self.session.leader))
+
     def onMainBehaviorFinish(self, code, err):
         if err:
             Logger().error(err, exc_info=True)
             self.shutdown(DisconnectionReasonEnum.EXCEPTION_THROWN, err)
         else:
             self.shutdown(DisconnectionReasonEnum.WANTED_SHUTDOWN, "main behavior ended successfully")
-    
-    def startSessionMainBehavior(self):
-        Logger().info(f"Starting main behavior for {self.name}, sessionType : {self._session.type.name}")
-    
-        if BotConfig().isFarmSession:
-            Logger().info(f"Starting farm behavior for {self.name}")
-            ResourceFarm().start()
-            
-        elif BotConfig().isFightSession:
-            Logger().info(f"Starting fight behavior for {self.name}")
-            if BotConfig().isLeader:
-                if BotConfig().followers:
-                    GroupLeaderFarmFights(BotConfig().followers).start(callback=self.onMainBehaviorFinish)
-                else:
-                    SoloFarmFights().start(callback=self.onMainBehaviorFinish)
 
-        elif BotConfig().isMuleFighter:
+    def registerBotUpdatesListener(self, callback):
+        self._botUpdatesListeners.append(callback)
+
+    def startSessionMainBehavior(self):
+        Logger().info(f"Starting main behavior for {self.name}, sessionType : {self.session.type.name}")
+
+        if self.session.isFarmSession:
+            Logger().info(f"Starting farm behavior for {self.name}")
+            ResourceFarm(self.session.getPathFromDto(), self.session.jobFilters).start()
+
+        elif self.session.isMultiPathsFarmer:
+            Logger().info(f"Starting multi paths farmer behavior for {self.name}")
+            MultiplePathsResourceFarm(
+                self.session.getPathsListFromDto(), self.session.jobFilters, self.session.number_of_covers
+            ).start(callback=self.onMainBehaviorFinish)
+
+        elif self.session.isFightSession:
+            Logger().info(f"Starting fight behavior for {self.name}")
+            if self.session.isLeader:
+                GroupLeaderFarmFights(
+                    self.session.getPathFromDto(),
+                    self.session.fightsPerMinute,
+                    self.session.fightPartyMembers,
+                    self.session.monsterLvlCoefDiff,
+                    self.session.followers
+                ).start(callback=self.onMainBehaviorFinish)
+            else:
+                SoloFarmFights(
+                    self.session.getPathFromDto(),
+                    self.session.fightsPerMinute,
+                    self.session.fightPartyMembers,
+                    self.session.monsterLvlCoefDiff
+                ).start(callback=self.onMainBehaviorFinish)
+
+        elif self.session.isMuleFighter:
             Logger().info(f"Starting mule fighter behavior for {self.name}")
-            MuleFighter(BotConfig().leader).start(callback=self.onMainBehaviorFinish)
-                
-        elif BotConfig().isTreasureHuntSession:
+            MuleFighter(self.session.leader).start(callback=self.onMainBehaviorFinish)
+
+        elif self.session.isTreasureHuntSession:
             Logger().info(f"Starting treasure hunt behavior for {self.name}")
             ClassicTreasureHunt().start(callback=self.onMainBehaviorFinish)
-            
-        elif BotConfig().isMixed:
+
+        elif self.session.isMixed:
             activity = random.choice([ResourceFarm(60 * 5), SoloFarmFights(60 * 3)])
             activity.start(callback=self.switchActivity)
-            
-        elif BotConfig().isMultiPathsFarmer:
-            Logger().info(f"Starting multi paths farmer behavior for {self.name}")
-            MultiplePathsResourceFarm().start(callback=self.onMainBehaviorFinish)
-        
+
+        self.nap_take_timer = BenchmarkTimer(
+            BotSettings.TAKE_NAP_AFTTER_HOURS * 60 * 60,
+            lambda: self.onReconnect(
+                None,
+                "Taking a nap for %s minutes" % BotSettings.NAP_DURATION_MINUTES,
+                afterTime=BotSettings.NAP_DURATION_MINUTES * 60,
+            ),
+        )
+        self.nap_take_timer.start()
+
     def switchActivity(self, code, err):
-        self.onReconnect(None, f"Fake disconnect and take nap", random.random() * 60 * 3)
+        self.onReconnect(None, f"Fake disconnect and take nap", afterTime=random.random() * 60 * 3)
 
     def run(self):
-        self._startTime = time.time()
-        BotConfig().initFromSession(self._session)
-        self.registerInitFrame(BotWorkflowFrame)
-        self.registerInitFrame(BotRPCFrame)
-        self.registerGameStartFrame(BotCharacterUpdatesFrame)
+        self.registerInitFrame(BotWorkflowFrame(self.session))
+        self.registerInitFrame(BotRPCFrame())
         return super().run()
 
+    def onCharacterSelectionSuccess(self, event, characterBaseInformations):
+        super().onCharacterSelectionSuccess(event, characterBaseInformations)
+        BotCharacterUpdates(self.session.character.primaryStatId, self._botUpdatesListeners).start()
+        
     def getState(self):
         if self.terminated.is_set():
             if self._banned:
-                return SessionStatus.BANNED
+                return SessionStatusEnum.BANNED
             if self._crashed:
-                return SessionStatus.CRASHED
-            return SessionStatus.TERMINATED
-        if not ConnectionsHandler.getInstance(self.name) or \
-            ConnectionsHandler.getInstance(self.name).connectionType == ConnectionType.DISCONNECTED:
+                return SessionStatusEnum.CRASHED
+            return SessionStatusEnum.TERMINATED
+        if (
+            not ConnectionsHandler.getInstance(self.name)
+            or ConnectionsHandler.getInstance(self.name).connectionType == ConnectionType.DISCONNECTED
+        ):
             if self._banned:
-                return SessionStatus.BANNED
-            return SessionStatus.DISCONNECTED
+                return SessionStatusEnum.BANNED
+            return SessionStatusEnum.DISCONNECTED
         elif ConnectionsHandler.getInstance(self.name).connectionType == ConnectionType.TO_LOGIN_SERVER:
-            return SessionStatus.AUTHENTICATING
+            return SessionStatusEnum.AUTHENTICATING
         if Kernel.getInstance(self.name).fightContextFrame:
-            return SessionStatus.FIGHTING
+            return SessionStatusEnum.FIGHTING
         elif not Kernel.getInstance(self.name).roleplayEntitiesFrame:
-            return SessionStatus.OUT_OF_ROLEPLAY
+            return SessionStatusEnum.OUT_OF_ROLEPLAY
         elif MapDisplayManager.getInstance(self.name).currentDataMap is None:
-            return SessionStatus.LOADING_MAP
+            return SessionStatusEnum.LOADING_MAP
         elif not Kernel.getInstance(self.name).roleplayEntitiesFrame.mcidm_processed:
-            return SessionStatus.PROCESSING_MAP
+            return SessionStatusEnum.PROCESSING_MAP
         if AbstractBehavior.hasRunning(self.name):
-            return SessionStatus.ROLEPLAYING
-        return SessionStatus.IDLE
+            return SessionStatusEnum.ROLEPLAYING
+        return SessionStatusEnum.IDLE

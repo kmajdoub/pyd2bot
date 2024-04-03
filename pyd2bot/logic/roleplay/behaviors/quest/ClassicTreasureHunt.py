@@ -2,6 +2,7 @@ import json
 import os
 import random
 
+from pyd2bot.data.enums import ServerNotificationEnum
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
 from pyd2bot.logic.roleplay.behaviors.movement.AutoTripUseZaap import AutoTripUseZaap
 from pyd2bot.logic.roleplay.behaviors.quest.FindHintNpc import FindHintNpc
@@ -96,8 +97,8 @@ class ClassicTreasureHunt(AbstractBehavior):
     def maxCost(self):
         if not self._hunts_done:
             return self.defaultMaxCost
-        average_gain = 0.6 * self._gained_kamas // self._hunts_done
-        return min(average_gain, self.defaultMaxCost)
+        average_gain = 0.3 * self._gained_kamas // self._hunts_done
+        return average_gain
 
     def submitet_flag_maps(self):
         return [
@@ -115,25 +116,29 @@ class ClassicTreasureHunt(AbstractBehavior):
         return None
 
     def run(self):
-        self.on(KernelEvent.TreasureHuntUpdate, self.onUpdate)
-        self.on(KernelEvent.TreasureHuntFinished, self.onHuntFinished)
-        self.on(KernelEvent.ObjectAdded, self.onObjectAdded)
-        self.on(KernelEvent.TreasureHuntFlagRequestAnswer, self.onFlagRequestAnswer)
-        self.on(KernelEvent.TreasureHuntDigAnswer, self.onDigAnswer)
-        self.on(KernelEvent.ServerTextInfo, self.onTextInformation)
-        self.defaultMaxCost = min(PlayedCharacterApi.inventoryKamas(), 800)
+        self.onMultiple([
+            (KernelEvent.TreasureHuntUpdate, self.onUpdate, {}),
+            (KernelEvent.TreasureHuntFinished, self.onHuntFinished, {}),
+            (KernelEvent.ObjectAdded, self.onObjectAdded, {}),
+            (KernelEvent.TreasureHuntFlagRequestAnswer, self.onFlagRequestAnswer, {}),
+            (KernelEvent.TreasureHuntDigAnswer, self.onDigAnswer, {}),
+            (KernelEvent.ServerTextInfo, self.onTextInformation, {})
+        ])
+    
+        self.defaultMaxCost = min(PlayedCharacterApi.inventoryKamas(), 550)
         self.infos = Kernel().questFrame.getTreasureHunt(TreasureHuntTypeEnum.TREASURE_HUNT_CLASSIC)
         if self.infos is not None:
-            return self.solveNextStep()
-        self.goToHuntAtm()
+            self.solveNextStep()
+        else:
+            self.goToHuntAtm()
 
     def onTextInformation(self, event, msgId, msgType, textId, msgContent, params):
-        if textId == 325840:
+        if textId == ServerNotificationEnum.KAMAS_GAINED:
             self._gained_kamas += int(params[0])
             
     def onDigAnswer(self, event, wrongFlagCount, result, treasureHuntDigAnswerText):
         if result == TreasureHuntDigRequestEnum.TREASURE_HUNT_DIG_WRONG_AND_YOU_KNOW_IT:
-            return self.finish(result, f"Treasure hunt dig failed for reason : {treasureHuntDigAnswerText}")
+            self.finish(result, f"Treasure hunt dig failed for reason : {treasureHuntDigAnswerText}")
 
     def onFlagRequestAnswer(self, event, result, err):
         if result == TreasureHuntFlagRequestEnum.TREASURE_HUNT_FLAG_OK:
@@ -174,12 +179,10 @@ class ClassicTreasureHunt(AbstractBehavior):
             if int(Kernel().zaapFrame.spawnMapId) == int(self.ZAAP_HUNT_MAP):
                 iw = ItemWrapper._cacheGId.get(self.RAPPEL_POTION_GUID)
                 if iw:
-                    return UseTeleportItem().start(iw, callback=self.onTelportToDistributorNearestZaap, parent=self)
+                    return self.useTeleportItem(iw, callback=self.onTelportToDistributorNearestZaap)
                 for iw in InventoryManager().inventory.getView("storageConsumables").content:
-                    if iw.objectGID == self.RAPPEL_POTION_GUID or "rappel" in iw.name.lower():
-                        return UseTeleportItem().start(
-                            iw, callback=self.onTelportToDistributorNearestZaap, parent=self
-                        )
+                    if iw.objectGID == self.RAPPEL_POTION_GUID:
+                        return self.useTeleportItem(iw, callback=self.onTelportToDistributorNearestZaap)
                 else:
                     Logger().debug(f"No rappel potions found in player consumable view")
             else:
@@ -219,7 +222,7 @@ class ClassicTreasureHunt(AbstractBehavior):
                 BenchmarkTimer(3, lambda: self.onHuntFinished(event, questType)).start()
         else:
             wait_time = self.REST_TIME_BETWEEN_HUNTS + abs(random.gauss(0, self.REST_TIME_BETWEEN_HUNTS)) # Add some noise
-            Logger().debug(f"Sleeping for {round(wait_time / 60)} minutes before going to the next hunt, to avoid being kicked.")
+            Logger().debug(f"Sleeping for {round(wait_time / 60)} minutes before going to the next hunt, to avoid getting kicked.")
             BenchmarkTimer(wait_time, lambda: self.goToHuntAtm()).start()
 
     def onTakeQuestMapReached(self, code, err):

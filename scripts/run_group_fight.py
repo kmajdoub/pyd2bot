@@ -3,7 +3,7 @@ import os
 import sys
 
 from PyQt5 import QtGui, QtWidgets
-from pyd2bot.models.session.models import Path, PathType, Session, SessionType, UnloadType
+from pyd2bot.data.models import Path, PathTypeEnum, Session, SessionTypeEnum, UnloadTypeEnum
 from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.TransitionTypeEnum import TransitionTypeEnum
 from system_tray import SystemTrayIcon
 
@@ -34,8 +34,8 @@ if __name__ == "__main__":
     session_dict = {
         "id": farmer_creds["character"].login,
         "character": farmer_creds["character"],
-        "unloadType": UnloadType.BANK.value,
-        "type": SessionType.MULTIPLE_PATHS_FARM.value,
+        "unloadType": UnloadTypeEnum.BANK.value,
+        "type": SessionTypeEnum.MULTIPLE_PATHS_FARM.value,
         "pathsList": [paths["Cania_Plains_Mine"], paths["Astrub_Mine"], paths["Dyna_Mine"], paths["Korussant_Mine"]],
         "apikey": farmer_creds["apikey"],
         "cert": farmer_creds["cert"]
@@ -63,8 +63,8 @@ if __name__ == "__main__":
         session_dict = {
             "id": creds["character"].login,
             "character": creds["character"],
-            "unloadType": UnloadType.BANK.value,
-            "type": SessionType.MULE_FIGHT.value,
+            "unloadType": UnloadTypeEnum.BANK.value,
+            "type": SessionTypeEnum.MULE_FIGHT.value,
             "leader": leader_creds["character"],
             "apikey": creds["apikey"],
             "cert": creds["cert"]
@@ -76,8 +76,8 @@ if __name__ == "__main__":
     session_dict = {
         "id": leader_creds["character"].login,
         "character": leader_creds["character"],
-        "unloadType": UnloadType.BANK.value,
-        "type": SessionType.FIGHT.value,
+        "unloadType": UnloadTypeEnum.BANK.value,
+        "type": SessionTypeEnum.FIGHT.value,
         "followers": followers_chars,
         "path": paths["astrub_village"],
         "apikey": leader_creds["apikey"],

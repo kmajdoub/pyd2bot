@@ -1,23 +1,28 @@
 import math
-from pyd2bot.logic.managers.BotConfig import BotConfig
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
 from pyd2bot.logic.roleplay.behaviors.farm.ResourceFarm import ResourceFarm
-from pyd2bot.models.farmPaths.AbstractFarmPath import AbstractFarmPath
+from pyd2bot.farmPaths.AbstractFarmPath import AbstractFarmPath
+from pyd2bot.data.models import JobFilter
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 
 
 class MultiplePathsResourceFarm(AbstractBehavior):
-
-    def __init__(self) -> None:
-        self.default_ncovers = 3
+    default_ncovers = 3
+    
+    def __init__(self, pathsList: list[AbstractFarmPath], jobFilter: JobFilter, num_of_covers: int=None) -> None:
+        for path in pathsList:
+            if not isinstance(path, AbstractFarmPath):
+                raise ValueError(f"Invalid path type {type(path)}")
+        self.jobFilter = jobFilter
+        self.num_of_covers = num_of_covers
+        self.pathsList = pathsList
         self.forbiden_paths = []
+        if not self.num_of_covers:
+            self.num_of_covers = self.default_ncovers
         super().__init__()
 
     def run(self) -> bool:
-        self.pathsList = BotConfig().pathsList
         self.iterPathsList = iter(self.pathsList)
-        if not BotConfig().session.number_of_covers:
-            BotConfig().session.number_of_covers = self.default_ncovers
         Logger().info(f"Starting multiple paths resource farm with {len(self.pathsList)} paths.")
         self.startNextPath(None, None)
 
@@ -36,8 +41,7 @@ class MultiplePathsResourceFarm(AbstractBehavior):
             non_forbiden_paths = [p for p in self.pathsList if p not in self.forbiden_paths]
             if not non_forbiden_paths:
                 return self.finish(1, "All paths are forbiden")
-            self.iterPathsList = iter([p for p in self.pathsList if p not in self.forbiden_paths])
+            self.iterPathsList = iter(non_forbiden_paths)
             self.currentPath = next(self.iterPathsList)
-        BotConfig().curr_path = self.currentPath
-        timeout = BotConfig().session.number_of_covers * self.coverTimeEstimate(self.currentPath)
-        ResourceFarm(timeout).start(callback=self.startNextPath)
+        timeout = self.num_of_covers * self.coverTimeEstimate(self.currentPath)
+        ResourceFarm(self.currentPath, self.jobFilter, timeout).start(callback=self.startNextPath)

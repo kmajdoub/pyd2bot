@@ -1,7 +1,6 @@
 from enum import Enum
 from typing import TYPE_CHECKING
 
-from pyd2bot.logic.managers.BotConfig import BotConfig
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
 from pyd2bot.logic.roleplay.behaviors.exchange.BotExchange import (
     BotExchange, ExchangeDirectionEnum)
@@ -9,7 +8,7 @@ from pyd2bot.logic.roleplay.behaviors.movement.AutoTrip import AutoTrip
 from pyd2bot.logic.roleplay.behaviors.movement.AutoTripUseZaap import \
     AutoTripUseZaap
 from pyd2bot.misc.Localizer import Localizer
-from pyd2bot.models.session.models import Character
+from pyd2bot.data.models import Character
 from pydofus2.com.ankamagames.atouin.managers.MapDisplayManager import \
     MapDisplayManager
 from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import \
@@ -39,7 +38,8 @@ class GiveItelsStates(Enum):
 class GiveItems(AbstractBehavior):
     SELLER_BUSY = 8803
     
-    def __init__(self):
+    def __init__(self, character: Character):
+        self.character = character
         super().__init__()
 
     def run(self, sellerInfos: Character, return_to_start=True) -> bool:
@@ -93,7 +93,7 @@ class GiveItems(AbstractBehavior):
                 return Logger().warning("Worker finished while fetching player status returning")
             self.lastSellerState = self.getGuestStatus(self.seller.login)
         self.state = GiveItelsStates.WALKING_TO_BANK
-        AutoTripUseZaap().start(self.bankInfos.npcMapId, 1, callback=self.onTripEnded, parent=self)
+        self.autotripUseZaap(self.bankInfos.npcMapId, callback=self.onTripEnded)
 
     def onTripEnded(self, errorId, error):
         if error:
@@ -108,7 +108,7 @@ class GiveItems(AbstractBehavior):
                 if not result:
                     return self.finish(self.SELLER_BUSY, f"Seller refused come to collect ask")
                 self.waitForGuestToComme()
-            self.rpcFrame.askComeToCollect(self.seller.login, self.bankInfos, BotConfig().character, onSellerResponse)
+            self.rpcFrame.askComeToCollect(self.seller.login, self.bankInfos, self.character, onSellerResponse)
 
     def waitForGuestToComme(self):
         if Kernel().roleplayEntitiesFrame:
@@ -132,7 +132,7 @@ class GiveItems(AbstractBehavior):
             return self.finish(True, None)
         else:
             self.state = GiveItelsStates.RETURNING_TO_START_POINT
-            AutoTripUseZaap().start(self._startMapId, self._startRpZone, callback=self.onTripEnded, parent=self)
+            self.autotripUseZaap(self._startMapId, self._startRpZone, callback=self.onTripEnded)
     
     def getState(self):
         state = self.state.name 

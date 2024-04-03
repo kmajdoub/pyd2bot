@@ -63,7 +63,7 @@ pyd2bot/misc/__init__.py
 pyd2bot/misc/areaInfos.json
 pyd2bot/misc/banks.json
 pyd2bot/models/__init__.py
-pyd2bot/models/enums/ServerNotificationTitlesEnum.py
+pyd2bot/models/enums/ServerNotificationEnum.py
 pyd2bot/models/enums/__init__.py
 pyd2bot/models/farmPaths/AbstractFarmPath.py
 pyd2bot/models/farmPaths/CustomRandomFarmPath.py
@@ -74,6 +74,7 @@ pyd2bot/persistence/accounts.json
 scripts/__init__.py
 scripts/fetch_account_data.py
 scripts/run_farmer.py
+scripts/run_group_fight.py
 scripts/run_solofightBot.py
 scripts/run_treasureHuntBot.py
 scripts/system_tray.py

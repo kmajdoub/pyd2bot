@@ -2,8 +2,8 @@ import random
 import time
 from typing import Iterator, Set
 
-from pyd2bot.models.farmPaths.AbstractFarmPath import AbstractFarmPath
-from pyd2bot.models.farmPaths.RandomAreaFarmPath import NoTransitionFound
+from pyd2bot.farmPaths.AbstractFarmPath import AbstractFarmPath
+from pyd2bot.farmPaths.RandomAreaFarmPath import NoTransitionFound
 from pydofus2.com.ankamagames.dofus.datacenter.world.SubArea import SubArea
 from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.astar.AStar import \
     AStar
@@ -23,12 +23,12 @@ class RandomSubAreaFarmPath(AbstractFarmPath):
         self,
         name: str,
         startVertex: Vertex,
-        transitionTypeWhitelist: list = None,
+        allowedTransitions: list = None,
     ) -> None:
         super().__init__()
         self.name = name
         self.startVertex = startVertex
-        self.transitionTypeWhitelist = transitionTypeWhitelist
+        self.allowedTransitions = allowedTransitions
         self._subArea = None
     
     @property
@@ -96,7 +96,7 @@ class RandomSubAreaFarmPath(AbstractFarmPath):
                 "mapId": self.startVertex.mapId,
                 "mapRpZone": self.startVertex.zoneId,
             },
-            "transitionTypeWhitelist": self.transitionTypeWhitelist,
+            "allowedTransitions": self.allowedTransitions,
         }
 
     def hasValidTransition(self, edge: Edge) -> bool:
@@ -104,8 +104,8 @@ class RandomSubAreaFarmPath(AbstractFarmPath):
             GroupItemCriterion
 
         
-        if self.transitionTypeWhitelist:
-            transitions = [tr for tr in edge.transitions if TransitionTypeEnum(tr.type) in self.transitionTypeWhitelist]
+        if self.allowedTransitions:
+            transitions = [tr for tr in edge.transitions if TransitionTypeEnum(tr.type) in self.allowedTransitions]
         else:
             transitions = edge.transitions
         

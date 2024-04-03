@@ -2,27 +2,13 @@ import json
 import os
 
 from pyd2bot.logic.managers.AccountCharactersFetcher import AccountCharactersFetcher
-from pyd2bot.models.session.models import Account, Certificate, Character
-from pydofus2.com.ankamagames.dofus.misc.utils.GameID import GameID
+from pyd2bot.data.models import Account, Certificate
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 from pydofus2.Zaap.ZaapDecoy import ZaapDecoy
-from pyd2bot.BotConstants import BotConstants
 
 __dir__ = os.path.dirname(os.path.abspath(__file__))
-accounts_jsonfile = os.path.join(BotConstants.PERSISTENCE_DIR, "accounts.json")
-
 
 class AccountManager:
-
-    if not os.path.exists(accounts_jsonfile):
-        accounts = {}
-    else:
-        with open(accounts_jsonfile, "r") as fp:
-            try:
-                accounts_dto: dict = json.load(fp)
-            except json.JSONDecodeError:
-                accounts_dto = {}
-            accounts: dict[int, Account] = {int(k): Account.from_dict(v) for k, v in accounts_dto.items()}
     
     _zaap = None
             
@@ -68,8 +54,8 @@ class AccountManager:
         return cls.get_account(accountId).apikey
 
     @classmethod
-    def fetch_account(cls, game, apikey, certid="", certhash="", with_characters_fetch=True) -> Account:
-        Logger().debug(f"Fetching account for game {game}, apikey {apikey}, certid {certid}, certhash {certhash}")
+    def fetch_account(cls, apikey, certid="", certhash="", with_characters_fetch=True) -> Account:
+        Logger().debug(f"Fetching account data")
         if not cls._zaap:
             cls._zaap = ZaapDecoy(apikey)
             r = cls._zaap.mainAccount
@@ -106,14 +92,14 @@ class AccountManager:
         cls.save()
 
     @classmethod
-    def import_launcher_accounts(cls, with_characters_fetch=True) -> dict[int, Account]:
+    def import_launcher_accounts(cls, with_characters_fetch=True):
         apikeys = ZaapDecoy.get_all_stored_apikeys()
         certs = ZaapDecoy.get_all_stored_certificates()
         print(f"Found {len(apikeys)} apikeys and {len(certs)} certificates")
         for apikey_details in apikeys:
             keydata = apikey_details['apikey']
             apikey = keydata['key']
-            certid = ""
+            certid = 0
             certhash = ""
             if 'certificate' in keydata:
                 certid = keydata['certificate']['id']
@@ -123,7 +109,6 @@ class AccountManager:
                         certhash = cert['hash']
                         break
             try:
-                AccountManager.fetch_account(GameID.DOFUS, apikey, certid, certhash, with_characters_fetch)
+                AccountManager.fetch_account(apikey, certid, certhash, with_characters_fetch)
             except Exception as exc:
                 Logger().error(f"Failed to fetch characters from game server:\n{exc}", exc_info=True)
-        return cls.accounts

@@ -9,9 +9,8 @@ from prettytable import PrettyTable
 
 from pyd2bot.logic.fight.messages.MuleSwitchedToCombatContext import \
     MuleSwitchedToCombatContext
-from pyd2bot.logic.managers.BotConfig import BotConfig
 from pyd2bot.misc.BotEventsmanager import BotEventsManager
-from pyd2bot.models.session.models import Character
+from pyd2bot.data.models import Character, Session
 from pydofus2.com.ankamagames.atouin.HaapiEventsManager import \
     HaapiEventsManager
 from pydofus2.com.ankamagames.atouin.managers.EntitiesManager import \
@@ -126,7 +125,8 @@ class BotFightFrame(Frame):
     _number_of_path_calculations = 0
     _total_time_to_find_path = 0
 
-    def __init__(self):
+    def __init__(self, session: Session):
+        self.session = session
         self.init()
         super().__init__()
 
@@ -161,25 +161,24 @@ class BotFightFrame(Frame):
         self._challengeChosen = False
 
     def onFightJoined(self, event, isFightStarted, fightType, isTeamPhase, timeMaxBeforeFightStart):
-        BotConfig().lastFightTime = perf_counter()
         self._fightCount += 1
         self._spellCastFails = 0
         self._inFight = True
         self.fightReadySent = False
-        if not BotConfig().fightOptionsSent:
-            if BotConfig().isLeader:
+        if not self.session.fightOptionsSent:
+            if self.session.isLeader:
                 gfotmsg = GameFightOptionToggleMessage()
                 gfotmsg.init(FightOptionsEnum.FIGHT_OPTION_SET_SECRET)
                 ConnectionsHandler().send(gfotmsg)
-                if not BotConfig().followers:
+                if not self.sessin.followers:
                     gfotmsg = GameFightOptionToggleMessage()
                     gfotmsg.init(FightOptionsEnum.FIGHT_OPTION_SET_CLOSED)
                     ConnectionsHandler().send(gfotmsg)
-            BotConfig().fightOptionsSent = True
+            self.session.fightOptionsSent = True
 
     def onChallengeBonusChosen(self, event, bonusId):
         self._challengeChosen = True
-        if BotConfig().isLeader:
+        if self.session.isLeader:
             Logger().info(f"Challenge bonus {bonusId} chosen.")
             if self.allMembersJoinedFight():
                 self.sendFightReady()
@@ -187,16 +186,16 @@ class BotFightFrame(Frame):
                 Logger().info("Waiting for members to join fight.")
 
     def onFighterShowed(self, event, fighterId):
-        if BotConfig().isLeader:
+        if self.session.isLeader:
             self._turnPlayed = 0
             self._myTurn = False
-            player = BotConfig().getPlayerById(fighterId)
+            player = self.session.getPlayerById(fighterId)
             if player:
-                if player.id != BotConfig().character.id:
+                if player.id != self.session.character.id:
                     self.onMemberJoinedFight(player)
                 else:
                     Logger().info(f"Party Leader {player.name} joined fight.")
-            elif fighterId > 0 and fighterId != BotConfig().character.id:
+            elif fighterId > 0 and fighterId != self.session.character.id:
                 Logger().error(f"Unknown Player {fighterId} joined fight.")
             elif fighterId < 0:
                 Logger().info(f"Monster {fighterId} appeared.")
@@ -225,11 +224,11 @@ class BotFightFrame(Frame):
 
     @property
     def spellId(self) -> int:
-        return BotConfig().getPrimarySpellId(self.currentPlayer.breedId)
+        return self.session.getPrimarySpellId(self.currentPlayer.breedId)
 
     @property
     def secondarySpellId(self) -> int:
-        return BotConfig().getSecondarySpellId(self.currentPlayer.breedId)
+        return self.session.getSecondarySpellId(self.currentPlayer.breedId)
 
     @property
     def playerManager(self) -> "PlayedCharacterManager":
@@ -462,7 +461,7 @@ class BotFightFrame(Frame):
             self.addTurnAction(self.turnEnd, [])
             self.nextTurnAction("Play turn no targets")
             return
-        if BotConfig().isTreasureHuntSession:
+        if self.session.isTreasureHuntSession:
             targetsFiters = [(self.spellw, True, 2672), (self.spellw, True, 91)]
         else:
             targetsFiters = [(self.spellw, False, None), (self.spellw, True, None)]
@@ -514,7 +513,7 @@ class BotFightFrame(Frame):
         else:
             if not self.remainsEnemies():
                 return
-            if BotConfig().isTreasureHuntSession:
+            if self.session.isTreasureHuntSession:
                 raise Exception("No path to target found")
             else:
                 self.addTurnAction(self.turnEnd, [])
@@ -584,7 +583,7 @@ class BotFightFrame(Frame):
         return CurrentPlayedFighterManager().canCastThisSpell(self.spellId, self.spellw.spellLevel, targetId)
 
     def allMembersJoinedFight(self) -> bool:
-        for member in BotConfig().fightPartyMembers:
+        for member in self.session.fightPartyMembers:
             if not Kernel().fightEntitiesFrame.getEntityInfos(member.id):
                 return False
         return True
@@ -607,7 +606,7 @@ class BotFightFrame(Frame):
             self.fightReadySent = True
         else:
             missing = [
-                m.name for m in BotConfig().fightPartyMembers if not Kernel().fightEntitiesFrame.getEntityInfos(m.id)
+                m.name for m in self.session.fightPartyMembers if not Kernel().fightEntitiesFrame.getEntityInfos(m.id)
             ]
             Logger().info(f"Members missing : {missing}")
 
@@ -620,16 +619,16 @@ class BotFightFrame(Frame):
 
     def process(self, msg: Message) -> bool:
         if isinstance(msg, GameFightOptionStateUpdateMessage):
-            if msg.option not in BotConfig().fightOptions:
-                BotConfig().fightOptions.append(msg.option)
+            if msg.option not in self.session.fightOptions:
+                self.session.fightOptions.append(msg.option)
             if Kernel().roleplayEntitiesFrame:
                 return False
             return True
 
         elif isinstance(msg, GameFightEndMessage):
             self._inFight = False
-            if BotConfig().followers:
-                for player in BotConfig().followers:
+            if self.session.followers:
+                for player in self.session.followers:
                     playerManager = PlayedCharacterManager.getInstance(player.login)
                     if playerManager:
                         playerManager.isFighting = False
@@ -697,7 +696,7 @@ class BotFightFrame(Frame):
                     for entityId, infos in Kernel().fightEntitiesFrame.entities.items():
                         if infos and infos.stats.summoner == msg.id:
                             Kernel().battleFrame.removeSavedPosition(entityId)
-            self.currentPlayer = BotConfig().getPlayerById(self._currentPlayerId)
+            self.currentPlayer = self.session.getPlayerById(self._currentPlayerId)
             if self.currentPlayer:
                 self.onPlayer()
             if self._turnStartPlaying:

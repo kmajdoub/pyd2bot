@@ -3,7 +3,7 @@ import threading
 from typing import TYPE_CHECKING
 
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
-from pyd2bot.models.session.models import Character
+from pyd2bot.data.models import Character
 from pydofus2.com.ankamagames.atouin.managers.MapDisplayManager import \
     MapDisplayManager
 from pydofus2.com.ankamagames.berilia.managers.Listener import Listener

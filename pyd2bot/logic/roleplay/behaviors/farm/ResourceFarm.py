@@ -1,11 +1,12 @@
 from prettytable import PrettyTable
 
-from pyd2bot.logic.managers.BotConfig import BotConfig
 from pyd2bot.logic.roleplay.behaviors.AbstractFarmBehavior import \
     AbstractFarmBehavior
 from pyd2bot.logic.roleplay.behaviors.farm.CollectableResource import \
     CollectableResource
 from pyd2bot.logic.roleplay.behaviors.skill.UseSkill import UseSkill
+from pyd2bot.farmPaths.AbstractFarmPath import AbstractFarmPath
+from pyd2bot.data.models import JobFilter
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
 from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import \
     KernelEventsManager
@@ -27,13 +28,13 @@ from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 
 class ResourceFarm(AbstractFarmBehavior):
     
-    def __init__(self, timeout=None):
+    def __init__(self, path: AbstractFarmPath, jobFilter: JobFilter, timeout=None):
         super().__init__(timeout)
+        self.jobFilter = jobFilter
+        self.path = path
         self.deadEnds = set()
 
     def init(self):
-        self.jobFilter = BotConfig().jobFilter
-        self.path = BotConfig().curr_path
         self.path.init()
         self.currentTarget: CollectableResource = None
         KernelEventsManager().on(KernelEvent.PlayerStatusUpdate, self.onPlayerStatusUpdate)

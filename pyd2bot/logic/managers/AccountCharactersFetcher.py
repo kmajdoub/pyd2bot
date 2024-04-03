@@ -1,45 +1,48 @@
-from pyd2bot.models.session.models import Account, Character
 from pydofus2.com.DofusClient import DofusClient
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
 from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import KernelEventsManager
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
-from pydofus2.com.ankamagames.dofus.logic.common.actions.ChangeServerAction import ChangeServerAction
 from pydofus2.com.ankamagames.dofus.logic.common.managers.PlayerManager import PlayerManager
-from pydofus2.com.ankamagames.dofus.logic.connection.actions.ServerSelectionAction import ServerSelectionAction
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 
 
-class AccountCharactersFetcher:
+class AccountCharactersFetcher(DofusClient):
     
-    def __init__(self):
-        self.characters = []
+    def __init__(self, login:str, apikey:str, certId:int=0, certHash:str="", callback=None):        
+        if apikey is None:
+            raise ValueError("Account apikey is required!")
+        if callback is not None and not callable(callback):
+            raise ValueError("Callback must be a callable function")
+        super().__init__(login)
+        self.characters = []        
+        self.callback = callback
         self.changeSevrer = False
         self.currServer = None
         self.serversList = None
+        self.setCredentials(apikey, certId, certHash)
+        self.addShutDownListener(self.afterShutDown)
 
-    def run(self, account: Account) -> list[Character]:
-        self.account = account
-        self.client = DofusClient(account.login)
-        self.client.setApiKey(account.apikey)
-        self.client.setCertificate(account.certid, account.certhash)
-        self.client.addShutDownListener(self.onClientShutdown)
-        self.client.start()
-        self.evtsManager = KernelEventsManager.waitThreadRegister(self.account.login, 60)
-        self.evtsManager.once(KernelEvent.ServersList, self.onServersList)
-        self.playerManager = PlayerManager.waitThreadRegister(self.account.login, 60)
-        self.client.join()
-        return self.characters
-    
-    def onClientShutdown(self, event, message, reason):
-        Logger().info(f"Client {self.account.login} shutdown : {message} - {reason}")
+    def afterShutDown(self, name, shutDownMessage, shutDownReason):
+        if self.callback:
+            if not callable(self.callback):
+                Logger().error("Callback is not callable", exc_info=True)
+                return
+            self.callback(self.characters)
+
+    def initListeners(self):
+        super().initListeners()
+        KernelEventsManager().once(
+            KernelEvent.ServersList,
+            self.onServersList,
+            originator=self,
+        )
     
     def onServersList(self, event, erversList, serversUsedList, serversTypeAvailableSlots):
-        self.kernel = Kernel.waitThreadRegister(self.account.login, 30)
-        selectableServers = [server for server in self.kernel.serverSelectionFrame.usedServers if server.isSelectable]
+        selectableServers = [server for server in Kernel().serverSelectionFrame.usedServers if server.isSelectable]
         self.serversListIter = iter(selectableServers)
         self.processServer()
 
-    def onServerSelectRefused(self, event, serverId, error, serverStatus, error_text, selectableServers):
+    def onServerSelectionRefused(self, event, serverId, error, serverStatus, error_text, selectableServers):
         Logger().error(f"Server {serverId} selection refused for reason : {error_text}")
         self.processServer()
     
@@ -47,31 +50,28 @@ class AccountCharactersFetcher:
         try:
             self.currServer = next(self.serversListIter)
         except StopIteration:
-            self.client.shutdown("Shutdowned by the characters fetcher")
+            self.shutdown("Wanted shutdown after all servers processed.")
             return
         if self.changeSevrer:
-            self.playerManager.charactersList.clear()
-            self.kernel.worker.process(ChangeServerAction.create(self.currServer.id))
+            PlayerManager().charactersList.clear()
+            Kernel().characterFrame.changeToServer(self.currServer.id)
         else:
             self.changeSevrer = False
-            self.kernel.worker.process(ServerSelectionAction.create(self.currServer.id))
-        self.evtsManager.once(KernelEvent.CharactersList, self.onCharactersList)
-        self.evtsManager.once(KernelEvent.SelectedServerRefused, self.onServerSelectRefused)
+            Kernel().serverSelectionFrame.selectServer(self.currServer.id)
+        KernelEventsManager().once(KernelEvent.CharactersList, self.onCharactersList)
         
     def onCharactersList(self, event, charactersList):
-        Logger().info(f"Server : {self.currServer.id}, List characters received")
+        Logger().info(f"Server : {self.currServer.id}, List of characters received")
         self.characters += [
-            Character(
-                name=character.name,
-                id=character.id,
-                level=character.level,
-                breedId=character.breedId,
-                breedName=character.breed.name,
-                serverId=self.playerManager.server.id,
-                serverName=self.playerManager.server.name,
-                login=self.account.login,
-                accountId=self.account.id,
-            )
-            for character in self.playerManager.charactersList
+            {
+                "name": character.name,
+                "id": character.id,
+                "level": character.level,
+                "breedId": character.breedId,
+                "breedName": character.breed.name,
+                "serverId": PlayerManager().server.id,
+                "serverName": PlayerManager().server.name,
+            }
+            for character in PlayerManager().charactersList
         ]
         self.processServer()

@@ -54,27 +54,11 @@ Add the following env variables to your system:
 
 ### 2. Installing Dependencies
 
-- **Activate Virtual Environment**:
-
-   ```bash
-   source .venv/Script/activate
-    ```
-
-- **Install Dependencies**:
-
-  Install pydofus2 in dev mode:
-
-  ```bash
-  cd $PYBOTDEV_HOME/pydofus2
-  pip install -e .
-  ```
-
-  Install pyd2bot in dev mode:
-
-  ```bash
-  cd $PYBOTDEV_HOME/pyd2bot
-  pip install -e .
-  ```
+```bash
+source $PYBOTDEV_HOME/.venv/Script/activate
+pip install -e $PYBOTDEV_HOME/pydofus2
+pip install -e $PYBOTDEV_HOME/pyd2bot
+```
 
 ### 4. Run Unpack Maps to dezip the game maps locally
 

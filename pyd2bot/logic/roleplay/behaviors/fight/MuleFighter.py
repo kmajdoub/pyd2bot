@@ -4,7 +4,7 @@ from time import perf_counter
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
 from pyd2bot.logic.roleplay.behaviors.movement.MapMove import MapMove
 from pyd2bot.misc.BotEventsmanager import BotEventsManager
-from pyd2bot.models.session.models import Character
+from pyd2bot.data.models import Character
 from pydofus2.com.ankamagames.berilia.managers.EventsHandler import (Event,
                                                                      Listener)
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent

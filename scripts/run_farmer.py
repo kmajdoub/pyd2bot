@@ -2,7 +2,7 @@ import os
 import sys
 
 from PyQt5 import QtGui, QtWidgets
-from pyd2bot.models.session.models import JobFilter, Path, PathType, Session, SessionType
+from pyd2bot.data.models import JobFilter, Path, PathTypeEnum, Session, SessionTypeEnum
 from system_tray import SystemTrayIcon
 
 from pyd2bot.logic.managers.AccountManager import AccountManager
@@ -23,16 +23,16 @@ if __name__ == "__main__":
     session = Session(
         id="test_fight_solo",
         character=creds['character'],
-        type=SessionType.MULTIPLE_PATHS_FARM,
+        type=SessionTypeEnum.MULTIPLE_PATHS_FARM,
         pathsList=[
             Path(
                 id="mine_astrub",
-                type=PathType.CustomRandomFarmPath,
+                type=PathTypeEnum.CustomRandomFarmPath,
                 mapIds=[ 193331715, 193200131, 188484108 ]
             ),
             Path(
                 id="mine_astrub2",
-                type=PathType.CustomRandomFarmPath,
+                type=PathTypeEnum.CustomRandomFarmPath,
                 mapIds=[ 193331713, 193200129 ]
             ),
         ],

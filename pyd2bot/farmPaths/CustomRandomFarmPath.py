@@ -1,8 +1,8 @@
 import random
 import time
 from typing import Iterator
-from pyd2bot.models.farmPaths.AbstractFarmPath import AbstractFarmPath
-from pyd2bot.models.farmPaths.RandomAreaFarmPath import NoTransitionFound
+from pyd2bot.farmPaths.AbstractFarmPath import AbstractFarmPath
+from pyd2bot.farmPaths.RandomAreaFarmPath import NoTransitionFound
 from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Edge import \
     Edge
 from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Vertex import \

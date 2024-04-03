@@ -2,7 +2,7 @@ import os
 import sys
 
 from PyQt5 import QtGui, QtWidgets
-from pyd2bot.models.session.models import Path, PathType, Session, SessionType, UnloadType, Vertex
+from pyd2bot.data.models import Path, PathTypeEnum, Session, SessionTypeEnum, UnloadTypeEnum, Vertex
 from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.TransitionTypeEnum import TransitionTypeEnum
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 from system_tray import SystemTrayIcon
@@ -28,13 +28,13 @@ if __name__ == "__main__":
         {
             "id": "test_fight_solo",
             "character": creds["character"],
-            "unloadType": UnloadType.BANK.value,
-            "type": SessionType.FIGHT.value,
+            "unloadType": UnloadTypeEnum.BANK.value,
+            "type": SessionTypeEnum.FIGHT.value,
             "path": {
                 "id": "test_path",
-                "type": PathType.RandomSubAreaFarmPath.value,
+                "type": PathTypeEnum.RandomSubAreaFarmPath.value,
                 "startVertex": {"mapId": village_astrub, "zoneId": 1},
-                "transitionTypeWhitelist": [TransitionTypeEnum.SCROLL.value, TransitionTypeEnum.SCROLL_ACTION.value],
+                "allowedTransitions": [TransitionTypeEnum.SCROLL.value, TransitionTypeEnum.SCROLL_ACTION.value],
             },
             "monsterLvlCoefDiff": 1.5,
             "apikey": creds["apikey"],

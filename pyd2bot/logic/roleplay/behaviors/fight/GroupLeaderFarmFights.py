@@ -1,5 +1,4 @@
 from typing import TYPE_CHECKING
-from pyd2bot.logic.managers.BotConfig import BotConfig
 from pyd2bot.logic.roleplay.behaviors.fight.SoloFarmFights import SoloFarmFights
 from pyd2bot.logic.roleplay.behaviors.party.WaitForMembersToShow import \
     WaitForMembersToShow
@@ -7,7 +6,8 @@ from pyd2bot.logic.roleplay.messages.FollowTransitionMessage import \
     FollowTransitionMessage
 from pyd2bot.logic.roleplay.messages.MoveToVertexMessage import \
     MoveToVertexMessage
-from pyd2bot.models.session.models import Character
+from pyd2bot.farmPaths.AbstractFarmPath import AbstractFarmPath
+from pyd2bot.data.models import Character
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
 from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import \
     KernelEventsManager
@@ -22,8 +22,8 @@ if TYPE_CHECKING:
 
 class GroupLeaderFarmFights(SoloFarmFights):
 
-    def __init__(self, followers: list[Character], timeout=None):
-        super().__init__(timeout)
+    def __init__(self, path: AbstractFarmPath, fightsPerMinute: int, fightPartyMembers: list[Character], monsterLvlCoefDiff=None, followers: list[Character]=None, timeout=None):
+        super().__init__(path, fightsPerMinute, fightPartyMembers, monsterLvlCoefDiff, timeout)
         self.followers = followers
 
     def moveToNextStep(self):

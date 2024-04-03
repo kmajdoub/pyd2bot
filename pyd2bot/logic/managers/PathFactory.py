@@ -1,32 +1,35 @@
-from pyd2bot.models.farmPaths.CustomRandomFarmPath import CustomRandomFarmPath
-from pyd2bot.models.farmPaths.RandomAreaFarmPath import RandomAreaFarmPath
-from pyd2bot.models.farmPaths.RandomSubAreaFarmPath import \
+from pyd2bot.farmPaths.CustomRandomFarmPath import CustomRandomFarmPath
+from pyd2bot.farmPaths.RandomAreaFarmPath import RandomAreaFarmPath
+from pyd2bot.farmPaths.RandomSubAreaFarmPath import \
     RandomSubAreaFarmPath
-from pyd2bot.models.session.models import Path, PathType
 
+from pyd2bot.data.enums import PathTypeEnum
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from pyd2bot.data.models import Path
 
 class PathFactory:
 
     @classmethod
-    def from_dto(cls, obj: Path):
-        if not isinstance(obj, Path):
+    def from_dto(cls, obj: 'Path'):
+        if not isinstance(obj, 'Path'):
             raise ValueError("session.path must be a Path instance, not " + str(type(obj)))
             
-        if obj.type == PathType.RandomSubAreaFarmPath:
+        if obj.type == PathTypeEnum.RandomSubAreaFarmPath:
             return RandomSubAreaFarmPath(
                 name=obj.id,
                 startVertex=obj.startVertex,
-                transitionTypeWhitelist=obj.transitionTypeWhitelist,
+                allowedTransitions=obj.allowedTransitions,
             )
             
-        if obj.type == PathType.RandomAreaFarmPath:
+        if obj.type == PathTypeEnum.RandomAreaFarmPath:
             return RandomAreaFarmPath(
                 name=obj.id,
                 startVertex=obj.startVertex,
                 
             )
             
-        if obj.type == PathType.CustomRandomFarmPath:
+        if obj.type == PathTypeEnum.CustomRandomFarmPath:
             return CustomRandomFarmPath(
                 name=obj.id,
                 mapIds=obj.mapIds,

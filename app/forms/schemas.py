@@ -1,5 +1,5 @@
 from marshmallow import Schema, ValidationError, fields, post_load
-from pyd2bot.models.session.models import JobFilter, SessionType
+from pyd2bot.data.models import JobFilter, SessionTypeEnum
 
 
 class JobFilterSchema(Schema):
@@ -25,7 +25,7 @@ class FarmSessionSchema(Schema):
 
     def load_session_type(self, value):
         try:
-            return SessionType(int(value))
+            return SessionTypeEnum(int(value))
         except ValueError:
             raise ValidationError(f"{value} is not a valid SessionType")
 
@@ -36,12 +36,13 @@ class FightSessionSchema(Schema):
     type = fields.Method("get_session_type", deserialize="load_session_type")
     pathId = fields.Str(allow_none=True)
     monsterLvlCoefDiff = fields.Float(required=True)
+    fightsPerMinute = fields.Integer(required=True)
 
     def get_session_type(self, obj):
         return obj.value
 
     def load_session_type(self, value):
         try:
-            return SessionType(int(value))
+            return SessionTypeEnum(int(value))
         except ValueError:
             raise ValidationError(f"{value} is not a valid SessionType")

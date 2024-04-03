@@ -1,9 +1,10 @@
+from Grinder.models import Session
 from pyd2bot.logic.common.rpcMessages.PlayerConnectedMessage import \
     PlayerConnectedMessage
-from pyd2bot.logic.managers.BotConfig import BotConfig
 from pyd2bot.logic.roleplay.messages.SellerVacantMessage import \
     SellerVacantMessage
 from pyd2bot.misc.BotEventsmanager import BotEventsManager
+from pyd2bot.data.enums import ServerNotificationEnum
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
 from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import \
     KernelEventsManager
@@ -20,8 +21,9 @@ from pydofus2.com.ankamagames.jerakine.types.enums.Priority import Priority
 
 
 class BotWorkflowFrame(Frame):
-    def __init__(self):
+    def __init__(self, session: Session):
         self.currentContext = None
+        self.session = session
         super().__init__()
 
     def pushed(self) -> bool:
@@ -54,8 +56,8 @@ class BotWorkflowFrame(Frame):
             return True
 
     def onServerNotif(self, event, msgId, msgType, textId, text, params):
-        if textId == 5123:
-            if not BotConfig().isSeller:
+        if textId == ServerNotificationEnum.INACTIVITY_WARNING:
+            if not self.session.isSeller:
                 KernelEventsManager().send(KernelEvent.ClientRestart, "Bot stayed inactive for too long, must have a bug")
             else:
                 pingMsg = BasicPingMessage()

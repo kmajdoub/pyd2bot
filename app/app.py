@@ -10,8 +10,7 @@ from marshmallow import ValidationError
 from forms.schemas import FarmSessionSchema, FightSessionSchema
 from pyd2bot.logic.managers.AccountManager import AccountManager
 from pyd2bot.Pyd2Bot import Pyd2Bot
-from pyd2bot.logic.managers.BotConfig import BotConfig
-from pyd2bot.models.session.models import JobFilter, Path, Session, SessionStatus, SessionType, UnloadType
+from pyd2bot.data.models import JobFilter, Path, Session, SessionStatusEnum, SessionTypeEnum, UnloadTypeEnum
 from pydofus2.com.ankamagames.dofus.kernel.net.DisconnectionReasonEnum import DisconnectionReasonEnum
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.InventoryManager import InventoryManager
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import PlayedCharacterManager
@@ -92,7 +91,7 @@ class BotManagerApp:
         self.setup_routes()
 
     @staticmethod
-    def get_basic_session(account_id: int, character_id: float, session_type: SessionType) -> Session:
+    def get_basic_session(account_id: int, character_id: float, session_type: SessionTypeEnum) -> Session:
         accountkey = AccountManager.get_accountkey(account_id)
         character = AccountManager.get_character(accountkey, character_id)
         apikey = AccountManager.get_apikey(accountkey)
@@ -100,7 +99,7 @@ class BotManagerApp:
         return Session(
             id=account_id,
             character=character,
-            unloadType=UnloadType.BANK,
+            unloadType=UnloadTypeEnum.BANK,
             apikey=apikey,
             cert=cert,
             type=session_type,
@@ -156,18 +155,19 @@ class BotManagerApp:
             account_id = data.get("accountId")
             character_id = data.get("characterId")
             path_id = data.get("pathId")
-            session = self.get_basic_session(account_id, character_id, SessionType.FIGHT)
+            session = self.get_basic_session(account_id, character_id, SessionTypeEnum.FIGHT)
             # check if bot already running on this accounId
             if session.character.login in self._running_bots:
                 return jsonify({"error": f"Bot already running for account {account_id}"}), 400
             session.monsterLvlCoefDiff = data.get("monsterLvlCoefDiff")
             session.path = paths[path_id]
+            session.fightsPerMinute = data.get("fightsPerMinute", 1)
             self.start_bot_session(session)
             return jsonify({"message": "Solo fight initiated successfully"}), 200
 
         @self.app.route("/farm", methods=["GET"])
         def get_farm_data():
-            farm_session_types = [SessionType.FARM, SessionType.MULTIPLE_PATHS_FARM]
+            farm_session_types = [SessionTypeEnum.FARM, SessionTypeEnum.MULTIPLE_PATHS_FARM]
             return (
                 jsonify(
                     {
@@ -200,11 +200,11 @@ class BotManagerApp:
             if session.character.login in self._running_bots:
                 return jsonify({"error": f"Bot already running for account {account_id}"}), 400
             session.type = session_type
-            if session_type == SessionType.FARM:
+            if session_type == SessionTypeEnum.FARM:
                 if path_id not in paths:
                     return jsonify({"error": f"Path {path_id} not found"}), 400
                 session.path = paths[path_id]
-            elif session_type == SessionType.MULTIPLE_PATHS_FARM:
+            elif session_type == SessionTypeEnum.MULTIPLE_PATHS_FARM:
                 for path_id in paths_ids:
                     if path_id not in paths:
                         return jsonify({"error": f"Path {path_id} not found"}), 400
@@ -223,7 +223,7 @@ class BotManagerApp:
         @self.app.route("/treasurehunt/<account_id>/<character_id>")
         def trasurehunt(account_id, character_id):
             try:
-                session = self.get_basic_session(account_id, character_id, SessionType.TREASURE_HUNT)
+                session = self.get_basic_session(account_id, character_id, SessionTypeEnum.TREASURE_HUNT)
                 self.start_bot_session(session)
             except Exception as e:
                 return jsonify({"status": "error", "message": f"Error : {e}"})
@@ -240,7 +240,6 @@ class BotManagerApp:
                 bot.shutdown(DisconnectionReasonEnum.WANTED_SHUTDOWN, "User wanted to stop bot")
                 bot.join()
                 self._running_bots.pop(botname)
-                # self._bots_run_infos.pop(botname)
             return jsonify({"status": "success", "message": f"Stopped bot {botname}"})
 
         @self.app.route("/get_running_bots")
@@ -251,12 +250,10 @@ class BotManagerApp:
                 if bot:
                     bot_status = bot.getState()
                     bot_oper["status"] = bot_status.name
-                    stopped = bot_status in [SessionStatus.TERMINATED, SessionStatus.CRASHED, SessionStatus.BANNED]
+                    stopped = bot_status in [SessionStatusEnum.TERMINATED, SessionStatusEnum.CRASHED, SessionStatusEnum.BANNED]
                     if not stopped:
-                        path = BotConfig.getInstance(bot_oper["name"]).curr_path
                         bot_oper["endTime"] = time.time()
                         bot_oper["runTime"] = format_runtime(bot_oper["startTime"], bot_oper.get("endTime", None))
-                        bot_oper["path_name"] = path.name if path else "N/A"
                         bot_oper["fights_count"] = bot._nbrFightsDone
                         bot_oper["earned_kamas"] = bot._earnedKamas
                         bot_oper["earned_levels"] = bot._earnedLevels

@@ -279,17 +279,17 @@ class BehaviorApi:
             ie, cell, exactDistination, waitForSkillUsed, elementId, skilluid, callback=callback, parent=self
         )
 
-    def soloFarmFights(self, timeout=None, callback=None):
+    def soloFarmFights(self, path, fightPerMinute=1, fightPartyMembers=None, monsterLvlCoefDiff=None, timeout=None, callback=None):
         from pyd2bot.logic.roleplay.behaviors.fight.SoloFarmFights import \
             SoloFarmFights
 
-        SoloFarmFights().start(timeout=timeout, callback=callback, parent=self)
+        SoloFarmFights(path, fightPerMinute, fightPartyMembers, monsterLvlCoefDiff, timeout).start(callback=callback, parent=self)
 
-    def resourceFarm(self, timeout=None, callback=None):
+    def resourceFarm(self, path, jobFilter, timeout=None, callback=None):
         from pyd2bot.logic.roleplay.behaviors.farm.ResourceFarm import \
             ResourceFarm
 
-        ResourceFarm().start(timeout=timeout, callback=callback, parent=self)
+        ResourceFarm(path, jobFilter, timeout).start(callback=callback, parent=self)
 
     def partyLeader(self, callback=None):
         from pyd2bot.logic.roleplay.behaviors.party.PartyLeader import \
@@ -353,6 +353,11 @@ class BehaviorApi:
 
         TreasureHunt().start(callback=callback, parent=self)
 
+    def useTeleportItem(self, iw, callback=None):
+        from pyd2bot.logic.roleplay.behaviors.teleport.UseTeleportItem import UseTeleportItem
+
+        UseTeleportItem().start(iw, callback=callback, parent=self)
+
     def botExchange(self, direction, target, items=None, callback=None):
         from pyd2bot.logic.roleplay.behaviors.exchange.BotExchange import \
             BotExchange
@@ -376,7 +381,7 @@ class BehaviorApi:
 
         UnloadInBank().start(return_to_start, bankInfos, callback=callback, parent=self)
 
-    def on(self, event_id, callback, timeout=None, ontimeout=None, retryNbr=None, retryAction=None):
+    def on(self, event_id, callback, timeout=None, ontimeout=None, retryNbr=None, retryAction=None, once=False):
         return KernelEventsManager().on(
             event_id=event_id,
             callback=callback,
@@ -384,21 +389,16 @@ class BehaviorApi:
             ontimeout=ontimeout,
             retryNbr=retryNbr,
             retryAction=retryAction,
-            once=False,
+            once=once,
             originator=self,
         )
 
     def once(self, event_id, callback, timeout=None, ontimeout=None, retryNbr=None, retryAction=None):
-        return KernelEventsManager().on(
-            event_id=event_id,
-            callback=callback,
-            timeout=timeout,
-            ontimeout=ontimeout,
-            retryNbr=retryNbr,
-            retryAction=retryAction,
-            once=True,
-            originator=self,
-        )
+        return self.on(event_id, callback, timeout=timeout, ontimeout=ontimeout, retryNbr=retryNbr, retryAction=retryAction, once=True)
+    
+    def onMultiple(self, listeners):
+        for event_id, callback, kwargs in listeners:
+            self.on(event_id, callback, **kwargs, originator=self)
 
     def onceMapProcessed(self, callback, args=[], mapId=None, timeout=None, ontimeout=None):
         return KernelEventsManager().onceMapProcessed(

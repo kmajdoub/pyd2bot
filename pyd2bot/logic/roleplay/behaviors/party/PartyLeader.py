@@ -1,4 +1,4 @@
-from pyd2bot.logic.managers.BotConfig import BotConfig
+from Grinder.models import Character
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
 from pyd2bot.misc.BotEventsmanager import BotEventsManager
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
@@ -15,8 +15,9 @@ class PartyLeader(AbstractBehavior):
     ASK_INVITE_TIMOUT = 20
     CONFIRME_JOIN_TIMEOUT = 20
 
-    def __init__(self) -> None:
+    def __init__(self, followers: list[Character]) -> None:
         super().__init__()
+        self.followers = followers
 
     @property
     def partyMembers(self):
@@ -28,7 +29,7 @@ class PartyLeader(AbstractBehavior):
     
     @property
     def allFollowersJoinedParty(self):
-        for follower in BotConfig().followers:
+        for follower in self.followers:
             if follower.id not in self.partyMembers:
                 return False
         return True
@@ -44,7 +45,7 @@ class PartyLeader(AbstractBehavior):
         self.inviteFollowers()
     
     def onPartyJoin(self, event, partyId, members: list[PartyMemberInformations]):
-        membersNotInParty = filter(lambda follower: follower.id not in self.partyMembers, BotConfig().followers)
+        membersNotInParty = filter(lambda follower: follower.id not in self.partyMembers, self.followers)
         for follower in membersNotInParty:
             if follower.id not in self.partyJoinListeners:
                 self.inviteFollower(follower.id)
@@ -65,7 +66,7 @@ class PartyLeader(AbstractBehavior):
             self.wantedDeleteParty = False
     
     def inviteFollowers(self):
-        for follower in BotConfig().followers:
+        for follower in self.followers:
             self.inviteFollower(follower.id)
             if Kernel().worker.terminated.wait(0.2):
                 return
@@ -97,9 +98,11 @@ class PartyLeader(AbstractBehavior):
                 ontimeout=lambda l: self.onFollowerPartyInviteTimeout(l, memberId),
                 originator=self
             )
-            follower = BotConfig().getFollowerById(memberId)
-            Kernel().partyFrame.sendPartyInviteRequest(follower.name)
-            Logger().debug(f"Join party invitation sent to {follower.name}")
+            for member in self.followers:
+                if member.id == memberId:
+                    Logger().warning(f"Player {member.name} is already in party")
+                    Kernel().partyFrame.sendPartyInviteRequest(member.name)
+                    Logger().debug(f"Join party invitation sent to {member.name}")
         else:
             Logger().warning(f"wants to invite a player already in party")
 

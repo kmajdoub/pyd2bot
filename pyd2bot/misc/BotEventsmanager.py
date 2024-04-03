@@ -2,7 +2,6 @@ from enum import auto
 from time import perf_counter
 from typing import TYPE_CHECKING
 
-from pyd2bot.logic.managers.BotConfig import BotConfig
 from pydofus2.com.ankamagames.berilia.managers.EventsHandler import (
     Event, EventsHandler)
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
@@ -38,9 +37,9 @@ class BotEventsManager(EventsHandler, metaclass=Singleton):
 
         return self.once(BotEventsManager.ALL_PARTY_MEMBERS_IDLE, onEvt, originator=originator)
 
-    def oncePartyMemberShowed(self, callback, args=[], originator=None):
+    def oncePartyMemberShowed(self, partyMembers, callback, args=[], originator=None):
         def onActorShowed(e, infos: "GameRolePlayHumanoidInformations"):
-            for follower in BotConfig().followers:
+            for follower in partyMembers:
                 if int(follower.id) == int(infos.contextualId):
                     Logger().info("[BotEventsManager] Party member %s showed" % follower.name)
                     callback(e, *args)

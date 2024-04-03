@@ -1,5 +1,6 @@
 import threading
 
+from pyd2bot.BotSettings import BotSettings
 from pyd2bot.logic.common.rpcMessages.ComeToCollectMessage import \
     ComeToCollectMessage
 from pyd2bot.logic.common.rpcMessages.GetCurrentVertexMessage import \
@@ -7,7 +8,6 @@ from pyd2bot.logic.common.rpcMessages.GetCurrentVertexMessage import \
 from pyd2bot.logic.common.rpcMessages.GetStatusMessage import GetStatusMessage
 from pyd2bot.logic.common.rpcMessages.RCPResponseMessage import RPCResponseMessage
 from pyd2bot.logic.common.rpcMessages.RPCMessage import RPCMessage
-from pyd2bot.logic.managers.BotConfig import BotConfig
 from pyd2bot.logic.roleplay.behaviors.exchange.CollectItems import CollectItems
 from pyd2bot.logic.roleplay.behaviors.movement.AutoTrip import AutoTrip
 from pyd2bot.logic.roleplay.behaviors.movement.ChangeMap import ChangeMap
@@ -82,9 +82,9 @@ class BotRPCFrame(Frame):
                         Logger().error(f"[RPCFrame] Error while trying to meet the guest {msg.guestInfos.login} to collect resources: {error}")
                     for _, instance in Kernel.getInstances():
                         instance.worker.process(SellerVacantMessage(threading.current_thread().name))
-                    BotConfig.SELLER_VACANT.set()
-                    if BotConfig.SELLER_LOCK.locked():
-                        BotConfig.SELLER_LOCK.release()
+                    BotSettings.SELLER_VACANT.set()
+                    if BotSettings.SELLER_LOCK.locked():
+                        BotSettings.SELLER_LOCK.release()
                 if CollectItems().isRunning():
                     Logger().error(f"[RPCFrame] can't start collect with {msg.guestInfos.login} because collect is already running with {CollectItems().guest.login}")
                     rsp = RPCResponseMessage(msg, data=False)

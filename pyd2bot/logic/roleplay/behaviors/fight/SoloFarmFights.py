@@ -1,13 +1,14 @@
 import heapq
+from Grinder.models import Character
 import numpy as np
 import time
 from prettytable import PrettyTable
 
-from pyd2bot.logic.managers.BotConfig import BotConfig
 from pyd2bot.logic.roleplay.behaviors.AbstractFarmBehavior import \
     AbstractFarmBehavior
 from pyd2bot.logic.roleplay.behaviors.fight.AttackMonsters import \
     AttackMonsters
+from pyd2bot.farmPaths.AbstractFarmPath import AbstractFarmPath
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
 from pydofus2.com.ankamagames.dofus.datacenter.monsters.Monster import Monster
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
@@ -21,15 +22,17 @@ from pydofus2.com.ankamagames.jerakine.types.positions.MapPoint import MapPoint
 
 class SoloFarmFights(AbstractFarmBehavior):
 
-    def __init__(self, timeout=None):
+    def __init__(self, path: AbstractFarmPath, fightsPerMinute: int, fightPartyMembers: list[Character], monsterLvlCoefDiff=None, timeout=None):
         super().__init__(timeout)
+        self.path = path
+        self.fightsPerMinute = fightsPerMinute
+        self.fightPartyMembers = fightPartyMembers
+        self.monsterLvlCoefDiff = monsterLvlCoefDiff if monsterLvlCoefDiff else float("inf")
     
     def init(self):
-        self.path = BotConfig().curr_path
         self.path.init()
         self.last_monster_attack_time = None
-        self.fights_per_minute = 2
-        Logger().debug(f"Solo farm fights started")
+        Logger().debug(f"Solo farm fights started, {self.fightsPerMinute} fights per minute.")
         return True
 
     def makeAction(self):
@@ -76,7 +79,7 @@ class SoloFarmFights(AbstractFarmBehavior):
         visited = set()
         queue = list[int, MapPoint]()
         currCellId = PlayedCharacterManager().currentCellId
-        teamLvl = sum(PlayedCharacterManager.getInstance(c.login).limitedLevel for c in BotConfig().fightPartyMembers)
+        teamLvl = sum(PlayedCharacterManager.getInstance(c.login).limitedLevel for c in self.fightPartyMembers)
         monsterByCellId = dict[int, GameRolePlayGroupMonsterInformations]()
         for entityId in Kernel().roleplayEntitiesFrame._monstersIds:
             infos: GameRolePlayGroupMonsterInformations = Kernel().roleplayEntitiesFrame.getEntityInfos(entityId)
@@ -84,7 +87,7 @@ class SoloFarmFights(AbstractFarmBehavior):
                 totalGrpLvl = infos.staticInfos.mainCreatureLightInfos.level + sum(
                     ul.level for ul in infos.staticInfos.underlings
                 )
-                if totalGrpLvl < BotConfig().monsterLvlCoefDiff * teamLvl:
+                if totalGrpLvl < self.monsterLvlCoefDiff * teamLvl:
                     monsterByCellId[infos.disposition.cellId] = infos
         if not monsterByCellId:
             return []

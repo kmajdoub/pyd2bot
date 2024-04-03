@@ -2,7 +2,7 @@ import random
 from time import perf_counter
 from typing import Iterator, Set
 
-from pyd2bot.models.farmPaths.AbstractFarmPath import AbstractFarmPath
+from pyd2bot.farmPaths.AbstractFarmPath import AbstractFarmPath
 from pydofus2.com.ankamagames.dofus.datacenter.world.MapPosition import \
     MapPosition
 from pydofus2.com.ankamagames.dofus.datacenter.world.SubArea import SubArea
@@ -27,19 +27,18 @@ class RandomAreaFarmPath(AbstractFarmPath):
         self,
         name: str,
         startVertex: Vertex,
-        transitionTypeWhitelist: list = None,
+        allowedTransitions: list = None,
         subAreaBlacklist: list = None,
     ) -> None:
         super().__init__()
         self.name = name
         self.startVertex = startVertex
-        self.transitionTypeWhitelist: list[TransitionTypeEnum] = transitionTypeWhitelist
+        self.allowedTransitions: list[TransitionTypeEnum] = allowedTransitions
         self.subAreaBlacklist = subAreaBlacklist if subAreaBlacklist is not None else []
 
     def init(self):
         self.area = SubArea.getSubAreaByMapId(self.startVertex.mapId).area
         self.subAreas = self.getAllSubAreas()
-        self.verticies = self.reachableVerticies()
         Logger().info(f"RandomAreaFarmPath {self.name} initialized with {len(self.verticies)} verticies")
 
     @property
@@ -91,8 +90,8 @@ class RandomAreaFarmPath(AbstractFarmPath):
             GroupItemCriterion
 
         
-        if self.transitionTypeWhitelist:
-            transitions = [tr for tr in edge.transitions if TransitionTypeEnum(tr.type) in self.transitionTypeWhitelist]
+        if self.allowedTransitions:
+            transitions = [tr for tr in edge.transitions if TransitionTypeEnum(tr.type) in self.allowedTransitions]
         else:
             transitions = edge.transitions
         
@@ -160,6 +159,6 @@ class RandomAreaFarmPath(AbstractFarmPath):
                 "mapId": self.startVertex.mapId,
                 "mapRpZone": self.startVertex.zoneId,
             },
-            "transitionTypeWhitelist": self.transitionTypeWhitelist,
+            "allowedTransitions": self.allowedTransitions,
             "subAreaBlacklist": self.subAreaBlacklist,
         }

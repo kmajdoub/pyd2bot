@@ -8,17 +8,14 @@ from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterMa
     PlayedCharacterManager
 from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Transition import \
     Transition
-
 from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.WorldGraph import \
     WorldGraph
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 import collections
 from typing import Iterator, Set
 if TYPE_CHECKING:
-    from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Edge import \
-        Edge
-    from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Vertex import \
-        Vertex
+    from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Edge import Edge
+    from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Vertex import Vertex
 class AbstractFarmPath:
     _currentVertex: 'Vertex'
     startVertex: 'Vertex'
@@ -53,7 +50,7 @@ class AbstractFarmPath:
     def __next__(self) -> Transition:
         raise NotImplementedError()
     
-    def getNextEdge(self, forbidenEdges=None, onlyNonRecent=False) -> 'Edge':
+    def getNextEdge(self, forbiddenEdges=None, onlyNonRecent=False) -> 'Edge':
         raise NotImplementedError()
     
     def __iter__(self) -> Iterator['Vertex']:

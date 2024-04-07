@@ -1,7 +1,8 @@
 import random
 
 from pyd2bot.BotSettings import BotSettings
-from pyd2bot.logic.roleplay.behaviors.updates.BotCharacterUpdates import BotCharacterUpdates
+from pyd2bot.logic.roleplay.behaviors.updates.AutoUpgradeStats import AutoUpgradeStats
+from pyd2bot.logic.roleplay.behaviors.updates.CollectStats import CollectStats
 from pyd2bot.logic.common.frames.BotRPCFrame import BotRPCFrame
 from pyd2bot.logic.common.frames.BotWorkflowFrame import BotWorkflowFrame
 from pyd2bot.logic.common.rpcMessages.PlayerConnectedMessage import PlayerConnectedMessage
@@ -35,12 +36,12 @@ class Pyd2Bot(DofusClient):
             raise ValueError(
                 f"Breed {session.character.breedName} is not supported, supported breeds are {supported_breeds}"
             )
-        super().__init__(session.character.login)
+        super().__init__(session.character.accountId)
         self.session = session
         self._mule = session.isMuleFighter
         self.setAutoServerSelection(session.character.serverId, session.character.id)
         self.setCredentials(session.credentials.apikey, session.credentials.certId, session.credentials.certHash)
-        self._botUpdatesListeners = []
+        self._botUpdateStatsHandlers = []
 
     def onReconnect(self, event, message, afterTime=0):
         AbstractBehavior.clearAllChilds()
@@ -71,8 +72,8 @@ class Pyd2Bot(DofusClient):
         else:
             self.shutdown(DisconnectionReasonEnum.WANTED_SHUTDOWN, "main behavior ended successfully")
 
-    def registerBotUpdatesListener(self, callback):
-        self._botUpdatesListeners.append(callback)
+    def registerBotStatsHandler(self, callback):
+        self._botUpdateStatsHandlers.append(callback)
 
     def startSessionMainBehavior(self):
         Logger().info(f"Starting main behavior for {self.name}, sessionType : {self.session.type.name}")
@@ -137,7 +138,8 @@ class Pyd2Bot(DofusClient):
 
     def onCharacterSelectionSuccess(self, event, characterBaseInformations):
         super().onCharacterSelectionSuccess(event, characterBaseInformations)
-        BotCharacterUpdates(self.session.character.primaryStatId, self._botUpdatesListeners).start()
+        CollectStats(self._botUpdateStatsHandlers).start()
+        AutoUpgradeStats(self.session.character.primaryStatId).start()
         
     def getState(self):
         if self.terminated.is_set():

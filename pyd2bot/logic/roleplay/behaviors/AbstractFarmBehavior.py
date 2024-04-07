@@ -40,8 +40,8 @@ class AbstractFarmBehavior(AbstractBehavior):
     def __init__(self, timeout=None):
         self.timeout = timeout
         self.currentVertex: Vertex = None
-        self.forbidenActions = set()
-        self.forbidenEdges = set()
+        self.forbiddenActions = set()
+        self.forbiddenEdges = set()
         self._currEdge = None
         self._deactivate_riding = False
         super().__init__()
@@ -116,8 +116,8 @@ class AbstractFarmBehavior(AbstractBehavior):
             if code == ChangeMap.LANDED_ON_WRONG_MAP:
                 Logger().warning(f"Player landed on the wrong map while moving to next path Vertex!")
             elif code in [UseSkill.USE_ERROR, AutoTrip.NO_PATH_FOUND, ChangeMap.INVALID_TRANSITION, ChangeMap.NEED_QUEST]:
-                Logger().warning(f"Player tried navigating using invalid edge ({error}), edge will be forbiden")
-                self.forbidenEdges.add(self._currEdge)
+                Logger().warning(f"Player tried navigating using invalid edge ({error}), edge will be forbidden")
+                self.forbiddenEdges.add(self._currEdge)
                 return self.moveToNextStep()
             else:
                 return self.send(
@@ -129,14 +129,14 @@ class AbstractFarmBehavior(AbstractBehavior):
             self.currentVertex = self.path.currentVertex
         if self._currEdge:
             self.path._lastVisited[self._currEdge] = perf_counter()
-        self.forbidenActions = set()
+        self.forbiddenActions = set()
         self.main()
 
     def moveToNextStep(self):
         if not self.running.is_set():
             return
         try:
-            self._currEdge = self.path.getNextEdge(self.forbidenEdges, onlyNonRecent=True)
+            self._currEdge = self.path.getNextEdge(self.forbiddenEdges, onlyNonRecent=True)
         except NoTransitionFound:
             Logger().error(f"No next vertex found in path, player is stuck!")
             if PlayedCharacterManager().currVertex in self.path:

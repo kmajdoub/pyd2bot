@@ -24,7 +24,7 @@ if __name__ == "__main__":
     app.setQuitOnLastWindowClosed(False)
     account_key = 244588168244175251
     creds = AccountManager.get_credentials(account_key)
-    session = Session.from_dict(
+    session = Session(**
         {
             "id": "test_fight_solo",
             "character": creds["character"],

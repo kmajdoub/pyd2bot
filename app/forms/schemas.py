@@ -8,7 +8,7 @@ class JobFilterSchema(Schema):
 
     @post_load
     def make_job_filter(self, data, **kwargs):
-        return JobFilter.from_dict(data)
+        return JobFilter(**data)
 
 
 class FarmSessionSchema(Schema):

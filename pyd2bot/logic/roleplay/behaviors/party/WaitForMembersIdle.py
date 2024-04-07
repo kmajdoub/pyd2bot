@@ -43,7 +43,7 @@ class WaitForMembersIdle(AbstractBehavior):
         if not self.isRunning():
             return
         while not Kernel().worker.terminated.is_set():
-            self.memberStatus = {member.login: self.getMuleStatus(member.login) for member in self.members}
+            self.memberStatus = {member.accountId: self.getMuleStatus(member.accountId) for member in self.members}
             Logger().info(json.dumps(self.memberStatus, indent=2))
             if any(status != "idle" for status in self.memberStatus.values()):
                 if any(status == "disconnected" for status in self.memberStatus.values()):

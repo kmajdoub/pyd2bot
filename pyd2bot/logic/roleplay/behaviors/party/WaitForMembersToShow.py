@@ -38,8 +38,8 @@ class WaitForMembersToShow(AbstractBehavior):
             if member.id == infos.contextualId:
                 self.onTeamMemberShowed()
 
-    def onMemberDisconnected(self, event, login, connectionType):
+    def onMemberDisconnected(self, event, accountId, connectionType):
         for member in self.members:
-            if member.login == login:
-                Logger().warning(f"Member {login} disconnected while waiting for it to show up")
-                return self.finish(self.MEMBER_DISCONNECTED, login)
+            if member.accountId == accountId:
+                Logger().warning(f"Member {accountId} disconnected while waiting for it to show up")
+                return self.finish(self.MEMBER_DISCONNECTED, accountId)

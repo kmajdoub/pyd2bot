@@ -1,3 +1,4 @@
+from pyd2bot.data.models import Account, Character
 from pydofus2.com.DofusClient import DofusClient
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
 from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import KernelEventsManager
@@ -7,27 +8,28 @@ from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 
 
 class AccountCharactersFetcher(DofusClient):
-    
-    def __init__(self, login:str, apikey:str, certId:int=0, certHash:str="", callback=None):        
-        if apikey is None:
+
+    def __init__(self, account: Account, callback=None):
+        self.account = account
+        if account.apikey is None:
             raise ValueError("Account apikey is required!")
         if callback is not None and not callable(callback):
             raise ValueError("Callback must be a callable function")
-        super().__init__(login)
-        self.characters = []        
+        super().__init__(account.id)
         self.callback = callback
         self.changeSevrer = False
         self.currServer = None
         self.serversList = None
-        self.setCredentials(apikey, certId, certHash)
+        self.setCredentials(account.apikey, account.certId, account.certHash)
         self.addShutDownListener(self.afterShutDown)
 
-    def afterShutDown(self, name, shutDownMessage, shutDownReason):
+    def afterShutDown(self, name, message, reason):
+        Logger().info(f"Characters fetched for account {self.account.login} ended with message : {message} and reason : {reason}")
         if self.callback:
             if not callable(self.callback):
                 Logger().error("Callback is not callable", exc_info=True)
                 return
-            self.callback(self.characters)
+            self.callback(self.account.characters, message, reason)
 
     def initListeners(self):
         super().initListeners()
@@ -36,7 +38,7 @@ class AccountCharactersFetcher(DofusClient):
             self.onServersList,
             originator=self,
         )
-    
+
     def onServersList(self, event, erversList, serversUsedList, serversTypeAvailableSlots):
         selectableServers = [server for server in Kernel().serverSelectionFrame.usedServers if server.isSelectable]
         self.serversListIter = iter(selectableServers)
@@ -45,7 +47,7 @@ class AccountCharactersFetcher(DofusClient):
     def onServerSelectionRefused(self, event, serverId, error, serverStatus, error_text, selectableServers):
         Logger().error(f"Server {serverId} selection refused for reason : {error_text}")
         self.processServer()
-    
+
     def processServer(self):
         try:
             self.currServer = next(self.serversListIter)
@@ -59,19 +61,22 @@ class AccountCharactersFetcher(DofusClient):
             self.changeSevrer = False
             Kernel().serverSelectionFrame.selectServer(self.currServer.id)
         KernelEventsManager().once(KernelEvent.CharactersList, self.onCharactersList)
-        
+
     def onCharactersList(self, event, charactersList):
         Logger().info(f"Server : {self.currServer.id}, List of characters received")
-        self.characters += [
-            {
-                "name": character.name,
-                "id": character.id,
-                "level": character.level,
-                "breedId": character.breedId,
-                "breedName": character.breed.name,
-                "serverId": PlayerManager().server.id,
-                "serverName": PlayerManager().server.name,
-            }
+        self.account.characters += [
+            Character(**
+                {
+                    "name": character.name,
+                    "id": character.id,
+                    "level": character.level,
+                    "breedId": character.breedId,
+                    "breedName": character.breed.name,
+                    "serverId": PlayerManager().server.id,
+                    "serverName": PlayerManager().server.name,
+                    "accountId": self.account.id,
+                }
+            )
             for character in PlayerManager().charactersList
         ]
         self.processServer()

@@ -9,53 +9,37 @@ class ServerNotificationEnum:
     INACTIVITY_WARNING = 5123
     KAMAS_GAINED = 325840
 
-class SessionStatusEnum(Enum):
-    CRASHED = 0
-    TERMINATED = 1
-    RUNNING = 2
-    DISCONNECTED = 3
-    AUTHENTICATING = 4
-    FIGHTING = 5
-    ROLEPLAYING = 6
-    LOADING_MAP = 7
-    PROCESSING_MAP = 8
-    OUT_OF_ROLEPLAY = 9
-    IDLE = 10
-    BANNED = 11
+class SessionStatusEnum(str, Enum):
+    CRASHED = 'CRASHED'
+    TERMINATED = 'TERMINATED'
+    RUNNING = 'RUNNING'
+    DISCONNECTED = 'DISCONNECTED'
+    AUTHENTICATING = 'AUTHENTICATING'
+    FIGHTING = 'FIGHTING'
+    ROLEPLAYING = 'ROLEPLAYING'
+    LOADING_MAP = 'LOADING_MAP'
+    PROCESSING_MAP = 'PROCESSING_MAP'
+    OUT_OF_ROLEPLAY = 'OUT_OF_ROLEPLAY'
+    IDLE = 'IDLE'
+    BANNED = 'BANNED'
 
-    @classmethod
-    def choices(cls):
-        return tuple((i.value, i.name) for i in cls)
+class SessionTypeEnum(str, Enum):
+    SOLO_FIGHT = 'SOLO_FIGHT'
+    GROUP_FIGHT = 'GROUP_FIGHT'
+    FARM = 'FARM'
+    SELL = 'SELL'
+    TREASURE_HUNT = 'TREASURE_HUNT'
+    MIXED = 'MIXED'
+    MULE_FIGHT = 'MULE_FIGHT'
+    MULTIPLE_PATHS_FARM = 'MULTIPLE_PATHS_FARM'
 
-class SessionTypeEnum(Enum):
-    FIGHT = 0
-    FARM = 1
-    SELL = 3
-    TREASURE_HUNT = 4
-    MIXED = 5
-    MULE_FIGHT = 6
-    MULTIPLE_PATHS_FARM = 7
+class UnloadTypeEnum(str, Enum):
+    BANK = 'BANK'
+    STORAGE = 'STORAGE'
+    SELLER = 'SELLER'
 
-    @classmethod
-    def choices(cls):
-        return tuple((i.value, i.name) for i in cls)
-
-class UnloadTypeEnum(Enum):
-    BANK = 0
-    STORAGE = 1
-    SELLER = 2
-
-    @classmethod
-    def choices(cls):
-        return tuple((i.value, i.name) for i in cls)
-
-class PathTypeEnum(Enum):
-    RandomSubAreaFarmPath = 0
-    RandomAreaFarmPath = 2
-    CyclicFarmPath = 1
-    CustomRandomFarmPath = 3
-    
-    @classmethod
-    def choices(cls):
-        return tuple((i.value, i.name) for i in cls)
-
+class PathTypeEnum(str, Enum):
+    RandomSubAreaFarmPath = 'RandomSubAreaFarmPath'
+    RandomAreaFarmPath = 'RandomAreaFarmPath'
+    CyclicFarmPath = 'CyclicFarmPath'
+    CustomRandomFarmPath = 'CustomRandomFarmPath'

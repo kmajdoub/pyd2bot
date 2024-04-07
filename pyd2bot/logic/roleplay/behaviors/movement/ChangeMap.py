@@ -63,7 +63,7 @@ class ChangeMap(AbstractBehavior):
         self.exactDestination = True
         self.edge = None
         self.mapChangeReqSent = False
-        self.forbidenScrollCells = dict[int, list]()
+        self.forbiddenScrollCells = dict[int, list]()
         self._transitions = None
         self._scrollMapChangeRequestTimer: BenchmarkTimer = None
         self._tr_fails_details = {}
@@ -160,11 +160,11 @@ class ChangeMap(AbstractBehavior):
             self.finish(self.INVALID_TRANSITION, f"Unsupported transition type {self.trType.name}")
 
     def getScrollCells(self):
-        if self.transition.id in self.forbidenScrollCells:
-            if self.transition.cell not in self.forbidenScrollCells[self.transition]:
+        if self.transition.id in self.forbiddenScrollCells:
+            if self.transition.cell not in self.forbiddenScrollCells[self.transition]:
                 yield self.transition.cell
             for c in MapTools.iterMapChangeCells(self.transition.direction):
-                if c not in self.forbidenScrollCells[self.transition]:
+                if c not in self.forbiddenScrollCells[self.transition]:
                     yield c
         else:
             yield self.transition.cell
@@ -202,9 +202,9 @@ class ChangeMap(AbstractBehavior):
                 return self.finish(reason, f"Change map failed for reason: {reason.name}")
             self.askChangeMap()
         else:
-            if self.transition not in self.forbidenScrollCells:
-                self.forbidenScrollCells[self.transition] = []
-            self.forbidenScrollCells[self.transition].append(self.mapChangeCellId)
+            if self.transition not in self.forbiddenScrollCells:
+                self.forbiddenScrollCells[self.transition] = []
+            self.forbiddenScrollCells[self.transition].append(self.mapChangeCellId)
             self.askChangeMap()
 
     def onRequestTimeout(self, listener: Listener):
@@ -321,9 +321,9 @@ class ChangeMap(AbstractBehavior):
             return self.handleOnsameCellForMapActionCell()
         elif code == MovementFailError.MOVE_REQUEST_REJECTED:
             if self.isScrollTr():
-                if self.transition not in self.forbidenScrollCells:
-                    self.forbidenScrollCells[self.transition] = []
-                self.forbidenScrollCells[self.transition].append(self.mapChangeCellId)
+                if self.transition not in self.forbiddenScrollCells:
+                    self.forbiddenScrollCells[self.transition] = []
+                self.forbiddenScrollCells[self.transition].append(self.mapChangeCellId)
                 return self.askChangeMap()
         elif code == MovementFailError.CANT_REACH_DEST_CELL:
             self._tr_fails_details[self.transition] = f"Can't reach map change cell {self.mapChangeCellId}!"

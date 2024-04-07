@@ -8,6 +8,7 @@ from pyd2bot.logic.roleplay.behaviors.teleport.UseZaap import UseZaap
 from pyd2bot.misc.Localizer import Localizer
 from pydofus2.com.ankamagames.atouin.managers.MapDisplayManager import MapDisplayManager
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
+from pydofus2.com.ankamagames.dofus.datacenter.world.MapPosition import MapPosition
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
 from pydofus2.com.ankamagames.dofus.logic.common.managers.PlayerManager import PlayerManager
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import PlayedCharacterManager
@@ -91,10 +92,13 @@ class AutoTripUseZaap(AbstractBehavior):
             Logger().debug(f"Player can use havenbag to reach dest zaap.")
             Logger().debug(f"Looking for a map we can use havenbag to reach dest zaap from.")
             for i, edge in enumerate(self.path_from_currmap_to_dest):
+                mapPosition = MapPosition.getMapPositionById(edge.src.mapId)
+                if not mapPosition.allowTeleportFrom:
+                    continue
                 teleport_cost = 10 * MapTools.distL2Maps(edge.src.mapId, self.dstZaapMapId)
                 if teleport_cost <= self.maxCost:
                     self._wants_to_use_havenbag = True
-                    self._path_index = i 
+                    self._path_index = i
                     self.src_zaap_vertex = edge.src
                     self.dist_from_currmap_to_src_zaap = i
                     self.path_from_currmap_to_src_zaap = self.path_from_currmap_to_dest[0:i] if i > 0 else []
@@ -190,7 +194,9 @@ class AutoTripUseZaap(AbstractBehavior):
                             return
                         self.travelToSrcZaapOnFeet()
                         return
-            Logger().error(f"Player can't use haven bag in any map of path to reach the dest zaap, It will travel to it on feet then.")
+            Logger().error(
+                f"Player can't use haven bag in any map of path to reach the dest zaap, It will travel to it on feet then."
+            )
             self.travelToDestinationOnFeetWithSaveZaap()
         else:
             self._wants_to_use_havenbag = False
@@ -291,10 +297,14 @@ class AutoTripUseZaap(AbstractBehavior):
                 return
             zaapIe = Kernel().interactivesFrame.getZaapIe()
             if zaapIe:
-                Logger().debug(f"Player found a Zaap at cell[{zaapIe.position.cellId}] => It will use it to reach the destination Zaap.")
+                Logger().debug(
+                    f"Player found a Zaap at cell[{zaapIe.position.cellId}] => It will use it to reach the destination Zaap."
+                )
                 self.useZaap(self.dstZaapVertex.mapId, callback=self.onDstZaap_zaapTrip)
                 return
-            Logger().error(f"This is not supposed to happen! :: Player can't use a Zaap or haven bag to reach dest zaap => It will travel to it on feet.")
+            Logger().error(
+                f"This is not supposed to happen! :: Player can't use a Zaap or haven bag to reach dest zaap => It will travel to it on feet."
+            )
             self.travelToDestinationOnFeetWithSaveZaap()
 
     @classmethod

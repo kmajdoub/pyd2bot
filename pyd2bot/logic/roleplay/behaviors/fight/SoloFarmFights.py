@@ -1,9 +1,9 @@
 import heapq
-from Grinder.models import Character
 import numpy as np
 import time
 from prettytable import PrettyTable
 
+from pyd2bot.data.models import Character
 from pyd2bot.logic.roleplay.behaviors.AbstractFarmBehavior import \
     AbstractFarmBehavior
 from pyd2bot.logic.roleplay.behaviors.fight.AttackMonsters import \
@@ -54,7 +54,12 @@ class SoloFarmFights(AbstractFarmBehavior):
 
         if Kernel().worker.terminated.wait(wait_time):
             return
+    
         all_monster_groups = self.getAvailableResources()
+        if not all_monster_groups:
+            Logger().debug("No monster group found!")
+            self.moveToNextStep()
+            return
         monster_group = all_monster_groups[0]
         self.attackMonsters(monster_group["id"], self.onFightStarted)
         self.last_monster_attack_time = current_time
@@ -79,7 +84,7 @@ class SoloFarmFights(AbstractFarmBehavior):
         visited = set()
         queue = list[int, MapPoint]()
         currCellId = PlayedCharacterManager().currentCellId
-        teamLvl = sum(PlayedCharacterManager.getInstance(c.login).limitedLevel for c in self.fightPartyMembers)
+        teamLvl = sum(PlayedCharacterManager.getInstance(c.account).limitedLevel for c in self.fightPartyMembers)
         monsterByCellId = dict[int, GameRolePlayGroupMonsterInformations]()
         for entityId in Kernel().roleplayEntitiesFrame._monstersIds:
             infos: GameRolePlayGroupMonsterInformations = Kernel().roleplayEntitiesFrame.getEntityInfos(entityId)

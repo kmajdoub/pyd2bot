@@ -59,14 +59,14 @@ class GroupLeaderFarmFights(SoloFarmFights):
  
     def askMembersFollow(self, transition: TransitionTypeEnum, dstMapId):
         for follower in self.followers:
-            Kernel.getInstance(follower.login).worker.process(FollowTransitionMessage(transition, dstMapId))
+            Kernel.getInstance(follower.accountId).worker.process(FollowTransitionMessage(transition, dstMapId))
 
     def askFollowersMoveToVertex(self, vertex: Vertex):
         for follower in self.followers:
             entity = Kernel().roleplayEntitiesFrame.getEntityInfos(follower.id)
             if not entity:
-                Kernel.getInstance(follower.login).worker.process(MoveToVertexMessage(vertex))                
-                Logger().debug(f"Asked follower {follower.login} to go to farm start vertex")
+                Kernel.getInstance(follower.accountId).worker.process(MoveToVertexMessage(vertex))                
+                Logger().debug(f"Asked follower {follower.accountId} to go to farm start vertex")
             
     def allMembersOnSameMap(self):
         for follower in self.followers:

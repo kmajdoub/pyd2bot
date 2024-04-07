@@ -34,12 +34,12 @@ class CollectItems(AbstractBehavior):
         super().__init__()
 
     def run(self, bankInfos: BankInfos, guest: Character, items: list = None) -> bool:
-        Logger().info(f"[CollectFromGuest] collect from {guest.login} started")
+        Logger().info(f"[CollectFromGuest] collect from {guest.accountId} started")
         self.guest = guest
         self.bankInfos = bankInfos
         self.items = items
         self.state = CollecteState.GOING_TO_BANK
-        self.guestDisconnectedListener = BotEventsManager().onceBotDisconnected(self.guest.login, self.onGuestDisconnected, originator=self)
+        self.guestDisconnectedListener = BotEventsManager().onceBotDisconnected(self.guest.accountId, self.onGuestDisconnected, originator=self)
         self.autotripUseZaap(self.bankInfos.npcMapId, callback=self.onTripEnded)
 
     def onGuestDisconnected(self):

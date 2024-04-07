@@ -30,11 +30,11 @@ class CustomRandomFarmPath(AbstractFarmPath):
     def init(self):
         Logger().info(f"CustomRandomFarmPath {self.name} initialized with {len(self.verticies)} verticies")
 
-    def __next__(self, forbidenEdges=None) -> Edge:
+    def __next__(self, forbiddenEdges=None) -> Edge:
         outgoingEdges = list(self.outgoingEdges(onlyNonRecentVisited=False))
-        if forbidenEdges is None:
-            forbidenEdges = []
-        outgoingEdges = [e for e in outgoingEdges if e not in forbidenEdges]
+        if forbiddenEdges is None:
+            forbiddenEdges = []
+        outgoingEdges = [e for e in outgoingEdges if e not in forbiddenEdges]
         if not outgoingEdges:
             raise NoTransitionFound()
         edge = random.choice(outgoingEdges)
@@ -61,11 +61,11 @@ class CustomRandomFarmPath(AbstractFarmPath):
                         ret.append(edge)
         return ret
     
-    def getNextEdge(self, forbidenEdges=None, onlyNonRecent=False) -> Edge:
+    def getNextEdge(self, forbiddenEdges=None, onlyNonRecent=False) -> Edge:
         outgoingEdges = list(self.outgoingEdges(onlyNonRecentVisited=onlyNonRecent))
-        if forbidenEdges is None:
-            forbidenEdges = []
-        outgoingEdges = [e for e in outgoingEdges if e not in forbidenEdges]
+        if forbiddenEdges is None:
+            forbiddenEdges = []
+        outgoingEdges = [e for e in outgoingEdges if e not in forbiddenEdges]
         if not outgoingEdges:
             raise NoTransitionFound()
         edge = random.choice(outgoingEdges)

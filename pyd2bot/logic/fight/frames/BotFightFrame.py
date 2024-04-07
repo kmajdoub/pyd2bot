@@ -154,7 +154,7 @@ class BotFightFrame(Frame):
         self._confirmTurnEnd = False
         self._moveRequestFails = 0
         self._lastMoveRequestTime = None
-        self._forbidenCells = set()
+        self._forbiddenCells = set()
         self._turnStartPlaying = False
         self._suspectedUnreachableCell = None
         self.fightResumed = False
@@ -235,7 +235,7 @@ class BotFightFrame(Frame):
         if not self.currentPlayer:
             Logger().warning("Asking for player manager for None current player")
             return None
-        return PlayedCharacterManager.getInstance(self.currentPlayer.login)
+        return PlayedCharacterManager.getInstance(self.currentPlayer.accountId)
 
     @property
     def fightCount(self) -> int:
@@ -243,7 +243,7 @@ class BotFightFrame(Frame):
 
     @property
     def connection(self) -> "ConnectionsHandler":
-        return ConnectionsHandler.getInstance(self.currentPlayer.login)
+        return ConnectionsHandler.getInstance(self.currentPlayer.accountId)
 
     @property
     def hitpoints(self) -> int:
@@ -350,7 +350,7 @@ class BotFightFrame(Frame):
             for nextMapPoint in currPoint.vicinity():
                 nextCellId = nextMapPoint.cellId
                 if (
-                    nextCellId not in self._forbidenCells
+                    nextCellId not in self._forbiddenCells
                     and nextCellId not in visited
                     and nextCellId in reachableCells
                 ):
@@ -594,11 +594,11 @@ class BotFightFrame(Frame):
             return Logger().warning("Fight resumed so wont check if members joined or not.")
         if self.fightReadySent:
             return Logger().warning("Fight ready already sent so we wont check if members joined or not.")
-        playerManager = PlayedCharacterManager.getInstance(player.login)
+        playerManager = PlayedCharacterManager.getInstance(player.accountId)
         if not playerManager:
             return Logger().warning(f"Player manager not found for {player.name}, probably diconnected")
         playerManager.isFighting = True
-        self.sendFightReady(ConnectionsHandler.getInstance(player.login))
+        self.sendFightReady(ConnectionsHandler.getInstance(player.accountId))
         if self.allMembersJoinedFight():
             Logger().info(f"All party members joined fight.")
             if self._challengeChosen:
@@ -618,6 +618,7 @@ class BotFightFrame(Frame):
         connh.send(startFightMsg)
 
     def process(self, msg: Message) -> bool:
+    
         if isinstance(msg, GameFightOptionStateUpdateMessage):
             if msg.option not in self.session.fightOptions:
                 self.session.fightOptions.append(msg.option)
@@ -629,7 +630,7 @@ class BotFightFrame(Frame):
             self._inFight = False
             if self.session.followers:
                 for player in self.session.followers:
-                    playerManager = PlayedCharacterManager.getInstance(player.login)
+                    playerManager = PlayedCharacterManager.getInstance(player.accountId)
                     if playerManager:
                         playerManager.isFighting = False
             Kernel().worker.removeFrame(self)
@@ -735,11 +736,11 @@ class BotFightFrame(Frame):
         return False
 
     def onServerTextInfo(self, event, msgId, msgType, textId, text, params):
-        if textId == 4993:  # Wants to use more than the pms available
+        if textId == 4993: # Wants to use more than the pms available
             self.turnEnd()
-        if textId == 4897:  # Something is blocking the way
+        if textId == 4897: # Something is blocking the way
             pass
-        if textId == 144451:  # An obstacle is blocking LOS
+        if textId == 144451: # An obstacle is blocking LOS
             self._requestingCastSpell = False
             self._turnAction.clear()
             self.turnEnd()
@@ -780,7 +781,7 @@ class BotFightFrame(Frame):
             )
             return
         Logger().info(f"It's {self.currentPlayer.name}'s turn to play")
-        self._forbidenCells.clear()
+        self._forbiddenCells.clear()
         self._myTurn = True
         self.preparePlayableCharacter()
         self.checkCanPlay()
@@ -793,12 +794,11 @@ class BotFightFrame(Frame):
             self.confirmTurnEnd()
             self._confirmTurnEnd = False
             return True
-        if self._myTurn and not self._waitingSeqEnd:
-            if Kernel().battleFrame._executingSequence:
-                Logger().warning("Delaying checkCanPlay because we're still in a sequence.")
-                KernelEventsManager().once(KernelEvent.SequenceExecFinished, self.checkCanPlay, originator=self)
-                return False
-            self.nextTurnAction("checkCanPlay")
+        if Kernel().battleFrame._executingSequence:
+            Logger().warning("Delaying checkCanPlay because we're still in a sequence.")
+            KernelEventsManager().once(KernelEvent.SequenceExecFinished, self.checkCanPlay, originator=self)
+            return False
+        self.nextTurnAction("checkCanPlay")
 
     def turnEnd(self) -> None:
         if self.currentPlayer is not None and self.connection is not None:
@@ -830,7 +830,7 @@ class BotFightFrame(Frame):
                 if not los:
                     Logger().warn(f"Can't cast spell {spellId} on cell {cellId} because of LOS")
                     self._turnAction.clear()
-                    self._forbidenCells.add(cellId)
+                    self._forbiddenCells.add(cellId)
                     return self.nextTurnAction("From cast spell no LOS")
                 self._requestingCastSpell = True
                 BotEventsManager().onceFighterCastedSpell(
@@ -879,10 +879,10 @@ class BotFightFrame(Frame):
                         entities_on_cell = Kernel().fightEntitiesFrame.hasEntity(unreachableCell)
                         if entities_on_cell:
                             Logger().warning(f"Entites {[e.id for e in entities_on_cell]} are on cell {unreachableCell}")
-                            self._forbidenCells.add(unreachableCell)
+                            self._forbiddenCells.add(unreachableCell)
                         elif unreachableCell in DataMapProvider().obstaclesCells:
                             Logger().warning(f"Cell {unreachableCell} is an obstacle")
-                            self._forbidenCells.add(unreachableCell)
+                            self._forbiddenCells.add(unreachableCell)
                         self._turnAction.clear()
                 self.checkCanPlay()
 
@@ -915,7 +915,7 @@ class BotFightFrame(Frame):
         self._spellCastFails = False
         self._requestingCastSpell = False
         self._isRequestingMovement = False
-        CurrentPlayedFighterManager().playerManager = PlayedCharacterManager.getInstance(self.currentPlayer.login)
+        CurrentPlayedFighterManager().playerManager = PlayedCharacterManager.getInstance(self.currentPlayer.accountId)
         CurrentPlayedFighterManager().currentFighterId = self._currentPlayerId
         CurrentPlayedFighterManager().conn = self.connection
         CurrentPlayedFighterManager().resetPlayerSpellList()

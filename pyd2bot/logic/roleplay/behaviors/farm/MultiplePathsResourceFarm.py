@@ -16,7 +16,7 @@ class MultiplePathsResourceFarm(AbstractBehavior):
         self.jobFilter = jobFilter
         self.num_of_covers = num_of_covers
         self.pathsList = pathsList
-        self.forbiden_paths = []
+        self.forbidden_paths = []
         if not self.num_of_covers:
             self.num_of_covers = self.default_ncovers
         super().__init__()
@@ -33,15 +33,15 @@ class MultiplePathsResourceFarm(AbstractBehavior):
     def startNextPath(self, code, err):
         if err:
             Logger().debug(f"Error[{code}] during the farm path : {err}")
-            self.forbiden_paths.append(self.currentPath)
+            self.forbidden_paths.append(self.currentPath)
         Logger().info(f"Starting next path")
         try:
             self.currentPath = next(self.iterPathsList)
         except StopIteration:
-            non_forbiden_paths = [p for p in self.pathsList if p not in self.forbiden_paths]
-            if not non_forbiden_paths:
-                return self.finish(1, "All paths are forbiden")
-            self.iterPathsList = iter(non_forbiden_paths)
+            non_forbidden_paths = [p for p in self.pathsList if p not in self.forbidden_paths]
+            if not non_forbidden_paths:
+                return self.finish(1, "All paths are forbidden")
+            self.iterPathsList = iter(non_forbidden_paths)
             self.currentPath = next(self.iterPathsList)
         timeout = self.num_of_covers * self.coverTimeEstimate(self.currentPath)
         ResourceFarm(self.currentPath, self.jobFilter, timeout).start(callback=self.startNextPath)

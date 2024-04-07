@@ -66,7 +66,7 @@ class ResourceFarm(AbstractFarmBehavior):
             self.moveToNextStep()
             return
         farmable_resources = [r for r in available_resources if r.canFarm(self.jobFilter)]
-        nonForbidenResources = [r for r in farmable_resources if r.uid not in self.forbidenActions]
+        nonForbidenResources = [r for r in farmable_resources if r.uid not in self.forbiddenActions]
         nonForbidenResources.sort(key=lambda r: r.distance)
         if len(nonForbidenResources) == 0:
             Logger().warning("No farmable resource found!")
@@ -102,7 +102,7 @@ class ResourceFarm(AbstractFarmBehavior):
                 MovementFailError.MOVE_REQUEST_REJECTED,
             ]:
                 Logger().warning(f"Error while collecting resource: {error}, will forbid the resource.")
-                self.forbidenActions.add(self.currentTarget.uid)
+                self.forbiddenActions.add(self.currentTarget.uid)
                 return self.main()
             return self.send(KernelEvent.ClientShutdown, error)
         BenchmarkTimer(0.2, self.main).start()

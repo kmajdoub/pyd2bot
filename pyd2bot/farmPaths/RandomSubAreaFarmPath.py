@@ -45,9 +45,9 @@ class RandomSubAreaFarmPath(AbstractFarmPath):
         self._recent_visited = [(_, time_added) for (_, time_added) in self._recent_visited if (time.time() - time_added) < 60 * 5]
         return [v for v, _ in self._recent_visited]
     
-    def __next__(self, forbidenEdges) -> Edge:
+    def __next__(self, forbiddenEdges) -> Edge:
         outgoingEdges = list(self.outgoingEdges(onlyNonRecentVisited=True))
-        outgoingEdges = [e for e in outgoingEdges if e not in forbidenEdges]
+        outgoingEdges = [e for e in outgoingEdges if e not in forbiddenEdges]
         if not outgoingEdges:
             raise NoTransitionFound()
         edge = random.choice(outgoingEdges)
@@ -124,11 +124,11 @@ class RandomSubAreaFarmPath(AbstractFarmPath):
             valid = True
         return valid
     
-    def getNextEdge(self, forbidenEdges=None, onlyNonRecent=False) -> Vertex:
+    def getNextEdge(self, forbiddenEdges=None, onlyNonRecent=False) -> Vertex:
         outgoingEdges = list(self.outgoingEdges(onlyNonRecentVisited=onlyNonRecent))
-        if forbidenEdges is None:
-            forbidenEdges = []
-        outgoingEdges = [e for e in outgoingEdges if e not in forbidenEdges]
+        if forbiddenEdges is None:
+            forbiddenEdges = []
+        outgoingEdges = [e for e in outgoingEdges if e not in forbiddenEdges]
         if not outgoingEdges:
             raise NoTransitionFound()
         edge = random.choice(outgoingEdges)

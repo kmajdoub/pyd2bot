@@ -34,7 +34,7 @@ signal.signal(signal.SIGTERM, signal_handler)
 paths_file = os.path.join(os.path.dirname(__file__), "db", "paths.json")
 with open(paths_file, "r") as f:
     paths_json = json.load(f)
-    paths: dict[str, Path] = {json_path["id"]: Path.from_dict(json_path) for json_path in paths_json}
+    paths: dict[str, Path] = {json_path["id"]: Path(**json_path) for json_path in paths_json}
 
 staticdir = os.path.join(os.path.dirname(__file__), "static")
 dofus_data_file = os.path.join(staticdir, "dofusData", "dofus_data.json")
@@ -108,8 +108,8 @@ class BotManagerApp:
     def start_bot_session(self, session: Session):
         bot = Pyd2Bot(session)
         bot.addShutDownListener(self.on_bot_shutdown)
-        self._running_bots[session.character.login] = bot
-        self._bots_run_infos[session.character.login] = {
+        self._running_bots[session.character.accountId] = bot
+        self._bots_run_infos[session.character.accountId] = {
             "name": bot.name,
             "startTime": time.time(),
             "character": session.character.name,
@@ -157,7 +157,7 @@ class BotManagerApp:
             path_id = data.get("pathId")
             session = self.get_basic_session(account_id, character_id, SessionTypeEnum.FIGHT)
             # check if bot already running on this accounId
-            if session.character.login in self._running_bots:
+            if session.character.accountId in self._running_bots:
                 return jsonify({"error": f"Bot already running for account {account_id}"}), 400
             session.monsterLvlCoefDiff = data.get("monsterLvlCoefDiff")
             session.path = paths[path_id]
@@ -197,7 +197,7 @@ class BotManagerApp:
             number_of_covers = data.get("number_of_covers")
             session = self.get_basic_session(account_id, character_id, session_type)
             # check if bot already running on this accounId
-            if session.character.login in self._running_bots:
+            if session.character.accountId in self._running_bots:
                 return jsonify({"error": f"Bot already running for account {account_id}"}), 400
             session.type = session_type
             if session_type == SessionTypeEnum.FARM:
@@ -213,7 +213,7 @@ class BotManagerApp:
             else:
                 return jsonify({"error": f"Invalid session type: {session_type}"}), 400
             try:
-                session.jobFilters = [JobFilter.from_dict(job) for job in job_filters]
+                session.jobFilters = [JobFilter(**job) for job in job_filters]
             except Exception as e:
                 return jsonify({"error": f"Invalid jobFilters: {e}"}), 400
             self.start_bot_session(session)
@@ -313,9 +313,9 @@ class BotManagerApp:
                 return jsonify({"message": f"Error while importing accounts: {e}"})
             return jsonify({"message": "Accounts imported successfully"})
 
-    def on_bot_shutdown(self, login, reason, message):
-        print(f"Bot {login} shutdown: {reason}\n{message}")
-        # self._running_bots.pop(login)
+    def on_bot_shutdown(self, accountId, reason, message):
+        print(f"Bot {accountId} shutdown: {reason}\n{message}")
+        # self._running_bots.pop(accountId)
 
     def run(self, debug=True, port=5000):
         self.socketio.run(self.app, debug=debug, port=port)

@@ -86,12 +86,12 @@ class GiveItems(AbstractBehavior):
 
     def checkGuestStatus(self):
         self.state = GiveItelsStates.WAITING_FOR_SELLER_IDLE
-        self.lastSellerState = self.getGuestStatus(self.seller.login)
+        self.lastSellerState = self.getGuestStatus(self.seller.accountId)
         while self.lastSellerState != "idle":
             Logger().info(f"[GiveItems] Seller status: {self.lastSellerState}.")
             if Kernel().worker.terminated.wait(2):
                 return Logger().warning("Worker finished while fetching player status returning")
-            self.lastSellerState = self.getGuestStatus(self.seller.login)
+            self.lastSellerState = self.getGuestStatus(self.seller.accountId)
         self.state = GiveItelsStates.WALKING_TO_BANK
         self.autotripUseZaap(self.bankInfos.npcMapId, callback=self.onTripEnded)
 
@@ -108,7 +108,7 @@ class GiveItems(AbstractBehavior):
                 if not result:
                     return self.finish(self.SELLER_BUSY, f"Seller refused come to collect ask")
                 self.waitForGuestToComme()
-            self.rpcFrame.askComeToCollect(self.seller.login, self.bankInfos, self.character, onSellerResponse)
+            self.rpcFrame.askComeToCollect(self.seller.accountId, self.bankInfos, self.character, onSellerResponse)
 
     def waitForGuestToComme(self):
         if Kernel().roleplayEntitiesFrame:
@@ -126,7 +126,7 @@ class GiveItems(AbstractBehavior):
             if errorId == 5023: # guest doesnt have enough space
                 Logger().error(error)
                 Kernel().worker.terminated.wait(5)
-                return self.checkGuestStatus(self.seller.login)
+                return self.checkGuestStatus(self.seller.accountId)
             return self.finish(errorId, error)
         if not self.return_to_start:
             return self.finish(True, None)

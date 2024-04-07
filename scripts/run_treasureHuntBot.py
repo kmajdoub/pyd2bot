@@ -26,7 +26,7 @@ if __name__ == "__main__":
     app.setQuitOnLastWindowClosed(False)
     bot = Pyd2Bot(session)
     bot.start()
-    bot.addShutDownListener(lambda login, reason, message: QtWidgets.QApplication.quit())
+    bot.addShutDownListener(lambda accountId, reason, message: QtWidgets.QApplication.quit())
     icon = QtGui.QIcon(os.path.join(__dir__, "icon.png"))
     trayIcon = SystemTrayIcon(icon, bot)
     trayIcon.show()

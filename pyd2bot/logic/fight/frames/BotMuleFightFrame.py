@@ -1,4 +1,4 @@
-from Grinder.models import Character
+from pyd2bot.data.models import Character
 from pyd2bot.logic.fight.messages.MuleSwitchedToCombatContext import \
     MuleSwitchedToCombatContext
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
@@ -40,7 +40,7 @@ class BotMuleFightFrame(Frame):
 
     def pushed(self) -> bool:
         Logger().info("BotMuleFightFrame pushed")
-        Kernel.getInstance(self.leader.login).worker.process(MuleSwitchedToCombatContext(PlayedCharacterManager().id))
+        Kernel.getInstance(self.leader.accountId).worker.process(MuleSwitchedToCombatContext(PlayedCharacterManager().id))
         return True
 
     def pulled(self) -> bool:
@@ -62,5 +62,5 @@ class BotMuleFightFrame(Frame):
             return True
         
         elif isinstance(msg, (GameMapNoMovementMessage, GameActionFightNoSpellCastMessage, GameFightTurnStartPlayingMessage, TextInformationMessage)):
-            Kernel.getInstance(self.leader.login).worker.process(msg)
+            Kernel.getInstance(self.leader.accountId).worker.process(msg)
             return True

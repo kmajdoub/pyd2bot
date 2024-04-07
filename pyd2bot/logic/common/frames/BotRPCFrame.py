@@ -79,14 +79,14 @@ class BotRPCFrame(Frame):
             elif isinstance(msg, ComeToCollectMessage):
                 def onresponse(result, error):
                     if error:
-                        Logger().error(f"[RPCFrame] Error while trying to meet the guest {msg.guestInfos.login} to collect resources: {error}")
+                        Logger().error(f"[RPCFrame] Error while trying to meet the guest {msg.guestInfos.accountId} to collect resources: {error}")
                     for _, instance in Kernel.getInstances():
                         instance.worker.process(SellerVacantMessage(threading.current_thread().name))
                     BotSettings.SELLER_VACANT.set()
                     if BotSettings.SELLER_LOCK.locked():
                         BotSettings.SELLER_LOCK.release()
                 if CollectItems().isRunning():
-                    Logger().error(f"[RPCFrame] can't start collect with {msg.guestInfos.login} because collect is already running with {CollectItems().guest.login}")
+                    Logger().error(f"[RPCFrame] can't start collect with {msg.guestInfos.accountId} because collect is already running with {CollectItems().guest.accountId}")
                     rsp = RPCResponseMessage(msg, data=False)
                     self.send(rsp)
                     return True

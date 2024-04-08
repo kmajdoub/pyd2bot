@@ -208,7 +208,7 @@ class BotManagerApp:
                 for path_id in paths_ids:
                     if path_id not in paths:
                         return jsonify({"error": f"Path {path_id} not found"}), 400
-                session.number_of_covers = number_of_covers
+                session.numberOfCovers = number_of_covers
                 session.pathsList = [paths[path_id] for path_id in paths_ids]
             else:
                 return jsonify({"error": f"Invalid session type: {session_type}"}), 400

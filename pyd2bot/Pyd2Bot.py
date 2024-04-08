@@ -85,7 +85,7 @@ class Pyd2Bot(DofusClient):
         elif self.session.isMultiPathsFarmer:
             Logger().info(f"Starting multi paths farmer behavior for {self.name}")
             MultiplePathsResourceFarm(
-                self.session.getPathsListFromDto(), self.session.jobFilters, self.session.number_of_covers
+                self.session.getPathsListFromDto(), self.session.jobFilters, self.session.numberOfCovers
             ).start(callback=self.onMainBehaviorFinish)
 
         elif self.session.isFightSession:

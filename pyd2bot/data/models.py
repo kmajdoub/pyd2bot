@@ -138,7 +138,7 @@ class Session(BaseModel):
     jobFilters: List[JobFilter] = []
     pathsList: Optional[List[Path]] = None
     fightsPerMinute: float = 1
-    number_of_covers: int = 3
+    numberOfCovers: int = 3
     fightOptionsSent: bool = False
 
     @model_validator(mode="before")

@@ -205,6 +205,7 @@ class BotFightFrame(Frame):
         self.fightResumed = True
 
     def pushed(self) -> bool:
+        Logger().warning(f"{self.__class__} has been pushed")
         self.init()
         KernelEventsManager().on(KernelEvent.ServerTextInfo, self.onServerTextInfo, originator=self)
         KernelEventsManager().once(KernelEvent.FightResumed, self.onFightResumed, originator=self)
@@ -283,6 +284,7 @@ class BotFightFrame(Frame):
         return EntitiesManager().getEntity(self.currentPlayer.id).position
     
     def pulled(self) -> bool:
+        Logger().warning(f"{self.__class__} has been pulled")
         self._spellw = None
         if self._reachableCells:
             self._reachableCells.clear()
@@ -637,6 +639,7 @@ class BotFightFrame(Frame):
                 playerManager = PlayedCharacterManager.getInstance(player.login)
                 if playerManager:
                     playerManager.isFighting = False
+        Kernel().worker.removeFrame(self)
 
     def onFightOptionStateUpdate(self, event, fightId, teamId, option, state):
         if option not in BotConfig().fightOptions:
@@ -864,7 +867,7 @@ class BotFightFrame(Frame):
                         self._turnAction.clear()
                 self.checkCanPlay()
 
-        BotEventsManager().onceFighterMoved(self._currentPlayerId, onMovementApplied, args=[path], originator=self)
+        BotEventsManager().onceFighterMoved(self._currentPlayerId, onMovementApplied, args=[path.clone()], originator=self)
         self.connection.send(gmmrmsg)
         self._lastMoveRequestTime = perf_counter()
         return True

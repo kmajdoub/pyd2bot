@@ -321,7 +321,7 @@ class BotManagerApp:
         # self._running_bots.pop(login)
 
     def run(self, debug=True, port=5000):
-        self.socketio.run(self.app, debug=debug, port=port)
+        self.socketio.run(self.app, debug=debug, port=port,allow_unsafe_werkzeug=True)
 
 
 if __name__ == "__main__":

@@ -107,7 +107,7 @@ class BotManagerApp:
 
     def start_bot_session(self, session: Session):
         bot = Pyd2Bot(session)
-        bot.addShutDownListener(self.on_bot_shutdown)
+        bot.addShutdownListener(self.on_bot_shutdown)
         self._running_bots[session.character.accountId] = bot
         self._bots_run_infos[session.character.accountId] = {
             "name": bot.name,

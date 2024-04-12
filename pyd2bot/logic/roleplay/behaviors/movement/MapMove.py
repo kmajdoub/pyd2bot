@@ -43,6 +43,7 @@ class MapMove(AbstractBehavior):
 
     def run(self, destCell, exactDistination=True, forMapChange=False, mapChangeDirection=-1, cellsblacklist=[]) -> None:
         Logger().info(f"Move from {PlayedCharacterManager().currentCellId} to {destCell} started")
+        
         self.forMapChange = forMapChange
         self.mapChangeDirection = mapChangeDirection
         self.exactDestination = exactDistination
@@ -141,11 +142,8 @@ class MapMove(AbstractBehavior):
         if PlayedCharacterManager().isFighting:
             return
         self.requested_movement = True
-        gmmrmsg = GameMapMovementRequestMessage()
-        gmmrmsg.init(self.movePath.keyMoves(), MapDisplayManager().currentMapPoint.mapId)
-        ConnectionsHandler().send(gmmrmsg)
+        Kernel().movementFrame.sendMovementRequest()
         Logger().info(f"Requested move from {PlayedCharacterManager().currentCellId} to {self.dstCell.cellId}")
-        InactivityManager().activity()
 
     def onPlayerMoving(self, event, clientMovePath: MovementPath):
         self.requested_movement = False

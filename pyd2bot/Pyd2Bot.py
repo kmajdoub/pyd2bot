@@ -16,11 +16,7 @@ from pyd2bot.logic.roleplay.behaviors.fight.MuleFighter import MuleFighter
 from pyd2bot.logic.roleplay.behaviors.fight.SoloFarmFights import SoloFarmFights
 from pyd2bot.logic.roleplay.behaviors.quest.ClassicTreasureHunt import ClassicTreasureHunt
 from pyd2bot.data.models import Session
-from pyd2bot.data.enums import SessionStatusEnum
-from pydofus2.com.ankamagames.atouin.managers.MapDisplayManager import MapDisplayManager
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
-from pydofus2.com.ankamagames.dofus.kernel.net.ConnectionsHandler import ConnectionsHandler
-from pydofus2.com.ankamagames.dofus.kernel.net.ConnectionType import ConnectionType
 from pydofus2.com.ankamagames.dofus.kernel.net.DisconnectionReasonEnum import DisconnectionReasonEnum
 from pydofus2.com.ankamagames.dofus.network.enums.BreedEnum import BreedEnum
 from pydofus2.com.ankamagames.jerakine.benchmark.BenchmarkTimer import BenchmarkTimer
@@ -41,7 +37,7 @@ class Pyd2Bot(DofusClient):
         self._mule = session.isMuleFighter
         self.setAutoServerSelection(session.character.serverId, session.character.id)
         self.setCredentials(session.credentials.apikey, session.credentials.certId, session.credentials.certHash)
-        self._botUpdateStatsHandlers = []
+        self._stateUpdateListeners = []
 
     def onReconnect(self, event, message, afterTime=0):
         AbstractBehavior.clearAllChilds()
@@ -70,11 +66,14 @@ class Pyd2Bot(DofusClient):
             Logger().error(err, exc_info=True)
             self.shutdown(DisconnectionReasonEnum.EXCEPTION_THROWN, err)
         else:
-            self.shutdown(DisconnectionReasonEnum.WANTED_SHUTDOWN, "main behavior ended successfully")
+            self.shutdown(DisconnectionReasonEnum.WANTED_SHUTDOWN, "Main behavior ended successfully with code %s" % code)
 
-    def registerBotStatsHandler(self, callback):
-        self._botUpdateStatsHandlers.append(callback)
+    def addUpdateListener(self, callback):
+        self._stateUpdateListeners.append(callback)
 
+    def addStatusChangeListener(self, callback):
+        self._statusChangedListeners.append(callback)
+        
     def startSessionMainBehavior(self):
         Logger().info(f"Starting main behavior for {self.name}, sessionType : {self.session.type.name}")
 
@@ -138,33 +137,7 @@ class Pyd2Bot(DofusClient):
 
     def onCharacterSelectionSuccess(self, event, characterBaseInformations):
         super().onCharacterSelectionSuccess(event, characterBaseInformations)
-        CollectStats(self._botUpdateStatsHandlers).start()
+        CollectStats(self._stateUpdateListeners).start()
         AutoUpgradeStats(self.session.character.primaryStatId).start()
-        
-    def getState(self):
-        if self.terminated.is_set():
-            if self._banned:
-                return SessionStatusEnum.BANNED
-            if self._crashed:
-                return SessionStatusEnum.CRASHED
-            return SessionStatusEnum.TERMINATED
-        if (
-            not ConnectionsHandler.getInstance(self.name)
-            or ConnectionsHandler.getInstance(self.name).connectionType == ConnectionType.DISCONNECTED
-        ):
-            if self._banned:
-                return SessionStatusEnum.BANNED
-            return SessionStatusEnum.DISCONNECTED
-        elif ConnectionsHandler.getInstance(self.name).connectionType == ConnectionType.TO_LOGIN_SERVER:
-            return SessionStatusEnum.AUTHENTICATING
-        if Kernel.getInstance(self.name).fightContextFrame:
-            return SessionStatusEnum.FIGHTING
-        elif not Kernel.getInstance(self.name).roleplayEntitiesFrame:
-            return SessionStatusEnum.OUT_OF_ROLEPLAY
-        elif MapDisplayManager.getInstance(self.name).currentDataMap is None:
-            return SessionStatusEnum.LOADING_MAP
-        elif not Kernel.getInstance(self.name).roleplayEntitiesFrame.mcidm_processed:
-            return SessionStatusEnum.PROCESSING_MAP
-        if AbstractBehavior.hasRunning(self.name):
-            return SessionStatusEnum.ROLEPLAYING
-        return SessionStatusEnum.IDLE
+
+    

@@ -2,6 +2,7 @@ import threading
 from enum import Enum
 
 from pyd2bot.logic.roleplay.behaviors.BehaviorApi import BehaviorApi
+from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
 from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import \
     KernelEventsManager
 from pydofus2.com.ankamagames.berilia.managers.Listener import Listener
@@ -30,13 +31,16 @@ class AbstractBehavior(BehaviorApi, metaclass=Singleton):
 
     def start(self, *args, parent: 'AbstractBehavior'=None, callback=None, **kwargs) -> None:
         if self.parent and not self.parent.running.is_set():
-            return Logger().debug(f"Cancel start for reason : parent behavior died.")
+            Logger().debug(f"Cancel start for reason : parent behavior died.")
+            return
+        KernelEventsManager().send(KernelEvent.ClientStatusUpdaten, f"Starting_{type(self).__name__}")
         self.callback = callback
         self.parent = parent
         if self.parent:
             self.parent.children.append(self)
         if self.running.is_set():
             error = f"{type(self).__name__} already running by parent {self.parent}."
+            KernelEventsManager().send(KernelEvent.ClientStatusUpdaten, f"Error_{type(self).__name__}", {"error": error, "code": self.ALREADY_RUNNING})
             if self.callback:
                 self.callback(self.ALREADY_RUNNING, error)
             else:
@@ -65,6 +69,10 @@ class AbstractBehavior(BehaviorApi, metaclass=Singleton):
         if self.parent and self in self.parent.children:
             self.parent.children.remove(self)
         error = f"[{type(self).__name__}] failed for reason : {error}" if error else None
+        if error:
+            KernelEventsManager().send(KernelEvent.ClientStatusUpdaten, f"Error_{type(self).__name__}", {"error": error, "code": code})
+        else:
+            KernelEventsManager().send(KernelEvent.ClientStatusUpdaten, f"Finished_{type(self).__name__}")
         if callback is not None:
             callback(code, error, *args, **kwargs)
         else:

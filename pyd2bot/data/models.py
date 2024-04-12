@@ -129,22 +129,23 @@ class Session(BaseModel):
     character: Character
     type: SessionTypeEnum
     credentials: Credentials
-    unloadType: UnloadTypeEnum = UnloadTypeEnum.BANK
+    unloadType: Optional[UnloadTypeEnum] = UnloadTypeEnum.BANK
     leader: Optional[Character] = None
     followers: List[Character] = []
     seller: Optional[Character] = None
-    path: Optional[Path] = None
-    monsterLvlCoefDiff: float = 10.0
-    jobFilters: List[JobFilter] = []
+    path: Optional[Path] = None    
+    numberOfCovers: Optional[int] = 3
+    monsterLvlCoefDiff: Optional[float] = 10.0
+    jobFilters: Optional[List[JobFilter]] = []
     pathsList: Optional[List[Path]] = None
-    fightsPerMinute: float = 1
-    numberOfCovers: int = 3
-    fightOptionsSent: bool = False
+    fightsPerMinute: Optional[float] = 1
+    fightOptionsSent: Optional[bool] = False
 
     @model_validator(mode="before")
     @classmethod
     def validate(cls, data):
         cls.check_logic(data)
+        return data
 
     @classmethod
     def check_logic(cls, data):
@@ -153,12 +154,14 @@ class Session(BaseModel):
         unloadInBank = data.get("unloadType") == UnloadTypeEnum.BANK.value
         unloadInSeller = data.get("unloadType") == UnloadTypeEnum.SELLER.value
         isFarmSession = data.get("type") == SessionTypeEnum.FARM.value
-        isFightSession = data.get("type") == SessionTypeEnum.FIGHT.value
+        isSoloFightSession = data.get("type") == SessionTypeEnum.SOLO_FIGHT.value
+        isGroupFightSession = data.get("type") == SessionTypeEnum.GROUP_FIGHT.value
         isMultiPathsFarmer = data.get("type") == SessionTypeEnum.MULTIPLE_PATHS_FARM.value
         seller = data.get("seller")
         leader = data.get("leader")
         path = data.get("path")
         pathsList = data.get("pathsList")
+        followers = data.get("followers")
         if not seller:
             if isSeller:
                 raise ValueError("Seller session must have a seller character.")
@@ -174,8 +177,11 @@ class Session(BaseModel):
         if isFarmSession and not path:
             raise ValueError("Farm session must have a path.")
 
-        if isFightSession and not path:
+        if (isSoloFightSession or isGroupFightSession) and not path:
             raise ValueError("Fight session must have a path.")
+
+        if isGroupFightSession and not followers:
+            raise ValueError("Group fight session must have at least one follower.")
 
         if isMultiPathsFarmer and (pathsList is None or len(pathsList) < 2):
             raise ValueError("Multi paths farm session must have at least 2 paths.")
@@ -301,3 +307,4 @@ class PlayerStats(BaseModel):
 
     def add_visited_map(self, map_id: int) -> None:
         self.visitedMapsHeatMap[map_id] = self.visitedMapsHeatMap.get(map_id, 0) + 1
+

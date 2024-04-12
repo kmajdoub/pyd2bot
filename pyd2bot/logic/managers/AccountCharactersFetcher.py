@@ -21,7 +21,7 @@ class AccountCharactersFetcher(DofusClient):
         self.currServer = None
         self.serversList = None
         self.setCredentials(account.apikey, account.certId, account.certHash)
-        self.addShutDownListener(self.afterShutDown)
+        self.addShutdownListener(self.afterShutDown)
 
     def afterShutDown(self, name, message, reason):
         Logger().info(f"Characters fetched for account {self.account.login} ended with message : {message} and reason : {reason}")

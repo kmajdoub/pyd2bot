@@ -1,4 +1,4 @@
-from Grinder.models import Session
+from pyd2bot.data.models import Session
 from pyd2bot.logic.common.rpcMessages.PlayerConnectedMessage import \
     PlayerConnectedMessage
 from pyd2bot.logic.roleplay.messages.SellerVacantMessage import \

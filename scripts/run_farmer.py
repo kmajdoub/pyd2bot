@@ -54,6 +54,6 @@ if __name__ == "__main__":
     def onShutdown(name, message, reason):
         print(f"Shutting down {name} because {reason}, details:\n{message}")
         QtWidgets.QApplication.quit()
-    bot.addShutDownListener(onShutdown)
+    bot.addShutdownListener(onShutdown)
     trayIcon.show()
     sys.exit(app.exec_())

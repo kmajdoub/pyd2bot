@@ -1,6 +1,9 @@
 from pyd2bot.logic.fight.messages.MuleSwitchedToCombatContext import \
     MuleSwitchedToCombatContext
 from pyd2bot.logic.managers.BotConfig import BotConfig
+from pyd2bot.misc.BotEventsmanager import BotEventsManager
+from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
+from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import KernelEventsManager
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
 from pydofus2.com.ankamagames.dofus.kernel.net.ConnectionsHandler import \
     ConnectionsHandler
@@ -39,7 +42,7 @@ class BotMuleFightFrame(Frame):
 
     def pushed(self) -> bool:
         Logger().info("BotMuleFightFrame pushed")
-        Kernel.getInstance(BotConfig().leader.login).worker.process(MuleSwitchedToCombatContext(PlayedCharacterManager().id))
+        BotEventsManager().send(BotEventsManager().MULE_FIGHT_CONTEXT, PlayedCharacterManager().id)
         return True
 
     def pulled(self) -> bool:

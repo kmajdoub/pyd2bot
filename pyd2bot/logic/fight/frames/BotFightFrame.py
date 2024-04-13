@@ -205,6 +205,7 @@ class BotFightFrame(Frame):
         self.fightResumed = True
 
     def pushed(self) -> bool:
+        Logger().warning(f"{self.__class__} has been pushed")
         self.init()
         KernelEventsManager().on(KernelEvent.ServerTextInfo, self.onServerTextInfo, originator=self)
         KernelEventsManager().once(KernelEvent.FightResumed, self.onFightResumed, originator=self)
@@ -217,6 +218,17 @@ class BotFightFrame(Frame):
             ontimeout=lambda _: self.onChallengeBonusChosen(None, "N/A"),
             originator=self,
         )
+        KernelEventsManager().once(KernelEvent.FightEnded, self.onFightEnded, originator=self)
+        KernelEventsManager().on(KernelEvent.FightOptionStateUpdate, self.onFightOptionStateUpdate, originator=self)
+        KernelEventsManager().on(KernelEvent.ActionFightNoSpellCast, self.onActionFightNoSpellCast, originator=self)
+        KernelEventsManager().on(KernelEvent.FightMapNoMovement, self.onFightMapNoMovement, originator=self)
+        KernelEventsManager().on(KernelEvent.SequenceEnd, self.onSequenceEnd, originator=self)
+        KernelEventsManager().on(KernelEvent.SequenceStart, self.onSequenceStart, originator=self)
+        KernelEventsManager().on(KernelEvent.FightTurnStart, self.onFightTurnStart, originator=self)
+        KernelEventsManager().on(KernelEvent.FightTurnEnd, self.onFightTurnEnd, originator=self)
+        KernelEventsManager().on(KernelEvent.FightTurnStartPlaying, self.onFightTurnStartPlaying, originator=self)
+        KernelEventsManager().on(KernelEvent.FightTurnReadyRequest, self.onFightTurnReadyRequest, originator=self)
+        BotEventsManager().on(BotEventsManager().MULE_FIGHT_CONTEXT, self.onMuleSwitchedToCombatContext, originator=self)
         return True
 
     @property
@@ -272,11 +284,13 @@ class BotFightFrame(Frame):
         return EntitiesManager().getEntity(self.currentPlayer.id).position
     
     def pulled(self) -> bool:
+        Logger().warning(f"{self.__class__} has been pulled")
         self._spellw = None
         if self._reachableCells:
             self._reachableCells.clear()
         self._turnAction.clear()
         KernelEventsManager().clearAllByOrigin(self)
+        BotEventsManager().clearAllByOrigin(self)
         return True
 
     @property
@@ -618,25 +632,20 @@ class BotFightFrame(Frame):
         startFightMsg.init(True)
         connh.send(startFightMsg)
 
-    def process(self, msg: Message) -> bool:
-        if isinstance(msg, GameFightOptionStateUpdateMessage):
-            if msg.option not in BotConfig().fightOptions:
-                BotConfig().fightOptions.append(msg.option)
-            if Kernel().roleplayEntitiesFrame:
-                return False
-            return True
+    def onFightEnded(self, event):
+        self._inFight = False
+        if BotConfig().followers:
+            for player in BotConfig().followers:
+                playerManager = PlayedCharacterManager.getInstance(player.login)
+                if playerManager:
+                    playerManager.isFighting = False
+        Kernel().worker.removeFrame(self)
 
-        elif isinstance(msg, GameFightEndMessage):
-            self._inFight = False
-            if BotConfig().followers:
-                for player in BotConfig().followers:
-                    playerManager = PlayedCharacterManager.getInstance(player.login)
-                    if playerManager:
-                        playerManager.isFighting = False
-            Kernel().worker.removeFrame(self)
-            return True
+    def onFightOptionStateUpdate(self, event, fightId, teamId, option, state):
+        if option not in BotConfig().fightOptions:
+            BotConfig().fightOptions.append(option)
 
-        elif isinstance(msg, GameActionFightNoSpellCastMessage):
+    def onActionFightNoSpellCast(self, event):
             if not self.currentPlayer:
                 return
             Logger().error(f"Failed to cast spell")
@@ -648,91 +657,66 @@ class BotFightFrame(Frame):
                     return True
                 self._spellCastFails += 1
                 self.playTurn()
-            return True
 
-        elif isinstance(msg, GameMapNoMovementMessage):
-            if not self.currentPlayer:
-                return
-            Logger().error(f"Failed to move")
-            if self._isRequestingMovement and Kernel().turnFrame and Kernel().turnFrame.myTurn:
-                self._turnAction.clear()
-                self._isRequestingMovement = False
-                if self._moveRequestFails > 2:
-                    self.turnEnd()
-                    return True
-                self._moveRequestFails += 1
-                self.playTurn()
-            return True
+    def onFightMapNoMovement(self, event):
+        if not self.currentPlayer:
+            return
+        Logger().error(f"Failed to move")
+        if self._isRequestingMovement and Kernel().turnFrame and Kernel().turnFrame.myTurn:
+            self._turnAction.clear()
+            self._isRequestingMovement = False
+            if self._moveRequestFails > 2:
+                self.turnEnd()
+                return True
+            self._moveRequestFails += 1
+            self.playTurn()
 
-        elif isinstance(msg, SequenceEndMessage):
-            if self._myTurn:
-                if self._seqQueue:
-                    self._seqQueue.pop()
-                    if not self._seqQueue:
-                        self._waitingSeqEnd = False
-                        self.checkCanPlay()
-            return True
+    def onSequenceEnd(self, event):
+        if self._myTurn:
+            if self._seqQueue:
+                self._seqQueue.pop()
+                if not self._seqQueue:
+                    self._waitingSeqEnd = False
+                    self.checkCanPlay()
 
-        elif isinstance(msg, SequenceStartMessage):
-            if self._myTurn:
-                self._waitingSeqEnd = True
-                self._seqQueue.append(msg)
-            return True
+    def onSequenceStart(self, event, sequenceType, authorId):
+        if self._myTurn:
+            self._waitingSeqEnd = True
+            self._seqQueue.append(SequenceStartMessage().init(sequenceType, authorId))
+        return True
+    
+    def onFightTurnStart(self, event, id):
+        self._currentPlayerId = id
+        self.currentPlayer = BotConfig().getPlayerById(self._currentPlayerId)
+        if self.currentPlayer:
+            self.onPlayer()
+        if self._turnStartPlaying:
+            self.checkCanPlay()
+        
+    def onFightTurnEnd(self, event, id):
+        if self._myTurn:
+            self._isRequestingMovement = False
+            self._requestingCastSpell
+            self._lastPlayerId = id
+            self._myTurn = False
 
-        elif isinstance(msg, GameFightTurnStartMessage):
-            if not Kernel().fightEntitiesFrame:
-                return KernelEventsManager().onceFramePushed(
-                    "FightEntitiesFrame", self.process, [msg], originator=self
-                )
-            Logger().separator(f"Player {msg.id} turn to play", "~")
-            self._currentPlayerId = msg.id
-            if not self._lastPlayerId:
-                self._lastPlayerId = self._currentPlayerId
-            if not isinstance(msg, GameFightTurnResumeMessage):
-                BuffManager().decrementDuration(msg.id)
-                BuffManager().resetTriggerCount(msg.id)
-            if Kernel().battleFrame:
-                Kernel().battleFrame.removeSavedPosition(msg.id)
-                if Kernel().fightEntitiesFrame:
-                    for entityId, infos in Kernel().fightEntitiesFrame.entities.items():
-                        if infos and infos.stats.summoner == msg.id:
-                            Kernel().battleFrame.removeSavedPosition(entityId)
-            self.currentPlayer = BotConfig().getPlayerById(self._currentPlayerId)
-            if self.currentPlayer:
-                self.onPlayer()
-            if self._turnStartPlaying:
-                self.checkCanPlay()
-            return True
+    def onFightTurnStartPlaying(self, event):
+        if self._myTurn:
+            self.checkCanPlay()
+        else:
+            self._turnStartPlaying = True
 
-        elif isinstance(msg, GameFightTurnEndMessage):
-            if self._myTurn:
-                self._isRequestingMovement = False
-                self._requestingCastSpell
-                self._lastPlayerId = msg.id
-                self._myTurn = False
-            return True
+    def onFightTurnReadyRequest(self, event):
+        if not Kernel().battleFrame._executingSequence:
+            self._turnStartPlaying = False
+        else:
+            self.currentPlayer = None
 
-        elif isinstance(msg, GameFightTurnStartPlayingMessage):
-            if self._myTurn:
-                self.checkCanPlay()
-            else:
-                self._turnStartPlaying = True
-            return True
+    def onMuleSwitchedToCombatContext(self, event, id):
+        Logger().info(f"Mule {id} in fight context")
+        BotEventsManager().send(BotEventsManager.MULE_FIGHT_CONTEXT, id)
 
-        elif isinstance(msg, GameFightTurnReadyRequestMessage):
-            if Kernel().battleFrame._executingSequence:
-                Logger().warn("Delaying turn end acknowledgement because we're still in a sequence.")
-                self._confirmTurnEnd = True
-            else:
-                self.confirmTurnEnd()
-                self._turnStartPlaying = False
-            return True
-
-        elif isinstance(msg, MuleSwitchedToCombatContext):
-            Logger().info(f"Mule {msg.muleId} in fight context")
-            BotEventsManager().send(BotEventsManager.MULE_FIGHT_CONTEXT, msg.muleId)
-            return True
-
+    def process(self, msg: Message) -> bool:
         return False
 
     def onServerTextInfo(self, event, msgId, msgType, textId, text, params):
@@ -787,19 +771,15 @@ class BotFightFrame(Frame):
         self.checkCanPlay()
         self._turnPlayed += 1
     
-    def checkCanPlay(self):
+    def checkCanPlay(self, event=None):
         if not Kernel().turnFrame or not Kernel().turnFrame.myTurn or not self.currentPlayer or not self.playerManager:
             return
-        if self._confirmTurnEnd:
-            self.confirmTurnEnd()
-            self._confirmTurnEnd = False
-            return True
-        if self._myTurn and not self._waitingSeqEnd:
-            if Kernel().battleFrame._executingSequence:
-                Logger().warning("Delaying checkCanPlay because we're still in a sequence.")
-                KernelEventsManager().once(KernelEvent.SequenceExecFinished, self.checkCanPlay, originator=self)
-                return False
-            self.nextTurnAction("checkCanPlay")
+        if Kernel().battleFrame._executingSequence:
+            Logger().warning("Delaying checkCanPlay because we're still in a sequence.")
+            KernelEventsManager().once(KernelEvent.SequenceExecFinished, self.checkCanPlay, originator=self)
+            return False
+        
+        self.nextTurnAction("checkCanPlay")
 
     def turnEnd(self) -> None:
         if self.currentPlayer is not None and self.connection is not None:
@@ -865,12 +845,12 @@ class BotFightFrame(Frame):
         currMapId = PlayedCharacterManager().currentMap.mapId
         gmmrmsg.init(keyMovements, currMapId)
 
-        def onMovementApplied(movePath: MovementPath) -> None:
+        def onMovementApplied(movePath: MovementPath, path: MovementPath) -> None:
             if self._isRequestingMovement:
                 Logger().info(f"Movement applied, landed on cell {self.fighterPos.cellId}.")
                 self._isRequestingMovement = False
                 if movePath.end.cellId != path.end.cellId:
-                    Logger().warn(f"Movement failed to reach dest cell.")
+                    Logger().warn(f"Movement failed to reach dest cell : movPath: {movePath} path: {path}")
                     stoppedOnCellIdx = cells.index(movePath.end.cellId)
                     if not stoppedOnCellIdx:
                         Logger().error(f"Couldnt find last reached cell in path.")
@@ -887,30 +867,10 @@ class BotFightFrame(Frame):
                         self._turnAction.clear()
                 self.checkCanPlay()
 
-        BotEventsManager().onceFighterMoved(self._currentPlayerId, onMovementApplied, originator=self)
+        BotEventsManager().onceFighterMoved(self._currentPlayerId, onMovementApplied, args=[path.clone()], originator=self)
         self.connection.send(gmmrmsg)
         self._lastMoveRequestTime = perf_counter()
         return True
-
-    def confirmTurnEnd(self) -> None:
-        if self.currentPlayer:
-            if self.currentPlayer.id in Kernel().battleFrame.deadFightersList:
-                Logger().info(f"Player {self.currentPlayer.name} is dead")
-                self.turnEnd()
-                return
-            fighterInfos = Kernel().fightEntitiesFrame.getEntityInfos(self.currentPlayer.id)
-            if fighterInfos:
-                BuffManager().markFinishingBuffs(self.currentPlayer.id)
-                SpellWrapper.refreshAllPlayerSpellHolder(self.currentPlayer.id)
-            else:
-                Logger().error(f"Can't find fighter infos for player {self.currentPlayer.id}")
-            spellCastManager = CurrentPlayedFighterManager().getSpellCastManagerById(self.currentPlayer.id)
-            if spellCastManager:
-                spellCastManager.nextTurn()
-        self.currentPlayer = None
-        turnReadyMsg = GameFightTurnReadyMessage()
-        turnReadyMsg.init(True)
-        ConnectionsHandler().send(turnReadyMsg)
 
     def preparePlayableCharacter(self) -> None:
         self._spellCastFails = False

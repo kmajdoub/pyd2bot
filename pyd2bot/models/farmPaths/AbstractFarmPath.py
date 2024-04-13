@@ -31,13 +31,18 @@ class AbstractFarmPath:
         self._lastVisited = dict()
         self.name = "undefined"
         self._mapIds = []
-        self._verticies = set()
+        self._verticies = None
 
     @property
     def verticies(self) -> Set['Vertex']:
         if not self._verticies:
             self._verticies = self.reachableVerticies()
         return self._verticies
+    
+    @verticies.setter
+    def verticies(self, value):
+        if not self._verticies:
+            self._verticies = value
     
     @property
     def mapIds(self) -> list[int]:

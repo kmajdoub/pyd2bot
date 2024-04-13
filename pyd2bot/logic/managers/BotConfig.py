@@ -27,8 +27,8 @@ class BotConfig(metaclass=Singleton):
             "primaryStat": StatIds.STRENGTH,
         },  
         BreedEnum.Cra: {
-            "primarySpellId": 13047, # fleche optique
-            "primaryStat": StatIds.AGILITY,
+            "primarySpellId": 13085, # fleche D�tonante
+            "primaryStat": StatIds.INTELLIGENCE,
         },
         BreedEnum.Feca: {
             "primarySpellId": 12978, # attaque naturelle

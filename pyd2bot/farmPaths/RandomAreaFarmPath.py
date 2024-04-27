@@ -39,7 +39,7 @@ class RandomAreaFarmPath(AbstractFarmPath):
     def init(self):
         self.area = SubArea.getSubAreaByMapId(self.startVertex.mapId).area
         self.subAreas = self.getAllSubAreas()
-        Logger().info(f"RandomAreaFarmPath {self.name} initialized with {len(self.verticies)} verticies")
+        Logger().info(f"RandomAreaFarmPath {self.name} initialized with {len(self.vertices)} vertices")
 
     @property
     def mapIds(self) -> Set[int]:
@@ -49,13 +49,13 @@ class RandomAreaFarmPath(AbstractFarmPath):
 
     @property
     def pourcentExplored(self):
-        return 100 * len(self._lastVisited) / len(self.verticies)
+        return 100 * len(self._lastVisited) / len(self.vertices)
 
     def getClosestUnvisited(self):
         bestDist = float("inf")
         bestSolution = None
         currMp = MapPosition.getMapPositionById(self.currentVertex.mapId)
-        for v in self.verticies:
+        for v in self.vertices:
             if v.mapId == self.currentVertex.mapId:
                 continue
             if v not in self._lastVisited:
@@ -129,11 +129,11 @@ class RandomAreaFarmPath(AbstractFarmPath):
         return ret
     
     def __iter__(self) -> Iterator[Vertex]:
-        for it in self.verticies:
+        for it in self.vertices:
             yield it
 
     def __in__(self, vertex: Vertex) -> bool:
-        return vertex in self.verticies
+        return vertex in self.vertices
     
     def getAllSubAreas(self):
         subAreas = []

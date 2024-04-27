@@ -28,7 +28,7 @@ class CustomRandomFarmPath(AbstractFarmPath):
         return self._mapIds
     
     def init(self):
-        Logger().info(f"CustomRandomFarmPath {self.name} initialized with {len(self.verticies)} verticies")
+        Logger().info(f"CustomRandomFarmPath {self.name} initialized with {len(self.vertices)} vertices")
 
     def __next__(self, forbiddenEdges=None) -> Edge:
         outgoingEdges = list(self.outgoingEdges(onlyNonRecentVisited=False))

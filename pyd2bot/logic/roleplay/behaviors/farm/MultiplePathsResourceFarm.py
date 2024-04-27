@@ -27,7 +27,7 @@ class MultiplePathsResourceFarm(AbstractBehavior):
         self.startNextPath(None, None)
 
     def coverTimeEstimate(self, path: AbstractFarmPath):
-        n = len(path.verticies)
+        n = len(path.vertices)
         return n * n * math.log(n) * 10 # 10 seconds per vertex
     
     def startNextPath(self, code, err):

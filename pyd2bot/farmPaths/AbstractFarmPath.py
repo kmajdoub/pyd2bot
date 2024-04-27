@@ -22,19 +22,19 @@ class AbstractFarmPath:
     name : str
     _lastVisited : dict['Edge', int]
     _mapIds : list[int]
-    _verticies: set['Vertex']
+    _vertices: set['Vertex']
 
     def __init__(self) -> None:
         self._lastVisited = dict()
         self.name = "undefined"
         self._mapIds = []
-        self._verticies = set()
+        self._vertices = set()
 
     @property
-    def verticies(self) -> Set['Vertex']:
-        if not self._verticies:
-            self._verticies = self.reachableVerticies()
-        return self._verticies
+    def vertices(self) -> Set['Vertex']:
+        if not self._vertices:
+            self._vertices = self.reachableVertices()
+        return self._vertices
     
     @property
     def mapIds(self) -> list[int]:
@@ -54,11 +54,11 @@ class AbstractFarmPath:
         raise NotImplementedError()
     
     def __iter__(self) -> Iterator['Vertex']:
-        for it in self.verticies:
+        for it in self.vertices:
             yield it
 
     def __in__(self, vertex: 'Vertex') -> bool:
-        return vertex in self.verticies
+        return vertex in self.vertices
 
 
     def currNeighbors(self) -> Iterator['Vertex']:
@@ -78,10 +78,10 @@ class AbstractFarmPath:
         Logger().info(f"Looking for a path to the closest parkour map, starting from the current vertex...")
         candidates = []
         for dst_mapId in self.mapIds:
-            verticies = WorldGraph().getVertices(dst_mapId)
-            if verticies:
-                candidates.extend(verticies.values())
-        return Localizer.findPathtoClosestVertexCandidate(self.currentVertex, candidates)
+            vertices = WorldGraph().getVertices(dst_mapId)
+            if vertices:
+                candidates.extend(vertices.values())
+        return Localizer.findPathToClosestVertexCandidate(self.currentVertex, candidates)
 
     def hasValidTransition(self, edge: 'Edge') -> bool:
         from pydofus2.com.ankamagames.dofus.datacenter.items.criterion.GroupItemCriterion import \
@@ -103,16 +103,16 @@ class AbstractFarmPath:
             valid = True
         return valid
 
-    def reachableVerticies(self) -> Set['Vertex']:
+    def reachableVertices(self) -> Set['Vertex']:
         queue = collections.deque([self.startVertex])
-        verticies = set([self.startVertex])
+        vertices = set([self.startVertex])
         while queue:
             curr = queue.popleft()
             for e in self.outgoingEdges(curr):
-                if e.dst not in verticies:
+                if e.dst not in vertices:
                     queue.append(e.dst)
-                    verticies.add(e.dst)
-        return verticies
+                    vertices.add(e.dst)
+        return vertices
 
     @staticmethod
     def filter_out_transitions(edge: 'Edge', tr_types_whitelist: list[TransitionTypeEnum]) -> bool:

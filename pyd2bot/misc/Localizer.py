@@ -121,11 +121,11 @@ class Localizer:
                 Logger().warning(f"Could not find a candidate zaap for map {startMapId}")
                 return None, None
             Logger().debug(f"Found {len(candidates)} candidates maps for closest zaap to map {startMapId}")
-            return cls.findPathtoClosestVertexCandidate(startVertex, candidates)
+            return cls.findPathToClosestVertexCandidate(startVertex, candidates)
         return None
 
     @classmethod
-    def findPathtoClosestVertexCandidate(cls, vertex: Vertex, candidates: list[Vertex]):
+    def findPathToClosestVertexCandidate(cls, vertex: Vertex, candidates: list[Vertex]):
         Logger().info(f"Searching closest map from vertex to one of the candidates")
         if not candidates:
             Logger().warning(f"No candidates to search path to!")

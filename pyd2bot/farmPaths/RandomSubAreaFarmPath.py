@@ -39,9 +39,9 @@ class RandomSubAreaFarmPath(AbstractFarmPath):
     
     def init(self):
         self._subArea = SubArea.getSubAreaByMapId(self.startVertex.mapId)
-        Logger().info(f"RandomSubAreaFarmPath {self.name} initialized with {len(self.verticies)} verticies")
+        Logger().info(f"RandomSubAreaFarmPath {self.name} initialized with {len(self.vertices)} vertices")
 
-    def recentVisitedVerticies(self):
+    def recentVisitedvertices(self):
         self._recent_visited = [(_, time_added) for (_, time_added) in self._recent_visited if (time.time() - time_added) < 60 * 5]
         return [v for v, _ in self._recent_visited]
     
@@ -81,11 +81,11 @@ class RandomSubAreaFarmPath(AbstractFarmPath):
         return ret
 
     def __iter__(self) -> Iterator[Vertex]:
-        for it in self.verticies:
+        for it in self.vertices:
             yield it
 
     def __in__(self, vertex: Vertex) -> bool:
-        return vertex in self.verticies
+        return vertex in self.vertices
 
     def to_json(self) -> dict:
         return {

@@ -64,8 +64,8 @@ class UseZaap(AbstractBehavior):
             Logger().error("Zaap is not reachable, maybe its in a different rp zone than the player!")
             zaapLinkedRpZone = MapDisplayManager().dataMap.cells[self.zaapIe.position.cellId].linkedZone
             playerLinkedRpZone = PlayedCharacterManager().currentZoneRp
-            currMapVerticies = WorldGraph().getVertices(PlayedCharacterManager().currentMap.mapId)
-            Logger().debug(f"Current map verticies: {currMapVerticies}")
+            currMapvertices = WorldGraph().getVertices(PlayedCharacterManager().currentMap.mapId)
+            Logger().debug(f"Current map vertices: {currMapvertices}")
             if zaapLinkedRpZone != playerLinkedRpZone:
                 Logger().debug(f"Zaap is in a different rp zone than the player, zaap rp zone: {zaapLinkedRpZone}, player rp zone: {playerLinkedRpZone}")
                 Logger().debug(f"Auto travelling to zaap rp zone {zaapLinkedRpZone}")

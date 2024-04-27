@@ -132,10 +132,10 @@ class AutoTrip(AbstractBehavior):
         if linkedZone is None and PlayedCharacterManager().currentMap.mapId == dstMapId:
             return callback(0, None, [])
         if linkedZone is None:
-            verticies = WorldGraph().getVertices(dstMapId).values()
+            vertices = WorldGraph().getVertices(dstMapId).values()
         else:
-            verticies = [WorldGraph().getVertex(dstMapId, linkedZone)]
-        for dest_vertex in verticies:
+            vertices = [WorldGraph().getVertex(dstMapId, linkedZone)]
+        for dest_vertex in vertices:
             start = perf_counter()
             path = AStar().search(WorldGraph(), src, dest_vertex)
             if path is not None:

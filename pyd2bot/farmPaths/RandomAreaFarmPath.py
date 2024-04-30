@@ -70,9 +70,10 @@ class RandomAreaFarmPath(AbstractFarmPath):
     
     def getNextEdge(self, forbiddenEdges=None, onlyNonRecent=False) -> Vertex:
         outgoingEdges = list(self.outgoingEdges(onlyNonRecentVisited=onlyNonRecent))
-        if forbiddenEdges is None:
-            forbiddenEdges = []
-        outgoingEdges = [e for e in outgoingEdges if e not in forbiddenEdges]
+        if forbiddenEdges is not None:
+            if not isinstance(forbiddenEdges, (list, set)):
+                raise ValueError(f"ForbiddenEdges must be a list or a set")
+            outgoingEdges = [e for e in outgoingEdges if e not in forbiddenEdges]
         if not outgoingEdges:
             raise NoTransitionFound()
         edge = random.choice(outgoingEdges)
@@ -89,7 +90,6 @@ class RandomAreaFarmPath(AbstractFarmPath):
         from pydofus2.com.ankamagames.dofus.datacenter.items.criterion.GroupItemCriterion import \
             GroupItemCriterion
 
-        
         if self.allowedTransitions:
             transitions = [tr for tr in edge.transitions if TransitionTypeEnum(tr.type) in self.allowedTransitions]
         else:

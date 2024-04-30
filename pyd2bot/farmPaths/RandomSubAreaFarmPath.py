@@ -36,12 +36,12 @@ class RandomSubAreaFarmPath(AbstractFarmPath):
         if not self._subArea:
             self._subArea = SubArea.getSubAreaByMapId(self.startVertex.mapId)
         return self._subArea.mapIds
-    
+
     def init(self):
         self._subArea = SubArea.getSubAreaByMapId(self.startVertex.mapId)
         Logger().info(f"RandomSubAreaFarmPath {self.name} initialized with {len(self.vertices)} vertices")
 
-    def recentVisitedvertices(self):
+    def recentVisitedVertices(self):
         self._recent_visited = [(_, time_added) for (_, time_added) in self._recent_visited if (time.time() - time_added) < 60 * 5]
         return [v for v, _ in self._recent_visited]
     

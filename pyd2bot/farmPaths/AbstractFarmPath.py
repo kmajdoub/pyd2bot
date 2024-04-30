@@ -16,6 +16,8 @@ from typing import Iterator, Set
 if TYPE_CHECKING:
     from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Edge import Edge
     from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Vertex import Vertex
+
+
 class AbstractFarmPath:
     _currentVertex: 'Vertex'
     startVertex: 'Vertex'

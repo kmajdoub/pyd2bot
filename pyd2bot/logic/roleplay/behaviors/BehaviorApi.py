@@ -23,8 +23,8 @@ __dir__ = os.path.dirname(os.path.abspath(__file__))
 SPECIAL_DESTINATIONS_PATH = os.path.join(__dir__, "special_destinations.json")
 with open(SPECIAL_DESTINATIONS_PATH, "r") as f:
     SPECIAL_DESTINATIONS = json.load(f)
-# Sort the dictionary items by 'pereference' in descending order
-SPECIAL_DESTINATIONS = sorted(SPECIAL_DESTINATIONS.items(), key=lambda x: x[1]['pereference'], reverse=True)
+# Sort the dictionary items by 'preference' in descending order
+SPECIAL_DESTINATIONS = sorted(SPECIAL_DESTINATIONS.items(), key=lambda x: x[1]['preference'], reverse=True)
 
 
 class BehaviorApi:
@@ -48,7 +48,7 @@ class BehaviorApi:
                 return info
         return None
 
-    def autotripUseZaap(self, dstMapId, dstZoneId=None, withSaveZaap=False, maxCost=None, excludeMaps=[], check_special_dest=True, callback=None):
+    def travelUsingZaap(self, dstMapId, dstZoneId=None, withSaveZaap=False, maxCost=None, excludeMaps=[], check_special_dest=True, callback=None):
         from pyd2bot.logic.roleplay.behaviors.movement.AutoTripUseZaap import \
             AutoTripUseZaap
         
@@ -71,11 +71,11 @@ class BehaviorApi:
             def onOutOfCelestialDim(code, err):
                 if err:
                     return callback(code, f"Could not get player out of celestial dimension : {err}")
-                self.autotripUseZaap(dstMapId, dstZoneId, withSaveZaap, maxCost, excludeMaps, callback=callback)
+                self.travelUsingZaap(dstMapId, dstZoneId, withSaveZaap, maxCost, excludeMaps, callback=callback)
 
             return self.autoTrip(154010883, 1, callback=onOutOfCelestialDim)
 
-        path_to_dest_zaap = Localizer.findPathtoClosestZaap(dstMapId, maxCost, excludeMaps=excludeMaps, onlyKnownZaap=False)
+        path_to_dest_zaap = Localizer.findPathToClosestZaap(dstMapId, maxCost, excludeMaps=excludeMaps, onlyKnownZaap=False)
         if not path_to_dest_zaap:
             Logger().warning(f"No dest zaap found for cost {maxCost} and map {dstMapId}!")
             return self.autoTrip(dstMapId, dstZoneId, callback=callback)
@@ -97,7 +97,7 @@ class BehaviorApi:
                     return self.saveZaap(onDstZaapSaved)
                 self.autoTrip(dstMapId, dstZoneId, callback=callback)
 
-            return self.autotripUseZaap(
+            return self.travelUsingZaap(
                 dstZaapVertex.mapId,
                 dstZaapVertex.zoneId,
                 excludeMaps=excludeMaps + [dstZaapVertex.mapId],
@@ -147,7 +147,7 @@ class BehaviorApi:
             if err:
                 return callback(code, f"Could not reach special destination {dstSubArea.name} ({dstMapId}) : {err}")
             if useZaap:
-                self.autotripUseZaap(dstMapId, dstZoneId, callback=callback)
+                self.travelUsingZaap(dstMapId, dstZoneId, callback=callback)
             else:
                 self.autoTrip(dstMapId, dstZoneId, callback=callback)
 
@@ -180,7 +180,7 @@ class BehaviorApi:
         self.npcDialog(
             infos["npcMapId"],
             infos["npcId"],
-            infos["openDialiogActionId"],
+            infos["openDialogActionId"],
             infos["replies"],
             useZaap=useZaap,
             callback=onNpcDialogEnd,
@@ -206,7 +206,7 @@ class BehaviorApi:
     def mapMove(
         self,
         destCell,
-        exactDistination=True,
+        exactDestination=True,
         forMapChange=False,
         mapChangeDirection=-1,
         callback=None,
@@ -216,7 +216,7 @@ class BehaviorApi:
 
         MapMove().start(
             destCell,
-            exactDistination=exactDistination,
+            exactDestination=exactDestination,
             forMapChange=forMapChange,
             mapChangeDirection=mapChangeDirection,
             callback=callback,
@@ -267,7 +267,7 @@ class BehaviorApi:
         self,
         ie=None,
         cell=None,
-        exactDistination=False,
+        exactDestination=False,
         waitForSkillUsed=True,
         elementId=None,
         skilluid=None,
@@ -276,7 +276,7 @@ class BehaviorApi:
         from pyd2bot.logic.roleplay.behaviors.skill.UseSkill import UseSkill
 
         UseSkill().start(
-            ie, cell, exactDistination, waitForSkillUsed, elementId, skilluid, callback=callback, parent=self
+            ie, cell, exactDestination, waitForSkillUsed, elementId, skilluid, callback=callback, parent=self
         )
 
     def soloFarmFights(self, path, fightPerMinute=1, fightPartyMembers=None, monsterLvlCoefDiff=None, timeout=None, callback=None):
@@ -319,7 +319,7 @@ class BehaviorApi:
             NpcDialog().start(npcMapId, npcId, npcOpenDialogId, npcQuestionsReplies, callback=callback, parent=self)
 
         if useZaap:
-            self.autotripUseZaap(npcMapId, callback=onNPCMapReached)
+            self.travelUsingZaap(npcMapId, callback=onNPCMapReached)
         else:
             self.autoTrip(npcMapId, check_special_dest=check_special_dest, callback=onNPCMapReached)
 
@@ -398,15 +398,15 @@ class BehaviorApi:
     
     def onMultiple(self, listeners):
         for event_id, callback, kwargs in listeners:
-            self.on(event_id, callback, **kwargs, originator=self)
+            self.on(event_id, callback, **kwargs)
 
     def onceMapProcessed(self, callback, args=[], mapId=None, timeout=None, ontimeout=None):
         return KernelEventsManager().onceMapProcessed(
             callback=callback, args=args, mapId=mapId, timeout=timeout, ontimeout=ontimeout, originator=self
         )
 
-    def onceFramePushed(self, frameName, callback):
-        return KernelEventsManager().onceFramePushed(frameName, callback, originator=self)
+    def onceFramePushed(self, frameName, callback, args=[]):
+        return KernelEventsManager().onceFramePushed(frameName, callback, args=args, originator=self)
 
     def send(self, event_id, *args, **kwargs):
         return KernelEventsManager().send(event_id, *args, **kwargs)

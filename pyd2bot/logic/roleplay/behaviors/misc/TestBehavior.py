@@ -14,4 +14,4 @@ class Test(AbstractBehavior):
         def onMapMoveFinished(code, err, landingcell):
             Logger().info(f"Map move finished with code {code} and error {err} and landingcell {landingcell}")
             self.finish(code, err)
-        self.mapMove(99, exactDistination=True, callback=onMapMoveFinished)
+        self.mapMove(99, exactDestination=True, callback=onMapMoveFinished)

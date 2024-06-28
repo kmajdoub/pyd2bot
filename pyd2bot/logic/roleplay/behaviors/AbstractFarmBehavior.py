@@ -1,4 +1,5 @@
 import os
+import threading
 from time import perf_counter
 from typing import Any
 
@@ -44,9 +45,23 @@ class AbstractFarmBehavior(AbstractBehavior):
         self.forbiddenEdges = set()
         self._currEdge = None
         self._deactivate_riding = False
+        self._stop_sig = threading.Event()
+        self._moving_to_next_step = False
         super().__init__()
 
+
+    def stop(self):
+        self._stop_sig.set()
+        
     def run(self, *args, **kwargs):
+        self.initListeners()
+        self.inFight = False
+        self.initialized = False
+        self.startTime = perf_counter()
+        self.init(*args, **kwargs)
+        self.main()
+
+    def initListeners(self):
         self.on(KernelEvent.FightStarted, self.onFight)
         self.on(KernelEvent.PlayerStateChanged, self.onPlayerStateChange)
         self.on(KernelEvent.JobExperienceUpdate, self.onJobExperience)
@@ -56,12 +71,7 @@ class AbstractFarmBehavior(AbstractBehavior):
         self.on(KernelEvent.JobLevelUp, self.onJobLevelUp)
         self.on(KernelEvent.PartyInvited, self.onPartyInvited)
         self.on(KernelEvent.GuildInvited, self.onGuildInvited)
-        self.inFight = False
-        self.initialized = False
-        self.startTime = perf_counter()
-        self.init(*args, **kwargs)
-        self.main()
-
+        
     def onPartyInvited(self, event, partyId, partyType, fromId, fromName):
         pass
         
@@ -74,7 +84,7 @@ class AbstractFarmBehavior(AbstractBehavior):
     def onObjectAdded(self, event, iw: ItemWrapper):
         pass
 
-    def onReturnToLastvertex(self, code, err):
+    def onReturnToLastVertex(self, code, err):
         if err:
             if code == MovementFailError.PLAYER_IS_DEAD:
                 Logger().warning(f"Player is dead.")
@@ -103,11 +113,20 @@ class AbstractFarmBehavior(AbstractBehavior):
 
     def onGotBackInsideFarmArea(self, code, error):
         if error:
+            if code == 666:
+                if ChangeMap().isRunning():
+                    ChangeMap().stop()
+                    self.main()
+                    return
             return self.finish(self.JOIN_PATH_FAILED, f"Error while moving to farm path [{code}]: %s." % error)
         Logger().debug(f"Player got back inside farm area")
         self.main()
 
     def onNextVertexReached(self, code, error):
+        if not self._moving_to_next_step:
+            Logger().warning("Next vertex reached called but farmer is not waiting for vertex change!")
+            return
+        self._moving_to_next_step = False
         if error:
             if code == MovementFailError.PLAYER_IS_DEAD:
                 return self.send(
@@ -121,9 +140,11 @@ class AbstractFarmBehavior(AbstractBehavior):
                 return self.moveToNextStep()
             else:
                 return self.send(
-                    KernelEvent.ClientShutdown,
+                    KernelEvent.ClientRestart,
                     "Error while moving to next step: %s." % error,
                 )
+        if PlayedCharacterManager().isInFight:
+            return
         Logger().debug(f"Player moved to next vertex")
         if not PlayedCharacterManager().isInFight:
             self.currentVertex = self.path.currentVertex
@@ -144,6 +165,14 @@ class AbstractFarmBehavior(AbstractBehavior):
             else:
                 self.onBotOutOfFarmPath()
             return None
+        Logger().debug("Will move to next vertex in farm path")
+        
+        if ChangeMap().isRunning():
+            Logger().warning("Farmer found change map behavior already running!")
+            self._moving_to_next_step = False
+            ChangeMap().stop(True)
+
+        self._moving_to_next_step = True
         self.changeMap(
             edge=self._currEdge,
             dstMapId=self._currEdge.dst.mapId,
@@ -152,10 +181,11 @@ class AbstractFarmBehavior(AbstractBehavior):
         return self._currEdge
 
     def onBotOutOfFarmPath(self):
-        if not PlayedCharacterManager().currVertex:
-            return self.onceMapProcessed(callback=self.onBotOutOfFarmPath)
         Logger().warning(f"Bot is out of farm path, searching path to last vertex...")
-        self.autotripUseZaap(
+        if not PlayedCharacterManager().currVertex:
+            Logger().warning("Bot vertex not loaded yet!, delaying return to path after Map is processed.")
+            return self.onceMapProcessed(callback=self.onBotOutOfFarmPath)
+        self.travelUsingZaap(
             self.path.startVertex.mapId,
             self.path.startVertex.zoneId,
             withSaveZaap=False,
@@ -173,7 +203,9 @@ class AbstractFarmBehavior(AbstractBehavior):
     def onFight(self, event=None):
         Logger().debug(f"Player entered in a fight.")
         self.inFight = True
-        self.stopChilds()
+        self._moving_to_next_step = False
+        self.stopChildren()
+        KernelEventsManager().clearAllByOrigin(self)
         self.once(KernelEvent.RoleplayStarted, self.onRoleplayAfterFight)
 
     def isCollectErrCodeRequireRefresh(self, code: int) -> bool:
@@ -200,18 +232,18 @@ class AbstractFarmBehavior(AbstractBehavior):
     def onRevived(self, code, error):
         if error:
             return self.finish(code, f"Error [{code}] while auto-reviving player: {error}")
-        Logger().debug(f"Bot back on form, autotravelling to last memorized vertex {self.currentVertex}")
+        Logger().debug(f"Bot back on form, traveling to last memorized vertex {self.currentVertex}")
         if self.initialized:
-            self.autotripUseZaap(
+            self.travelUsingZaap(
                 self.currentVertex.mapId,
                 self.currentVertex.zoneId,
                 True,
-                callback=self.ongotBackToLastMap,
+                callback=self.onBackToLastMap,
             )
         else:
             self.main()
 
-    def ongotBackToLastMap(self, code, err):
+    def onBackToLastMap(self, code, err):
         if err:
             if code == AutoTrip.PLAYER_IN_COMBAT:
                 Logger().error("Player in combat")
@@ -225,6 +257,7 @@ class AbstractFarmBehavior(AbstractBehavior):
 
     def onRoleplayAfterFight(self, event=None):
         Logger().debug(f"Player ended fight and started roleplay")
+        self.initListeners()
         self.inFight = False
         def onRolePlayMapLoaded():
             if PlayedCharacterManager().isDead():
@@ -236,6 +269,11 @@ class AbstractFarmBehavior(AbstractBehavior):
     def main(self, event=None, error=None):
         Logger().debug(f"Farmer main loop called")
 
+        if self._stop_sig.is_set():
+            Logger().warning("User wanted to stop farmer!")
+            self.stopChildren(True)
+            return self.finish(True, None)
+
         if not self.running.is_set():
             Logger().error(f"Is not running!")
             return
@@ -244,6 +282,7 @@ class AbstractFarmBehavior(AbstractBehavior):
             return self.onceMapProcessed(callback=self.main)
 
         if self.inFight:
+            Logger().warning('Stopping farm loop because the farmer got in a fight!')
             return
 
         if PlayedCharacterManager().isDead():
@@ -263,8 +302,8 @@ class AbstractFarmBehavior(AbstractBehavior):
             self.initialized = True
             if self.currentVertex:
                 Logger().debug(f"Traveling to the memorized current vertex...")
-                return self.autotripUseZaap(
-                    self.currentVertex.mapId, self.currentVertex.zoneId, True, callback=self.onReturnToLastvertex
+                return self.travelUsingZaap(
+                    self.currentVertex.mapId, self.currentVertex.zoneId, True, callback=self.onReturnToLastVertex
                 )
             else:
                 self.currentVertex = self.path.currentVertex
@@ -282,6 +321,7 @@ class AbstractFarmBehavior(AbstractBehavior):
     def makeAction(self):
         """
         This method is called each time the main loop is called.
-        It should be overriden by subclasses to implement the behavior.
+        It should be overridden by subclasses to implement the behavior.
         The default implementation is to collect the nearest resource.
         """
+        Logger().warning("No make action behavior implemented!")

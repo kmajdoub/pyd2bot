@@ -1,3 +1,4 @@
+from typing import List
 from prettytable import PrettyTable
 
 from pyd2bot.logic.roleplay.behaviors.AbstractFarmBehavior import \
@@ -28,9 +29,9 @@ from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 
 class ResourceFarm(AbstractFarmBehavior):
     
-    def __init__(self, path: AbstractFarmPath, jobFilter: JobFilter, timeout=None):
+    def __init__(self, path: AbstractFarmPath, jobFilters: List[JobFilter], timeout=None):
         super().__init__(timeout)
-        self.jobFilter = jobFilter
+        self.jobFilters = jobFilters
         self.path = path
         self.deadEnds = set()
 
@@ -43,7 +44,7 @@ class ResourceFarm(AbstractFarmBehavior):
     def onPlayerStatusUpdate(self, event, accountId, playerId, statusId, message):
         if playerId == PlayedCharacterManager().id:
             if statusId == PlayerStatusEnum.PLAYER_STATUS_SOLO:
-                Logger().info("Player is now solo and can't be bothered by other players")
+                Logger().info("Player is now in mode solo and can't be bothered by other players")
                 
     def onPartyInvited(self, event, partyId, partyType, fromId, fromName):
         Logger().warning(f"Player invited to party {partyId} by {fromName}")
@@ -59,21 +60,21 @@ class ResourceFarm(AbstractFarmBehavior):
         It will select the next resource to farm and move to it.
         '''
         available_resources = self.getAvailableResources()
-        possibleoutgoingEdges = [e for e in self.path.outgoingEdges() if e not in self.deadEnds]
-        if len(available_resources) == 0 and len(possibleoutgoingEdges) == 1:
+        possibleOutgoingEdges = [e for e in self.path.outgoingEdges() if e not in self.deadEnds]
+        if len(available_resources) == 0 and len(possibleOutgoingEdges) == 1:
             Logger().warning("Farmer found dead end")
             self.deadEnds.add(self._currEdge)
             self.moveToNextStep()
             return
-        farmable_resources = [r for r in available_resources if r.canFarm(self.jobFilter)]
-        nonForbidenResources = [r for r in farmable_resources if r.uid not in self.forbiddenActions]
-        nonForbidenResources.sort(key=lambda r: r.distance)
-        if len(nonForbidenResources) == 0:
+        farmable_resources = [r for r in available_resources if r.canFarm(self.jobFilters)]
+        nonForbiddenResources = [r for r in farmable_resources if r.uid not in self.forbiddenActions]
+        nonForbiddenResources.sort(key=lambda r: r.distance)
+        if len(nonForbiddenResources) == 0:
             Logger().warning("No farmable resource found!")
             self.moveToNextStep()
         else:
-            self.logResourcesTable(nonForbidenResources)
-            self.currentTarget = nonForbidenResources[0]
+            self.logResourcesTable(nonForbiddenResources)
+            self.currentTarget = nonForbiddenResources[0]
             self.useSkill(
                 elementId=self.currentTarget.resource.id,
                 skilluid=self.currentTarget.resource.interactiveSkill.skillInstanceUid,
@@ -105,13 +106,13 @@ class ResourceFarm(AbstractFarmBehavior):
                 self.forbiddenActions.add(self.currentTarget.uid)
                 return self.main()
             return self.send(KernelEvent.ClientShutdown, error)
-        BenchmarkTimer(0.2, self.main).start()
+        BenchmarkTimer(1, self.main).start()
 
     def getAvailableResources(self) -> list[CollectableResource]:
-        if not Kernel().interactivesFrame:
-            Logger().error("No interactives frame found")
+        if not Kernel().interactiveFrame:
+            Logger().error("No interactive frame found")
             return None
-        collectables = Kernel().interactivesFrame.collectables.values()
+        collectables = Kernel().interactiveFrame.collectables.values()
         collectableResources = [CollectableResource(it) for it in collectables]
         return collectableResources
 
@@ -126,7 +127,7 @@ class ResourceFarm(AbstractFarmBehavior):
                         e.resource.skill.gatheredRessource.name,
                         e.resource.enabled,
                         e.reachable,
-                        e.canFarm(self.jobFilter)
+                        e.canFarm(self.jobFilters)
                     ]
                 )
             Logger().debug(f"Available resources :\n{summaryTable}")

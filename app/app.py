@@ -4,13 +4,15 @@ import os
 import time
 import sys
 import traceback
+from venv import create
 from flask import Flask, jsonify, request, render_template
 from flask_socketio import SocketIO
 from marshmallow import ValidationError
 from forms.schemas import FarmSessionSchema, FightSessionSchema
 from pyd2bot.logic.managers.AccountManager import AccountManager
 from pyd2bot.Pyd2Bot import Pyd2Bot
-from pyd2bot.data.models import JobFilter, Path, Session, SessionStatusEnum, SessionTypeEnum, UnloadTypeEnum
+from pyd2bot.data.models import JobFilter, Path, Session, SessionTypeEnum, UnloadTypeEnum
+from pydofus2.com.ClientStatusEnum import ClientStatusEnum
 from pydofus2.com.ankamagames.dofus.kernel.net.DisconnectionReasonEnum import DisconnectionReasonEnum
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.InventoryManager import InventoryManager
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import PlayedCharacterManager
@@ -92,43 +94,23 @@ class BotManagerApp:
 
     @staticmethod
     def get_basic_session(account_id: int, character_id: float, session_type: SessionTypeEnum) -> Session:
-        accountkey = AccountManager.get_accountkey(account_id)
-        character = AccountManager.get_character(accountkey, character_id)
-        apikey = AccountManager.get_apikey(accountkey)
-        cert = AccountManager.get_cert(accountkey)
+        account = AccountManager.get_account(account_id)
+        character = account.get_character(character_id)
         return Session(
             id=account_id,
             character=character,
             unloadType=UnloadTypeEnum.BANK,
-            apikey=apikey,
-            cert=cert,
+            credentials=account.credentials,
             type=session_type,
         )
 
     def start_bot_session(self, session: Session):
         bot = Pyd2Bot(session)
         bot.addShutdownListener(self.on_bot_shutdown)
-        self._running_bots[session.character.accountId] = bot
-        self._bots_run_infos[session.character.accountId] = {
-            "name": bot.name,
-            "startTime": time.time(),
-            "character": session.character.name,
-            "activity": session.type.name,
-            "kamas": "N/A",
-            "level": "N/A",
-            "pods": "N/A",
-            "fights_count": 0,
-            "earned_kamas": 0,
-            "earned_levels": 0,
-            "path_name": "N/A",
-            "status": "Starting...",
-            "runtime": "0s",
-            "endTime": "N/A",
-        }
         bot.start()
 
     def teardown(self, *args):
-        for bot in self._running_bots.values():
+        for bot in Pyd2Bot._running_clients:
             bot.shutdown(DisconnectionReasonEnum.WANTED_SHUTDOWN, "Brutal shutdown because of app reload")
         self.socketio.stop()
 
@@ -157,8 +139,9 @@ class BotManagerApp:
             path_id = data.get("pathId")
             session = self.get_basic_session(account_id, character_id, SessionTypeEnum.FIGHT)
             # check if bot already running on this accounId
-            if session.character.accountId in self._running_bots:
-                return jsonify({"error": f"Bot already running for account {account_id}"}), 400
+            for bot in Pyd2Bot._running_clients:
+                if str(session.character.accountId) == bot.name:
+                    return jsonify({"error": f"Bot already running for account {account_id}"}), 400
             session.monsterLvlCoefDiff = data.get("monsterLvlCoefDiff")
             session.path = paths[path_id]
             session.fightsPerMinute = data.get("fightsPerMinute", 1)
@@ -248,13 +231,13 @@ class BotManagerApp:
             for bot_oper in self._bots_run_infos.values():
                 bot = self._running_bots.get(bot_oper["name"])
                 if bot:
-                    bot_status = bot.getState()
+                    bot_status = bot._status
                     bot_oper["status"] = bot_status.name
-                    stopped = bot_status in [SessionStatusEnum.TERMINATED, SessionStatusEnum.CRASHED, SessionStatusEnum.BANNED]
+                    stopped = bot_status in [ClientStatusEnum.TERMINATED, ClientStatusEnum.CRASHED, ClientStatusEnum.BANNED]
                     if not stopped:
                         bot_oper["endTime"] = time.time()
                         bot_oper["runTime"] = format_runtime(bot_oper["startTime"], bot_oper.get("endTime", None))
-                        bot_oper["fights_count"] = bot._nbrFightsDone
+                        bot_oper["fights_count"] = bot.
                         bot_oper["earned_kamas"] = bot._earnedKamas
                         bot_oper["earned_levels"] = bot._earnedLevels
                         playermanager = PlayedCharacterManager.getInstance(bot_oper["name"])

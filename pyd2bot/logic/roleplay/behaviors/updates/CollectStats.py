@@ -14,6 +14,7 @@ from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterMa
 from pydofus2.com.ankamagames.dofus.network.messages.game.achievement.AchievementRewardRequestMessage import \
     AchievementRewardRequestMessage
 from pydofus2.com.ankamagames.dofus.network.types.game.context.roleplay.job.JobExperience import JobExperience
+from pydofus2.com.ankamagames.jerakine.benchmark.BenchmarkTimer import BenchmarkTimer
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 
 
@@ -25,7 +26,8 @@ class CollectStats(AbstractBehavior):
         self.totalKamas = None
         if listeners is None:
             listeners = []
-        self.listeners = listeners
+        self.update_listeners = listeners
+        self.estimated_kamas_won = 0
 
     def run(self) -> bool:
         self.onMultiple(
@@ -41,19 +43,21 @@ class CollectStats(AbstractBehavior):
                 (KernelEvent.FightStarted, self.onFight, {}),
             ]
         )
-        self.waitingForCharactsBoost = threading.Event()
+        self.waitingForStatsBoost = threading.Event()
+        self.playerStats.currentLevel = PlayedCharacterManager().limitedLevel
+        self.onPlayerUpdate("Init")
         return True
     
     def addHandler(self, callback):
-        self.listeners.append(callback)
+        self.update_listeners.append(callback)
     
     def removeHandler(self, callback):
-        self.listeners.remove(callback)
+        self.update_listeners.remove(callback)
 
     def onPlayerUpdate(self, event):
-        if self.listeners:
-            for listener in self.listeners:
-                listener(event, self.playerStats)
+        if self.update_listeners:
+            for listener in self.update_listeners:
+                BenchmarkTimer(0.1, lambda: listener(event, self.playerStats)).start()
     
     def onKamasUpdate(self, event, totalKamas):
         Logger().debug(f"Player kamas updated : {totalKamas}")
@@ -78,6 +82,7 @@ class CollectStats(AbstractBehavior):
         HaapiEventsManager().sendSocialOpenEvent()
         Kernel().worker.terminated.wait(2)
         self.playerStats.earnedLevels += newLevel - previousLevel
+        self.playerStats.currentLevel = newLevel
         self.onPlayerUpdate(event)
                                         
     def onItemObtained(self, event, iw, qty):
@@ -86,21 +91,23 @@ class CollectStats(AbstractBehavior):
             averageKamasWon = (
                 Kernel().averagePricesFrame.getItemAveragePrice(iw.objectGID) * qty
             )
-            Logger().debug(f"Average kamas won from item : {averageKamasWon}")
+            Logger().debug(f"Average kamas won from item: {averageKamasWon}")
             self.estimated_kamas_won += averageKamasWon
-        self.playerStats.itemsGained.append((iw.objectGID, qty))
+            self.playerStats.estimatedKamasWon += averageKamasWon
+        self.playerStats.add_item_gained(iw.objectGID, qty)
         self.onPlayerUpdate(event)
 
     def onObjectAdded(self, event, iw):
-        HaapiEventsManager().sendRandomEvent()
-        if iw.objectGID not in ClassicTreasureHunt.CHESTS_GUID:
-            averageKamasWon = (
-                Kernel().averagePricesFrame.getItemAveragePrice(iw.objectGID) * iw.quantity
-            )
-            Logger().debug(f"Average kamas won from item: {averageKamasWon}")
-            self.estimated_kamas_won += averageKamasWon
-        self.playerStats.itemsGained.append((iw.objectGID, iw.quantity))
-        self.onPlayerUpdate(event)
+        # HaapiEventsManager().sendRandomEvent()
+        # if iw.objectGID not in ClassicTreasureHunt.CHESTS_GUID:
+        #     averageKamasWon = (
+        #         Kernel().averagePricesFrame.getItemAveragePrice(iw.objectGID) * iw.quantity
+        #     )
+        #     Logger().debug(f"Average kamas won from item: {averageKamasWon}")
+        #     self.estimated_kamas_won += averageKamasWon
+        # self.playerStats.add_item_gained(iw.objectGID, iw.quantity)
+        # self.onPlayerUpdate(event)
+        pass
 
     def onJobExperience(self, event, oldJobXp, jobExp: JobExperience):
         Logger().info(f"Job {jobExp.jobId} has gained {jobExp.jobXP} xp")
@@ -111,9 +118,9 @@ class CollectStats(AbstractBehavior):
     def onAchievementFinished(self, event, achievement):
         if PlayedCharacterManager().isFighting:
             return
-        arrmsg = AchievementRewardRequestMessage()
-        arrmsg.init(achievement.id)
-        ConnectionsHandler().send(arrmsg)
+        message = AchievementRewardRequestMessage()
+        message.init(achievement.id)
+        ConnectionsHandler().send(message)
         HaapiEventsManager().sendRandomEvent()
         return True
 

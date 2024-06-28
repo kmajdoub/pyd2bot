@@ -215,30 +215,37 @@
         ]
     },
     {
-        "id": "ankarnam_lvl1",
+        "id": "Ankarnam_LVL1",
         "type": "RandomSubAreaFarmPath",
         "startMapId": 154010883,
         "startZoneId": 1,
         "allowedTransitions": [1, 2]
     },
     {
-        "id": "ankarnam_lvl5",
+        "id": "Ankarnam_LVL5",
         "type": "RandomSubAreaFarmPath",
         "startMapId": 154010884, 
         "startZoneId": 1,
         "allowedTransitions": [1, 2]
     },
     {
-        "id": "ankarnam_lvl10",
+        "id": "Ankarnam_LVL10",
         "type": "RandomSubAreaFarmPath",
         "startMapId": 153880064, 
         "startZoneId": 1,
         "allowedTransitions": [1, 2]
     },
     {
-        "id": "astrub_village",
+        "id": "Astrub_City",
         "type": "RandomSubAreaFarmPath",
         "startMapId": 191106048, 
+        "startZoneId": 1,
+        "allowedTransitions": [1, 2]
+    },
+    {
+        "id": "Astrub_Forest",
+        "type": "RandomSubAreaFarmPath",
+        "startMapId": 189531146,
         "startZoneId": 1,
         "allowedTransitions": [1, 2]
     }

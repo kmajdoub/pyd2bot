@@ -79,8 +79,8 @@ class BotEventsManager(EventsHandler, metaclass=Singleton):
     def onceBotConnected(self, instanceId, callback, timeout=None, ontimeout=None, originator=None):
         started = perf_counter()
 
-        def onBotConnected(event: Event, conenctedBotInstanceId):
-            if conenctedBotInstanceId == instanceId:
+        def onBotConnected(event: Event, connectedBotInstanceId):
+            if connectedBotInstanceId == instanceId:
                 event.listener.delete()
                 return callback()
             remaining = perf_counter() - started

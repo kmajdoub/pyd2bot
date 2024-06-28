@@ -8,8 +8,8 @@ from pydofus2.com.ankamagames.dofus.kernel.net.ConnectionsHandler import \
     ConnectionsHandler
 from pydofus2.com.ankamagames.dofus.kernel.net.DisconnectionReasonEnum import \
     DisconnectionReasonEnum
-from pydofus2.com.ankamagames.dofus.logic.connection.managers.AuthentificationManager import \
-    AuthentificationManager
+from pydofus2.com.ankamagames.dofus.logic.connection.managers.AuthenticationManager import \
+    AuthenticationManager
 from pydofus2.com.ankamagames.dofus.network.messages.game.approach.ReloginTokenRequestMessage import \
     ReloginTokenRequestMessage
 from pydofus2.com.ankamagames.jerakine.benchmark.BenchmarkTimer import \
@@ -37,8 +37,8 @@ class ChangeServer(AbstractBehavior):
         if not valid:
             return self.finish(False, "Received non valid token")
         self.reloginTokenListener = None
-        AuthentificationManager()._lva.serverId = self.newServerId
-        AuthentificationManager().setToken(token)
+        AuthenticationManager()._lva.serverId = self.newServerId
+        AuthenticationManager().setToken(token)
         ConnectionsHandler().closeConnection(DisconnectionReasonEnum.CHANGING_SERVER)
         self.finish(True, None, token=token)
 

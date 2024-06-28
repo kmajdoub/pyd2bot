@@ -93,7 +93,7 @@ class GiveItems(AbstractBehavior):
                 return Logger().warning("Worker finished while fetching player status returning")
             self.lastSellerState = self.getGuestStatus(self.seller.accountId)
         self.state = GiveItelsStates.WALKING_TO_BANK
-        self.autotripUseZaap(self.bankInfos.npcMapId, callback=self.onTripEnded)
+        self.travelUsingZaap(self.bankInfos.npcMapId, callback=self.onTripEnded)
 
     def onTripEnded(self, errorId, error):
         if error:
@@ -132,7 +132,7 @@ class GiveItems(AbstractBehavior):
             return self.finish(True, None)
         else:
             self.state = GiveItelsStates.RETURNING_TO_START_POINT
-            self.autotripUseZaap(self._startMapId, self._startRpZone, callback=self.onTripEnded)
+            self.travelUsingZaap(self._startMapId, self._startRpZone, callback=self.onTripEnded)
     
     def getState(self):
         state = self.state.name 

@@ -6,7 +6,8 @@ from pyd2bot.farmPaths.RandomSubAreaFarmPath import \
 from pyd2bot.data.enums import PathTypeEnum
 from typing import TYPE_CHECKING
 
-from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world import WorldGraph
+from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.WorldGraph import WorldGraph
+
 if TYPE_CHECKING:
     from pyd2bot.data.models import Path
 
@@ -14,7 +15,9 @@ class PathFactory:
 
     @classmethod
     def from_dto(cls, obj: 'Path'):
-        if not isinstance(obj, 'Path'):
+        from pyd2bot.data.models import Path
+
+        if not isinstance(obj, Path):
             raise ValueError("session.path must be a Path instance, not " + str(type(obj)))
             
         if obj.type == PathTypeEnum.RandomSubAreaFarmPath:

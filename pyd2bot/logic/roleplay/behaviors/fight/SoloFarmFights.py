@@ -1,4 +1,5 @@
 import heapq
+import threading
 import numpy as np
 import time
 from prettytable import PrettyTable
@@ -28,7 +29,7 @@ class SoloFarmFights(AbstractFarmBehavior):
         self.fightsPerMinute = fightsPerMinute
         self.fightPartyMembers = fightPartyMembers
         self.monsterLvlCoefDiff = monsterLvlCoefDiff if monsterLvlCoefDiff else float("inf")
-    
+
     def init(self):
         self.path.init()
         self.last_monster_attack_time = None
@@ -67,10 +68,10 @@ class SoloFarmFights(AbstractFarmBehavior):
     def _calculate_wait_time(self, current_time):
         if not self.last_monster_attack_time:
             # No previous attack, use full wait time based on rate
-            return np.random.poisson(self.fights_per_minute / 60)
+            return np.random.poisson(self.fightsPerMinute / 60)
 
         time_since_last_attack = current_time - self.last_monster_attack_time
-        expected_attacks_since_last = self.fights_per_minute * time_since_last_attack / 60
+        expected_attacks_since_last = self.fightsPerMinute * time_since_last_attack / 60
 
         # Adjust wait time based on expected attacks since last attack
         wait_time = max(0, np.random.poisson(expected_attacks_since_last))
@@ -84,7 +85,7 @@ class SoloFarmFights(AbstractFarmBehavior):
         visited = set()
         queue = list[int, MapPoint]()
         currCellId = PlayedCharacterManager().currentCellId
-        teamLvl = sum(PlayedCharacterManager.getInstance(c.account).limitedLevel for c in self.fightPartyMembers)
+        teamLvl = PlayedCharacterManager().limitedLevel
         monsterByCellId = dict[int, GameRolePlayGroupMonsterInformations]()
         for entityId in Kernel().roleplayEntitiesFrame._monstersIds:
             infos: GameRolePlayGroupMonsterInformations = Kernel().roleplayEntitiesFrame.getEntityInfos(entityId)
@@ -111,7 +112,7 @@ class SoloFarmFights(AbstractFarmBehavior):
                     "cell": currCellId,
                     "distance": distance
                 })
-            for x, y in MapPoint.fromCellId(currCellId).iterChilds():
+            for x, y in MapPoint.fromCellId(currCellId).iterChildren():
                 adjacentPos = MapPoint.fromCoords(x, y)
                 if adjacentPos.cellId in visited:
                     continue
@@ -122,13 +123,15 @@ class SoloFarmFights(AbstractFarmBehavior):
         
     def onFightStarted(self, code, error):        
         if not self.running.is_set():
+            Logger().warning("onFightStarted callback called but fight farmer is not running!")
             return
         if error:
             Logger().warning(error)
-            if code in [AttackMonsters.ENTITY_VANISHED, AttackMonsters.FIGHT_REQ_TIMEDOUT, AttackMonsters.MAP_CHANGED]:
+            if code in [AttackMonsters.ENTITY_VANISHED, AttackMonsters.FIGHT_REQ_TIMED_OUT, AttackMonsters.MAP_CHANGED]:
                 self.main()
             else:
-                return self.send(KernelEvent.ClientRestart, f"Error while attacking monsters: {error}")
+                self.send(KernelEvent.ClientRestart, f"Error while attacking monsters: {error}")
+                return
 
     def logResourcesTable(self, resources):
         if resources:

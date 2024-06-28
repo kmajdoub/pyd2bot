@@ -22,13 +22,13 @@ class SaveZaap(AbstractBehavior):
         if int(Kernel().zaapFrame.spawnMapId) == int(PlayedCharacterManager().currentMap.mapId):
             Logger().debug(f"Zaap already saved in current map {PlayedCharacterManager().currentMap.mapId}.")
             return self.finish(True, None)
-        if Kernel().interactivesFrame:
+        if Kernel().interactiveFrame:
             self.openCurrMapZaapDialog()
         else:
             self.onceFramePushed("RoleplayInteractivesFrame", self.openCurrMapZaapDialog)
 
     def openCurrMapZaapDialog(self):
-        self.zaapIe = Kernel().interactivesFrame.getZaapIe()
+        self.zaapIe = Kernel().interactiveFrame.getZaapIe()
         if not self.zaapIe:
             return self.finish(self.ZAAP_IE_NOTFOUND, "Zaap ie not found in current Map")
         self.once(

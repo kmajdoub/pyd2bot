@@ -1,4 +1,3 @@
-from calendar import c
 import json
 import os
 
@@ -8,17 +7,18 @@ from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 from pydofus2.Zaap.ZaapDecoy import ZaapDecoy
 
 __dir__ = os.path.dirname(os.path.abspath(__file__))
-default_accounts_jsonfile = os.path.join(__dir__, "accounts.json")
+default_accounts_json_file = os.path.join(__dir__, "accounts.json")
 
 
 class AccountManager:
     _zaap: ZaapDecoy = None
     _accounts = dict[int, Account]()
-    _db_file = default_accounts_jsonfile
-
+    _db_file = default_accounts_json_file
+    
     @classmethod
     def get_account(cls, accountId) -> Account:
         if accountId not in cls._accounts:
+            print(cls._accounts)
             raise Exception(f"Account {accountId} not found")
         return cls._accounts[accountId]
 
@@ -32,7 +32,8 @@ class AccountManager:
 
     @classmethod
     def get_character(cls, accountId, charId=None) -> Character:
-        return cls.get_account(accountId).get_character(charId)
+        account = cls.get_account(accountId)
+        return account.get_character(charId)
 
     @classmethod
     def get_apikey(cls, accountId):
@@ -68,11 +69,11 @@ class AccountManager:
         return account.characters
 
     @classmethod
-    def load(cls, local_jsonfile=None):
-        if local_jsonfile is not None:
-            cls._db_file = local_jsonfile
+    def load(cls, local_json_file=None):
+        if local_json_file is not None:
+            cls._db_file = local_json_file
         if not cls._db_file:
-            cls._db_file = default_accounts_jsonfile
+            cls._db_file = default_accounts_json_file
         if not os.path.exists(cls._db_file):
             return
         with open(cls._db_file, "r") as fp:
@@ -82,11 +83,11 @@ class AccountManager:
             }
 
     @classmethod
-    def save(cls, local_jsonfile=None):
-        if local_jsonfile is None:
-            cls._db_file = default_accounts_jsonfile
+    def save(cls, local_json_file=None):
+        if local_json_file is None:
+            cls._db_file = default_accounts_json_file
         if not cls._db_file:
-            cls._db_file = local_jsonfile
+            cls._db_file = local_json_file
         with open(cls._db_file, "w") as fp:
             accounts_json = {accountId: account.model_dump() for accountId, account in cls._accounts.items()}
             json.dump(accounts_json, fp, indent=4)
@@ -98,10 +99,10 @@ class AccountManager:
             cls.save()
 
     @classmethod
-    def import_launcher_accounts(cls, fetch_characters=False, save_to_loal_json=False):
+    def import_launcher_accounts(cls, fetch_characters=False, save_to_local_json=False):
         cls._zaap = ZaapDecoy()
         cls._accounts.clear()
-        for apikey in cls._zaap._apikeys:
+        for apikey in cls._zaap._api_keys:
             try:
                 cert = cls._zaap.get_api_cert(apikey)
                 account = AccountManager.fetch_account(apikey.key, cert.id, cert.hash)
@@ -114,12 +115,12 @@ class AccountManager:
                 task.start()
             for task in tasks:
                 task.join()
-        if save_to_loal_json:
-            cls.save(save_to_loal_json)
+        if save_to_local_json:
+            cls.save(save_to_local_json)
         return cls._accounts
 
 
 if __name__ == "__main__":
     Logger.logToConsole = True
     AccountManager.clear()
-    AccountManager.import_launcher_accounts(fetch_characters=True, save_to_loal_json=True)
+    AccountManager.import_launcher_accounts(fetch_characters=True, save_to_local_json=True)

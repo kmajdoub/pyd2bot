@@ -18,6 +18,7 @@ class AbstractBehaviorState(Enum):
     
 class AbstractBehavior(BehaviorApi, metaclass=Singleton):
     ALREADY_RUNNING = 666
+    STOPPED = 988273
     _onEmptyCallbacks = dict[str, list[callable]]()
     
     def __init__(self) -> None:
@@ -33,14 +34,14 @@ class AbstractBehavior(BehaviorApi, metaclass=Singleton):
         if self.parent and not self.parent.running.is_set():
             Logger().debug(f"Cancel start for reason : parent behavior died.")
             return
-        KernelEventsManager().send(KernelEvent.ClientStatusUpdaten, f"Starting_{type(self).__name__}")
+        KernelEventsManager().send(KernelEvent.ClientStatusUpdate, f"Starting_{type(self).__name__}")
         self.callback = callback
         self.parent = parent
         if self.parent:
             self.parent.children.append(self)
         if self.running.is_set():
             error = f"{type(self).__name__} already running by parent {self.parent}."
-            KernelEventsManager().send(KernelEvent.ClientStatusUpdaten, f"Error_{type(self).__name__}", {"error": error, "code": self.ALREADY_RUNNING})
+            KernelEventsManager().send(KernelEvent.ClientStatusUpdate, f"Error_{type(self).__name__}", {"error": error, "code": self.ALREADY_RUNNING})
             if self.callback:
                 self.callback(self.ALREADY_RUNNING, error)
             else:
@@ -59,7 +60,7 @@ class AbstractBehavior(BehaviorApi, metaclass=Singleton):
         if not self.running.is_set():
             return Logger().warning(f"[{type(self).__name__}] wants to finish but not running!")
         KernelEventsManager().clearAllByOrigin(self)
-        from pyd2bot.misc.BotEventsmanager import BotEventsManager
+        from pyd2bot.misc.BotEventsManager import BotEventsManager
         BotEventsManager().clearAllByOrigin(self)
         callback = self.callback
         self.callback = None
@@ -70,13 +71,13 @@ class AbstractBehavior(BehaviorApi, metaclass=Singleton):
             self.parent.children.remove(self)
         error = f"[{type(self).__name__}] failed for reason : {error}" if error else None
         if error:
-            KernelEventsManager().send(KernelEvent.ClientStatusUpdaten, f"Error_{type(self).__name__}", {"error": error, "code": code})
+            KernelEventsManager().send(KernelEvent.ClientStatusUpdate, f"Error_{type(self).__name__}", {"error": error, "code": str(code)})
         else:
-            KernelEventsManager().send(KernelEvent.ClientStatusUpdaten, f"Finished_{type(self).__name__}")
+            KernelEventsManager().send(KernelEvent.ClientStatusUpdate, f"Finished_{type(self).__name__}")
         if callback is not None:
             callback(code, error, *args, **kwargs)
         else:
-            Logger().debug(error)
+            Logger().error(f"Callback of the behavior is None, error: {error}, code: {code}")
         while self.endListeners:
             callback = self.endListeners.pop()
             callback(code, error, *args, **kwargs)
@@ -91,7 +92,7 @@ class AbstractBehavior(BehaviorApi, metaclass=Singleton):
             
     @property
     def listeners(self) -> list[Listener]:
-        from pyd2bot.misc.BotEventsmanager import BotEventsManager
+        from pyd2bot.misc.BotEventsManager import BotEventsManager
         return KernelEventsManager().getListenersByOrigin(self) + BotEventsManager().getListenersByOrigin(self)
 
     def isRunning(self):
@@ -101,7 +102,7 @@ class AbstractBehavior(BehaviorApi, metaclass=Singleton):
         return AbstractBehaviorState.RUNNING.name if self.isRunning() else AbstractBehaviorState.IDLE.name
 
     @classmethod
-    def hasRunning(clsn, name):
+    def hasRunning(cls, name):
         for behavior in AbstractBehavior.getSubs(name):
             if behavior.isRunning():
                 return True
@@ -147,13 +148,13 @@ class AbstractBehavior(BehaviorApi, metaclass=Singleton):
             result += f", Children: {self.getTreeStr()}"
         return result
     
-    def stop(self):
-        # Logger().debug(f"Stopping {type(self).__name__} ...")
+    def stop(self, clear_callback=False):
+        if clear_callback:
+            self.callback = lambda code, error: Logger().debug("Callback cleared")
+        self.stopChildren(clear_callback)
         self.finish(True, None)
-        # Logger().debug(f"{type(self).__name__} has {len(self.children)} children")
-        self.stopChilds()
     
-    def stopChilds(self):
+    def stopChildren(self, clear_callbacks=False):
         while self.children:
             child = self.children.pop()
-            child.stop()
+            child.stop(clear_callbacks)

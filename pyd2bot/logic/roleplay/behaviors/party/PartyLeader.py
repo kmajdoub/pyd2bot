@@ -1,6 +1,6 @@
 from Grinder.models import Character
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
-from pyd2bot.misc.BotEventsmanager import BotEventsManager
+from pyd2bot.misc.BotEventsManager import BotEventsManager
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
 from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import \
     KernelEventsManager

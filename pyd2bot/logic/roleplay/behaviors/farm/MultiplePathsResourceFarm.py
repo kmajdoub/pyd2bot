@@ -1,4 +1,5 @@
 import math
+from typing import List
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
 from pyd2bot.logic.roleplay.behaviors.farm.ResourceFarm import ResourceFarm
 from pyd2bot.farmPaths.AbstractFarmPath import AbstractFarmPath
@@ -9,18 +10,25 @@ from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 class MultiplePathsResourceFarm(AbstractBehavior):
     default_ncovers = 3
     
-    def __init__(self, pathsList: list[AbstractFarmPath], jobFilter: JobFilter, num_of_covers: int=None) -> None:
+    def __init__(self, pathsList: list[AbstractFarmPath], jobFilters: List[JobFilter], num_of_covers: int=None) -> None:
         for path in pathsList:
             if not isinstance(path, AbstractFarmPath):
                 raise ValueError(f"Invalid path type {type(path)}")
-        self.jobFilter = jobFilter
+        self.jobFilters = jobFilters
         self.num_of_covers = num_of_covers
         self.pathsList = pathsList
         self.forbidden_paths = []
         if not self.num_of_covers:
             self.num_of_covers = self.default_ncovers
+        self._current_running_behavior = None
+        self._wants_stop = False
         super().__init__()
 
+    def stop(self):
+        self._wants_stop = True
+        if self._current_running_behavior:
+            self._current_running_behavior.stop()
+        
     def run(self) -> bool:
         self.iterPathsList = iter(self.pathsList)
         Logger().info(f"Starting multiple paths resource farm with {len(self.pathsList)} paths.")
@@ -31,6 +39,9 @@ class MultiplePathsResourceFarm(AbstractBehavior):
         return n * n * math.log(n) * 10 # 10 seconds per vertex
     
     def startNextPath(self, code, err):
+        if self._wants_stop:
+            return self.finish(self.STOPPED, None)
+
         if err:
             Logger().debug(f"Error[{code}] during the farm path : {err}")
             self.forbidden_paths.append(self.currentPath)
@@ -44,4 +55,5 @@ class MultiplePathsResourceFarm(AbstractBehavior):
             self.iterPathsList = iter(non_forbidden_paths)
             self.currentPath = next(self.iterPathsList)
         timeout = self.num_of_covers * self.coverTimeEstimate(self.currentPath)
-        ResourceFarm(self.currentPath, self.jobFilter, timeout).start(callback=self.startNextPath)
+        self._current_running_behavior = ResourceFarm(self.currentPath, self.jobFilters, timeout)
+        self._current_running_behavior.start(callback=self.startNextPath)

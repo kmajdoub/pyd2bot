@@ -3,7 +3,7 @@ from pyd2bot.logic.common.rpcMessages.PlayerConnectedMessage import \
     PlayerConnectedMessage
 from pyd2bot.logic.roleplay.messages.SellerVacantMessage import \
     SellerVacantMessage
-from pyd2bot.misc.BotEventsmanager import BotEventsManager
+from pyd2bot.misc.BotEventsManager import BotEventsManager
 from pyd2bot.data.enums import ServerNotificationEnum
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
 from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import \

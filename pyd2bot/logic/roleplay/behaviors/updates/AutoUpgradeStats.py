@@ -21,24 +21,23 @@ class AutoUpgradeStats(AbstractBehavior):
     def __init__(self, primaryStatId: int):
         super().__init__()
         self.primaryStatId = primaryStatId
-        self.waitingForCharactsBoost = threading.Event()
+        self.waitingForStatsBoost = threading.Event()
 
     def run(self) -> bool:
         self.on(KernelEvent.CharacterStats, self.onBotStats)
 
     def onBotStats(self, event, stats):
         if not Kernel().roleplayEntitiesFrame or not Kernel().roleplayEntitiesFrame.mcidm_processed:
-            Logger().info("waiting for map data to be processed before boosting stats ...")
             self.onceMapProcessed(lambda: self.onBotStats(event, stats))
             return
         unusedStatPoints = PlayedCharacterManager().stats.getStatBaseValue(StatIds.STATS_POINTS)
-        if unusedStatPoints > 0 and not self.waitingForCharactsBoost.is_set():
+        if unusedStatPoints > 0 and not self.waitingForStatsBoost.is_set():
             boost, usedCapital = self.getBoost(unusedStatPoints)
             if boost > 0:
                 Logger().info(f"Player can boost stat point with amount {boost}")
                 HaapiEventsManager().sendCharacteristicsOpenEvent()
-                self.waitingForCharactsBoost.set()
-                self.boostCharacs(usedCapital, self.primaryStatId)
+                self.waitingForStatsBoost.set()
+                self.boostCharacteristics(usedCapital, self.primaryStatId)
 
     def getStatFloor(self, statId: int):
         breed = Breed.getBreedById(PlayedCharacterManager().infos.breed)
@@ -93,16 +92,17 @@ class AutoUpgradeStats(AbstractBehavior):
                 )
         return boost, usedCapital
 
-    def boostCharacs(self, boost, statId):
+    def boostCharacteristics(self, boost, statId):
         if PlayedCharacterManager().isFighting:
             return
-        rpeframe = Kernel().roleplayEntitiesFrame
-        if not rpeframe or not rpeframe.mcidm_processed:
-            return self.onceMapProcessed(self.boostCharacs, [boost, statId])
-        sumsg = StatsUpgradeRequestMessage()
-        sumsg.init(False, statId, boost)
-        ConnectionsHandler().send(sumsg)
+        roleplay_frame = Kernel().roleplayEntitiesFrame
+        if not roleplay_frame or not roleplay_frame.mcidm_processed:
+            Logger().warning("Can't boost stats before map is fully loaded!")
+            return self.onceMapProcessed(self.boostCharacteristics, [boost, statId])
+        message = StatsUpgradeRequestMessage()
+        message.init(False, statId, boost)
+        ConnectionsHandler().send(message)
         self.once(KernelEvent.StatsUpgradeResult, self.onStatUpgradeResult)
 
     def onStatUpgradeResult(self, event, result, boost):
-        self.waitingForCharactsBoost.clear()
+        self.waitingForStatsBoost.clear()

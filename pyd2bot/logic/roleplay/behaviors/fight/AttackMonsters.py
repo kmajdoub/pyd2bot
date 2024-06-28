@@ -11,6 +11,7 @@ from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
 from pydofus2.com.ankamagames.dofus.kernel.net.ConnectionsHandler import \
     ConnectionsHandler
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.InactivityManager import InactivityManager
+from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import PlayedCharacterManager
 from pydofus2.com.ankamagames.dofus.network.messages.game.context.roleplay.fight.GameRolePlayAttackMonsterRequestMessage import \
     GameRolePlayAttackMonsterRequestMessage
 from pydofus2.com.ankamagames.dofus.network.types.game.context.GameContextActorInformations import \
@@ -41,7 +42,7 @@ class AttackMonsters(AbstractBehavior):
     ENTITY_VANISHED = 801
     ENTITY_MOVED = 802
     MAP_CHANGED = 803
-    FIGHT_REQ_TIMEDOUT = 804
+    FIGHT_REQ_TIMED_OUT = 804
     FIGHT_REQ_TIMEOUT = 7
 
     def __init__(self) -> None:
@@ -65,7 +66,7 @@ class AttackMonsters(AbstractBehavior):
         cellId = self.getEntityCellId()
         if not cellId:
             return self.finish(self.ENTITY_VANISHED, "Entity no more on the map")
-        self.onEntityMoved(self.entityId, callback=self.ontargetMonsterMoved)
+        self.onEntityMoved(self.entityId, callback=self.onTargetMonsterMoved)
         self.onceFightSword(self.entityId, cellId, callback=self.onFightWithEntityTaken)
         self.on(KernelEvent.CurrentMap, self.onCurrentMap)
         self._start()
@@ -76,8 +77,8 @@ class AttackMonsters(AbstractBehavior):
         cellId = self.getEntityCellId()
         if not cellId:
             return self.finish(self.ENTITY_VANISHED, "Fight with entity taken by another player!")
-        Logger().info(f"[AttackMonsters] Moving to monster {self.entityId} cell {cellId}")
-        self.mapMove(MapPoint.fromCellId(cellId), callback=self.ontargetMonsterReached)
+        Logger().info(f"Moving to monster {self.entityId} cell {cellId}")
+        self.mapMove(MapPoint.fromCellId(cellId), callback=self.onTargetMonsterReached)
 
     def onFightWithEntityTaken(self):
         if MapMove().isRunning():
@@ -90,15 +91,16 @@ class AttackMonsters(AbstractBehavior):
         elif self.attackMonsterListener:
             return self.finish(self.ENTITY_VANISHED, "Entity vanished while attacking it!")
 
-    def ontargetMonsterReached(self, status, error, landingcell=None):
+    def onTargetMonsterReached(self, status, error, landingcell=None):
+        Logger().info(f"Reached monster group cell")
+        if self._wanted_player_stop:
+            self._wanted_player_stop = False
+            if self._stop_code == self.ENTITY_MOVED:
+                return self.restart()
+            elif self._stop_code == self.ENTITY_VANISHED:
+                return self.finish(self.ENTITY_VANISHED, self._stop_message)
         if error:
-            if self._wanted_player_stop:
-                if self._stop_code == self.ENTITY_MOVED:
-                    return self.restart()
-                elif self._stop_code == self.ENTITY_VANISHED:
-                    return self.finish(self.ENTITY_VANISHED, self._stop_message)
             return self.finish(status, error)
-        Logger().info(f"[AttackMonsters] Reached monster group cell")
         self.attackMonsterListener = KernelEventsManager().once(
             event_id=KernelEvent.FightStarted,
             callback=lambda event: self.finish(True, None), 
@@ -110,8 +112,8 @@ class AttackMonsters(AbstractBehavior):
         )
         self.requestAttackMonsters()
 
-    def ontargetMonsterMoved(self, event: Event, movePath: MovementPath):
-        Logger().warning(f"[AttackMonsters] Entity moved to cell {movePath.end.cellId}")
+    def onTargetMonsterMoved(self, event: Event, movePath: MovementPath):
+        Logger().warning(f"Entity moved to cell {movePath.end.cellId}")
         if MapMove().isRunning():
             self._wanted_player_stop = True
             self._stop_code = self.ENTITY_MOVED
@@ -125,9 +127,9 @@ class AttackMonsters(AbstractBehavior):
         self.requestMapData(callback=lambda code, err: self._start())
 
     def requestAttackMonsters(self) -> None:
-        grpamrmsg = GameRolePlayAttackMonsterRequestMessage()
-        grpamrmsg.init(self.entityId)
-        ConnectionsHandler().send(grpamrmsg)
+        message = GameRolePlayAttackMonsterRequestMessage()
+        message.init(self.entityId)
+        ConnectionsHandler().send(message)
         InactivityManager().activity()
 
     def onCurrentMap(self, event, mapId):

@@ -116,7 +116,7 @@ class AutoTripUseZaap(AbstractBehavior):
             Logger().debug(f"Can't use havenbag to reach dest zaap, will travel to src zaap on feet.")
             self.travelToDestinationOnFeetWithSaveZaap()
         else:
-            self.path_from_currmap_to_src_zaap = Localizer.findPathtoClosestZaap(
+            self.path_from_currmap_to_src_zaap = Localizer.findPathToClosestZaap(
                 self.currMapId, self.maxCost, self.dstZaapMapId
             )
             if not self.path_from_currmap_to_src_zaap:
@@ -295,7 +295,7 @@ class AutoTripUseZaap(AbstractBehavior):
                 Logger().debug(f"Can use haven bag to reach dest zaap.")
                 self.enterHavenBag(wanted_state=True, callback=self.onInsideHavenbag)
                 return
-            zaapIe = Kernel().interactivesFrame.getZaapIe()
+            zaapIe = Kernel().interactiveFrame.getZaapIe()
             if zaapIe:
                 Logger().debug(
                     f"Player found a Zaap at cell[{zaapIe.position.cellId}] => It will use it to reach the destination Zaap."

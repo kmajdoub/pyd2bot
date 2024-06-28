@@ -1,7 +1,6 @@
-from pydantic import BaseModel, ValidationError, ValidationInfo, field_validator, model_validator
+from pydantic import BaseModel, ValidationInfo, field_validator, model_validator
 from typing import Dict, List, Optional
 
-from pydantic_core import PydanticCustomError
 from pyd2bot.BotSettings import BotSettings
 from pyd2bot.logic.managers.PathFactory import PathFactory
 from pyd2bot.data.enums import PathTypeEnum, SessionTypeEnum, UnloadTypeEnum
@@ -16,21 +15,28 @@ from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.TransitionTy
 
 class JobFilter(BaseModel):
     jobId: int
-    resourcesIds: List[int]
+    resourcesIds: Optional[List] = []
 
     @model_validator(mode="after")
     def validate(self):
         job = Job.getJobById(self.jobId)
         if not job:
             raise ValueError(f"JobId '{self.jobId}' does not match any valid job.")
-
         skills = Skill.getSkills()
-        possiblegatheredRessources = [skill.gatheredRessource.id for skill in skills if skill.parentJobId == self.jobId]
-        for resId in self.resourcesIds:
-            assert (
-                resId in possiblegatheredRessources
-            ), f"ResourcesIds contains a value '{resId}' that does not match any possible gathered resource for the specified job."
+        possibleGatheredResources = [skill.gatheredRessource.id for skill in skills if skill.parentJobId == self.jobId and skill.gatheredRessource]
+        if self.resourcesIds:
+            for resId in self.resourcesIds:
+                assert (
+                    resId in possibleGatheredResources
+                ), f"ResourcesIds contains a value '{resId}' that does not match any possible gathered resource for the specified job."
+        return self
 
+    def matchesResource(self, jobId: int, resourceId: int) -> bool:
+        if self.jobId != jobId:
+            return False
+        if not self.resourcesIds:
+            return True  # If resourceIds is empty, the filter allows all resources
+        return resourceId in self.resourcesIds
 
 class Path(BaseModel):
     id: str
@@ -69,7 +75,7 @@ class Path(BaseModel):
         if info.data["type"] in [PathTypeEnum.RandomAreaFarmPath, PathTypeEnum.RandomSubAreaFarmPath]:
             invalid_subAreas = [subAreaId for subAreaId in v if not SubArea.getSubAreaById(subAreaId)]
             if invalid_subAreas:
-                raise ValueError(f"Following ids doesnt much an existing subArea: {invalid_subAreas}.")
+                raise ValueError(f"Following ids doesn't much an existing subArea: {invalid_subAreas}.")
         return v
     
     @field_validator("mapIds", mode="after")
@@ -78,7 +84,7 @@ class Path(BaseModel):
         if info.data["type"] in [PathTypeEnum.CustomRandomFarmPath]:
             invalid_mapIds = [map_id for map_id in v if not WorldGraph().getVertices(map_id)]
             if invalid_mapIds:
-                raise ValueError(f"Following ids doesnt much an existing map: {invalid_mapIds}.")
+                raise ValueError(f"Following ids doesn't much an existing map: {invalid_mapIds}.")
         return v
 
 class Character(BaseModel):
@@ -140,6 +146,8 @@ class Session(BaseModel):
     pathsList: Optional[List[Path]] = None
     fightsPerMinute: Optional[float] = 1
     fightOptionsSent: Optional[bool] = False
+    fightOptions: Optional[List] = []
+    fightSecret: Optional[bool] = False
 
     @model_validator(mode="before")
     @classmethod
@@ -162,6 +170,7 @@ class Session(BaseModel):
         path = data.get("path")
         pathsList = data.get("pathsList")
         followers = data.get("followers")
+    
         if not seller:
             if isSeller:
                 raise ValueError("Seller session must have a seller character.")
@@ -231,7 +240,7 @@ class Session(BaseModel):
 
     @property
     def isFightSession(self) -> bool:
-        return self.type == SessionTypeEnum.FIGHT
+        return self.type in  [SessionTypeEnum.SOLO_FIGHT, SessionTypeEnum.GROUP_FIGHT]
 
     @property
     def isMixed(self) -> bool:
@@ -245,6 +254,10 @@ class Session(BaseModel):
     def isMuleFighter(self):
         return self.type == SessionTypeEnum.MULE_FIGHT
 
+    @property
+    def isLeader(self):
+        return self.type != SessionTypeEnum.MULE_FIGHT
+    
     def getPathFromDto(self) -> AbstractFarmPath:
         return PathFactory.from_dto(self.path)
 
@@ -277,6 +290,7 @@ class Account(BaseModel):
         for character in self.characters:
             if character.id == charId:
                 return character
+        print(self.characters)
         return None
 
     @property
@@ -298,6 +312,7 @@ class PlayerStats(BaseModel):
     earnedJobLevels: Dict[int, int] = {}
     itemsGained: Dict[int, int] = {}
     visitedMapsHeatMap: Dict[int, int] = {}
+    currentLevel: int = 0
 
     def add_job_level(self, job_id: str, levels_gained: int) -> None:
         self.earnedJobLevels[job_id] = self.earnedJobLevels.get(job_id, 0) + levels_gained

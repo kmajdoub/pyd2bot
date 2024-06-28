@@ -1,6 +1,7 @@
 import json
 import os
 import random
+import threading
 
 from pyd2bot.data.enums import ServerNotificationEnum
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
@@ -92,7 +93,11 @@ class ClassicTreasureHunt(AbstractBehavior):
         self._deactivate_riding = False
         self._hunts_done = 0
         self._gained_kamas = 0
+        self._stop_sig = threading.Event()
 
+    def stop(self):
+        self._stop_sig.set()
+        
     @property
     def maxCost(self):
         if not self._hunts_done:
@@ -165,7 +170,7 @@ class ClassicTreasureHunt(AbstractBehavior):
 
     def onTelportToDistributorNearestZaap(self, code, err):
         if code == UseTeleportItem.CANT_USE_ITEM_IN_MAP:
-            self.autotripUseZaap(
+            self.travelUsingZaap(
                 self.TAKE_QUEST_MAPID, withSaveZaap=True, maxCost=self.maxCost, callback=self.onTakeQuestMapReached
             )
         else:
@@ -187,7 +192,7 @@ class ClassicTreasureHunt(AbstractBehavior):
                     Logger().debug(f"No rappel potions found in player consumable view")
             else:
                 Logger().debug(f"Saved Zaap ({Kernel().zaapFrame.spawnMapId}) is not the TH-ATM zaap")
-        self.autotripUseZaap(
+        self.travelUsingZaap(
             self.TAKE_QUEST_MAPID, withSaveZaap=True, maxCost=self.maxCost, callback=self.onTakeQuestMapReached
         )
 
@@ -332,6 +337,10 @@ class ClassicTreasureHunt(AbstractBehavior):
         self.solveNextStep(ignoreSame)
 
     def solveNextStep(self, ignoreSame=False):
+        if self._stop_sig.is_set():
+            self.stopChildren()
+            return self.finish(self.STOPPED, None)
+        
         if Kernel().fightContextFrame:
             Logger().debug(f"Waiting for fight to end")
             return self.once(
@@ -356,7 +365,7 @@ class ClassicTreasureHunt(AbstractBehavior):
         if self.currentStep is not None:
             if self.currentStep.type != TreasureHuntStepTypeEnum.DIRECTION_TO_POI:
                 Logger().debug(f"AutoTravelling to treasure hunt step {idx}, start map {self.startMapId}")
-                self.autotripUseZaap(self.startMapId, maxCost=self.maxCost, callback=self.onStartMapReached)
+                self.travelUsingZaap(self.startMapId, maxCost=self.maxCost, callback=self.onStartMapReached)
             else:
                 self.onStartMapReached(True, None)
 
@@ -408,7 +417,7 @@ class ClassicTreasureHunt(AbstractBehavior):
                     )
                     return self.digTreasure()
             Logger().debug(f"Next hint map is {nextMapId}, will travel to it.")
-            self.autotripUseZaap(nextMapId, maxCost=self.maxCost, callback=self.onNextHintMapReached)
+            self.travelUsingZaap(nextMapId, maxCost=self.maxCost, callback=self.onNextHintMapReached)
         elif self.currentStep.type == TreasureHuntStepTypeEnum.DIRECTION_TO_HINT:
             FindHintNpc().start(
                 self.currentStep.count, self.currentStep.direction, callback=self.onNextHintMapReached, parent=self

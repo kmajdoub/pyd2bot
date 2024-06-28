@@ -8,6 +8,7 @@ from pyd2bot.logic.roleplay.behaviors.skill.UseSkill import UseSkill
 from pydofus2.com.ankamagames.berilia.managers.EventsHandler import (Event,
                                                                      Listener)
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
+from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import KernelEventsManager
 from pydofus2.com.ankamagames.dofus.datacenter.interactives.Interactive import \
     Interactive
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
@@ -112,17 +113,17 @@ class ChangeMap(AbstractBehavior):
             self.transition: Transition = next(self.transitions)
             self.trType = TransitionTypeEnum(self.transition.type)
             if self.isInteractiveTr():
-                self.mapChangeIE = Kernel().interactivesFrame._ie.get(self.transition.id)
+                self.mapChangeIE = Kernel().interactiveFrame._ie.get(self.transition.id)
                 if self.mapChangeIE:
                     trie = Interactive.getInteractiveById(self.mapChangeIE.element.elementTypeId)
                     if trie:
                         Logger().debug(f"Transition IE is {trie.name} ==> {trie.actionId}")
-                    if self.mapChangeIE.element.elementTypeId == Kernel().interactivesFrame.ZAAP_TYPEID:
+                    if self.mapChangeIE.element.elementTypeId == Kernel().interactiveFrame.ZAAP_TYPEID:
                         Logger().warning(f"Current transition is using a Zaap it must be discarded.")
                         self.transition = next(self.transitions)
                 else:
                     Logger().error(
-                        f"Unable to find transiton IE {self.transition.id}!. {Kernel().interactivesFrame._ie}"
+                        f"Unable to find transiton IE {self.transition.id}!. {Kernel().interactiveFrame._ie}"
                     )
                     self.transition = next(self.transitions)
         except StopIteration:
@@ -138,6 +139,9 @@ class ChangeMap(AbstractBehavior):
         callback(self.rpiframe.getInteractiveElement(transition.id, transition.skillId))
 
     def followTransition(self):
+        if PlayedCharacterManager().isInFight:
+            self.stop(True)
+            return
         if not self.transition.isValid:
             return self.finish(self.INVALID_TRANSITION, "Trying to follow a non valid transition")
         if self.dstMapId == PlayedCharacterManager().currentMap.mapId:
@@ -147,6 +151,9 @@ class ChangeMap(AbstractBehavior):
 
     def askChangeMap(self):
         Logger().info(f"{self.trType.name} map change to {self.dstMapId}")
+        if PlayedCharacterManager().isInFight:
+            self.stop(True)
+            return
         self.mapChangeReqSent = False
         if self.isInteractiveTr():
             self.interactiveMapChange()
@@ -173,10 +180,14 @@ class ChangeMap(AbstractBehavior):
 
     def onRequestRejectedByServer(self, event: Event, reason: MovementFailError):
         if MapMove().isRunning():
-            return Logger().warning(f"Change map timer kicked while map move to cell stil resolving!")
+            KernelEventsManager().clearAllByOrigin(MapMove())
+            MapMove().callback = lambda code, err: None
+            MapMove.clear()
+            
         Logger().warning(f"Movement failed for reason {reason.name}")
         if self.mapChangeListener:
             self.mapChangeListener.delete()
+
         if self.mapChangeRejectListener:
             self.mapChangeRejectListener.delete()
 
@@ -280,7 +291,7 @@ class ChangeMap(AbstractBehavior):
         )
 
     def handleOnsameCellForMapActionCell(self):
-        self.currentMPChilds = MapPoint.fromCellId(self.mapChangeCellId).iterChilds(False, True)
+        self.currentMPChilds = MapPoint.fromCellId(self.mapChangeCellId).iterChildren(False, True)
         try:
             x, y = next(self.currentMPChilds)
         except StopIteration:

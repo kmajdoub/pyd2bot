@@ -17,13 +17,13 @@ class AccountCharactersFetcher(DofusClient):
             raise ValueError("Callback must be a callable function")
         super().__init__(account.id)
         self.callback = callback
-        self.changeSevrer = False
+        self.changeServer = False
         self.currServer = None
         self.serversList = None
         self.setCredentials(account.apikey, account.certId, account.certHash)
         self.addShutdownListener(self.afterShutDown)
 
-    def afterShutDown(self, name, message, reason):
+    def afterShutDown(self, reason, message):
         Logger().info(f"Characters fetched for account {self.account.login} ended with message : {message} and reason : {reason}")
         if self.callback:
             if not callable(self.callback):
@@ -39,7 +39,7 @@ class AccountCharactersFetcher(DofusClient):
             originator=self,
         )
 
-    def onServersList(self, event, erversList, serversUsedList, serversTypeAvailableSlots):
+    def onServersList(self, event, serversList, serversUsedList, serversTypeAvailableSlots):
         selectableServers = [server for server in Kernel().serverSelectionFrame.usedServers if server.isSelectable]
         self.serversListIter = iter(selectableServers)
         self.processServer()
@@ -54,11 +54,11 @@ class AccountCharactersFetcher(DofusClient):
         except StopIteration:
             self.shutdown("Wanted shutdown after all servers processed.")
             return
-        if self.changeSevrer:
+        if self.changeServer:
             PlayerManager().charactersList.clear()
             Kernel().characterFrame.changeToServer(self.currServer.id)
         else:
-            self.changeSevrer = False
+            self.changeServer = False
             Kernel().serverSelectionFrame.selectServer(self.currServer.id)
         KernelEventsManager().once(KernelEvent.CharactersList, self.onCharactersList)
 

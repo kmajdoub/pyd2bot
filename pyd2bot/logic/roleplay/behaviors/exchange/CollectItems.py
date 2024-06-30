@@ -4,8 +4,6 @@ from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
 from pyd2bot.logic.roleplay.behaviors.bank.UnloadInBank import UnloadInBank
 from pyd2bot.logic.roleplay.behaviors.exchange.BotExchange import (
     BotExchange, ExchangeDirectionEnum)
-from pyd2bot.logic.roleplay.behaviors.movement.AutoTripUseZaap import \
-    AutoTripUseZaap
 from pyd2bot.misc.BotEventsManager import BotEventsManager
 from pyd2bot.misc.Localizer import BankInfos
 from pyd2bot.data.models import Character

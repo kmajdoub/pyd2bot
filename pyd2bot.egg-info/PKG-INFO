@@ -11,6 +11,7 @@ Classifier: Operating System :: Windows
 Requires-Python: <=3.9.13
 Requires-Dist: numpy
 Requires-Dist: pydantic
+Requires-Dist: pydofus2
 
 # Pyd2bot: A Python Bot for Dofus 2
 

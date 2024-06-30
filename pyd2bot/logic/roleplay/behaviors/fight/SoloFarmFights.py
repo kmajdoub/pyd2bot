@@ -1,13 +1,15 @@
 import heapq
+import threading
 import numpy as np
 import time
 from prettytable import PrettyTable
 
-from pyd2bot.logic.managers.BotConfig import BotConfig
+from pyd2bot.data.models import Character
 from pyd2bot.logic.roleplay.behaviors.AbstractFarmBehavior import \
     AbstractFarmBehavior
 from pyd2bot.logic.roleplay.behaviors.fight.AttackMonsters import \
     AttackMonsters
+from pyd2bot.farmPaths.AbstractFarmPath import AbstractFarmPath
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
 from pydofus2.com.ankamagames.dofus.datacenter.monsters.Monster import Monster
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
@@ -21,15 +23,17 @@ from pydofus2.com.ankamagames.jerakine.types.positions.MapPoint import MapPoint
 
 class SoloFarmFights(AbstractFarmBehavior):
 
-    def __init__(self, timeout=None):
+    def __init__(self, path: AbstractFarmPath, fightsPerMinute: int, fightPartyMembers: list[Character], monsterLvlCoefDiff=None, timeout=None):
         super().__init__(timeout)
-    
+        self.path = path
+        self.fightsPerMinute = fightsPerMinute
+        self.fightPartyMembers = fightPartyMembers
+        self.monsterLvlCoefDiff = monsterLvlCoefDiff if monsterLvlCoefDiff else float("inf")
+
     def init(self):
-        self.path = BotConfig().curr_path
         self.path.init()
         self.last_monster_attack_time = None
-        self.fights_per_minute = 2
-        Logger().debug(f"Solo farm fights started")
+        Logger().debug(f"Solo farm fights started, {self.fightsPerMinute} fights per minute.")
         return True
 
     def makeAction(self):
@@ -51,7 +55,12 @@ class SoloFarmFights(AbstractFarmBehavior):
 
         if Kernel().worker.terminated.wait(wait_time):
             return
+    
         all_monster_groups = self.getAvailableResources()
+        if not all_monster_groups:
+            Logger().debug("No monster group found!")
+            self.moveToNextStep()
+            return
         monster_group = all_monster_groups[0]
         self.attackMonsters(monster_group["id"], self.onFightStarted)
         self.last_monster_attack_time = current_time
@@ -59,10 +68,10 @@ class SoloFarmFights(AbstractFarmBehavior):
     def _calculate_wait_time(self, current_time):
         if not self.last_monster_attack_time:
             # No previous attack, use full wait time based on rate
-            return np.random.poisson(self.fights_per_minute / 60)
+            return np.random.poisson(self.fightsPerMinute / 60)
 
         time_since_last_attack = current_time - self.last_monster_attack_time
-        expected_attacks_since_last = self.fights_per_minute * time_since_last_attack / 60
+        expected_attacks_since_last = self.fightsPerMinute * time_since_last_attack / 60
 
         # Adjust wait time based on expected attacks since last attack
         wait_time = max(0, np.random.poisson(expected_attacks_since_last))
@@ -76,7 +85,7 @@ class SoloFarmFights(AbstractFarmBehavior):
         visited = set()
         queue = list[int, MapPoint]()
         currCellId = PlayedCharacterManager().currentCellId
-        teamLvl = sum(PlayedCharacterManager.getInstance(c.login).limitedLevel for c in BotConfig().fightPartyMembers)
+        teamLvl = PlayedCharacterManager().limitedLevel
         monsterByCellId = dict[int, GameRolePlayGroupMonsterInformations]()
         for entityId in Kernel().roleplayEntitiesFrame._monstersIds:
             infos: GameRolePlayGroupMonsterInformations = Kernel().roleplayEntitiesFrame.getEntityInfos(entityId)
@@ -84,7 +93,7 @@ class SoloFarmFights(AbstractFarmBehavior):
                 totalGrpLvl = infos.staticInfos.mainCreatureLightInfos.level + sum(
                     ul.level for ul in infos.staticInfos.underlings
                 )
-                if totalGrpLvl < BotConfig().monsterLvlCoefDiff * teamLvl:
+                if totalGrpLvl < self.monsterLvlCoefDiff * teamLvl:
                     monsterByCellId[infos.disposition.cellId] = infos
         if not monsterByCellId:
             return []
@@ -103,7 +112,7 @@ class SoloFarmFights(AbstractFarmBehavior):
                     "cell": currCellId,
                     "distance": distance
                 })
-            for x, y in MapPoint.fromCellId(currCellId).iterChilds():
+            for x, y in MapPoint.fromCellId(currCellId).iterChildren():
                 adjacentPos = MapPoint.fromCoords(x, y)
                 if adjacentPos.cellId in visited:
                     continue
@@ -114,13 +123,15 @@ class SoloFarmFights(AbstractFarmBehavior):
         
     def onFightStarted(self, code, error):        
         if not self.running.is_set():
+            Logger().warning("onFightStarted callback called but fight farmer is not running!")
             return
         if error:
             Logger().warning(error)
-            if code in [AttackMonsters.ENTITY_VANISHED, AttackMonsters.FIGHT_REQ_TIMEDOUT, AttackMonsters.MAP_CHANGED]:
+            if code in [AttackMonsters.ENTITY_VANISHED, AttackMonsters.FIGHT_REQ_TIMED_OUT, AttackMonsters.MAP_CHANGED]:
                 self.main()
             else:
-                return self.send(KernelEvent.ClientRestart, f"Error while attacking monsters: {error}")
+                self.send(KernelEvent.ClientRestart, f"Error while attacking monsters: {error}")
+                return
 
     def logResourcesTable(self, resources):
         if resources:

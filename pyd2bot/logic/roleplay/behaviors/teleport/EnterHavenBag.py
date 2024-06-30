@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING
 
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
+from pyd2bot.data.enums import ServerNotificationEnum
 from pydofus2.com.ankamagames.atouin.HaapiEventsManager import HaapiEventsManager
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
@@ -31,9 +32,9 @@ class EnterHavenBag(AbstractBehavior):
         self.useEnterHavenBagShortcut()
     
     def onServerTextInfo(self, event, msgId, msgType, textId, text, params):
-        if textId == 589049:  # need to be level 10 to enter haven bag
+        if textId == ServerNotificationEnum.DOESNT_HAVE_LVL_FOR_HAVEN_BAG:  # need to be level 10 to enter haven bag
             self.finish(self.NEED_LVL_10, text)
-        elif textId == 589088:  # Can't join haven bag from current Map
+        elif textId == ServerNotificationEnum.CANT_USE_HAVEN_BAG_FROM_CURRMAP:  # Can't join haven bag from current Map
             self.finish(self.CANT_USE_IN_CURRENT_MAP, text)
 
     def useEnterHavenBagShortcut(self):

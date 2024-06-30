@@ -15,12 +15,12 @@ from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 
 
 class AutoRevive(AbstractBehavior):
-    CIMETARY_MAP_LOADED_TIMEOUT = 7
+    CEMETARY_MAP_LOADED_TIMEOUT = 7
     
     def __init__(self) -> None:
         super().__init__()
         self.requestTimer = None
-        self.cimetaryMapLoadedListener = None
+        self.cemetaryMapLoadedListener = None
 
     def run(self) -> bool:
         self.phenixMapId = Kernel().playedCharacterUpdatesFrame._phenixMapId
@@ -28,23 +28,23 @@ class AutoRevive(AbstractBehavior):
             return self.onceMapProcessed(self.start)
         self.on(KernelEvent.PlayerStateChanged, self.onPlayerStateChange)
         if PlayerLifeStatusEnum(PlayedCharacterManager().state) == PlayerLifeStatusEnum.STATUS_PHANTOM:
-            Logger().debug(f"Autotravelling to phenix map {self.phenixMapId}")
+            Logger().debug(f"Traveling to phenix map {self.phenixMapId}")
             self.autoTrip(dstMapId=self.phenixMapId, callback=self.onPhenixMapReached)
         elif PlayerLifeStatusEnum(PlayedCharacterManager().state) == PlayerLifeStatusEnum.STATUS_TOMBSTONE:
-            self.cimetaryMapLoadedListener = self.onceMapProcessed(self.onCimetaryMapLoaded)
+            self.cemetaryMapLoadedListener = self.onceMapProcessed(self.onCemetaryMapLoaded)
             self.releaseSoulRequest()
 
     def onPlayerStateChange(self, event, playerState: PlayerLifeStatusEnum, phenixMapId):
         self.phenixMapId = phenixMapId
         Logger().debug(f"Phoenix mapId : {phenixMapId}")
         if playerState == PlayerLifeStatusEnum.STATUS_PHANTOM:
-            Logger().info(f"Player saoul released wating for cimetary map to load.")
+            Logger().info(f"Player soul released waiting for cemetery map to load.")
         elif playerState == PlayerLifeStatusEnum.STATUS_ALIVE_AND_KICKING:
             Logger().info("Player is alive and kicking.")
             self.finish(True, None)
 
-    def onCimetaryMapLoaded(self, event_id=None):
-        Logger().debug(f"Cimetary map loaded.")
+    def onCemetaryMapLoaded(self, event_id=None):
+        Logger().debug(f"Cemetery map loaded.")
         if self.requestTimer:
             self.requestTimer.cancel()
         self.autoTrip(dstMapId=self.phenixMapId, callback=self.onPhenixMapReached)
@@ -52,8 +52,8 @@ class AutoRevive(AbstractBehavior):
     def onPhenixMapReached(self, code, error):
         if error:
             return self.finish(code, error)
-        if Kernel().interactivesFrame:
-            reviveIE = Kernel().interactivesFrame.getReviveIe()
+        if Kernel().interactiveFrame:
+            reviveIE = Kernel().interactiveFrame.getReviveIe()
             def onPhenixSkillUsed(code, error, iePosition=None):
                 if error:
                     return self.finish(code, error)
@@ -62,12 +62,12 @@ class AutoRevive(AbstractBehavior):
         else:
             self.onceFramePushed("RoleplayInteractivesFrame", self.onPhenixMapReached)
             
-    def onCimetaryMapLoadedtimeout(self):
-        Logger().error("Cimetary map loaded timeout.")
-        self.cimetaryMapLoadedListener.delete()
+    def onCemetaryMapLoadedTimeout(self):
+        Logger().error("Cemetary map loaded timeout.")
+        self.cemetaryMapLoadedListener.delete()
         self.autoTrip(dstMapId=self.phenixMapId, callback=self.onPhenixMapReached)
             
     def releaseSoulRequest(self):
-        self.requestTimer = BenchmarkTimer(self.CIMETARY_MAP_LOADED_TIMEOUT, self.onCimetaryMapLoadedtimeout)
+        self.requestTimer = BenchmarkTimer(self.CEMETARY_MAP_LOADED_TIMEOUT, self.onCemetaryMapLoadedTimeout)
         self.requestTimer.start()
         ConnectionsHandler().send(GameRolePlayFreeSoulRequestMessage())

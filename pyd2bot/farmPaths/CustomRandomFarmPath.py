@@ -1,8 +1,8 @@
 import random
 import time
 from typing import Iterator
-from pyd2bot.models.farmPaths.AbstractFarmPath import AbstractFarmPath
-from pyd2bot.models.farmPaths.RandomAreaFarmPath import NoTransitionFound
+from pyd2bot.farmPaths.AbstractFarmPath import AbstractFarmPath
+from pyd2bot.farmPaths.RandomAreaFarmPath import NoTransitionFound
 from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Edge import \
     Edge
 from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Vertex import \
@@ -28,13 +28,13 @@ class CustomRandomFarmPath(AbstractFarmPath):
         return self._mapIds
     
     def init(self):
-        Logger().info(f"CustomRandomFarmPath {self.name} initialized with {len(self.verticies)} verticies")
+        Logger().info(f"CustomRandomFarmPath {self.name} initialized with {len(self.vertices)} vertices")
 
-    def __next__(self, forbidenEdges=None) -> Edge:
+    def __next__(self, forbiddenEdges=None) -> Edge:
         outgoingEdges = list(self.outgoingEdges(onlyNonRecentVisited=False))
-        if forbidenEdges is None:
-            forbidenEdges = []
-        outgoingEdges = [e for e in outgoingEdges if e not in forbidenEdges]
+        if forbiddenEdges is None:
+            forbiddenEdges = []
+        outgoingEdges = [e for e in outgoingEdges if e not in forbiddenEdges]
         if not outgoingEdges:
             raise NoTransitionFound()
         edge = random.choice(outgoingEdges)
@@ -61,11 +61,11 @@ class CustomRandomFarmPath(AbstractFarmPath):
                         ret.append(edge)
         return ret
     
-    def getNextEdge(self, forbidenEdges=None, onlyNonRecent=False) -> Edge:
+    def getNextEdge(self, forbiddenEdges=None, onlyNonRecent=False) -> Edge:
         outgoingEdges = list(self.outgoingEdges(onlyNonRecentVisited=onlyNonRecent))
-        if forbidenEdges is None:
-            forbidenEdges = []
-        outgoingEdges = [e for e in outgoingEdges if e not in forbidenEdges]
+        if forbiddenEdges is None:
+            forbiddenEdges = []
+        outgoingEdges = [e for e in outgoingEdges if e not in forbiddenEdges]
         if not outgoingEdges:
             raise NoTransitionFound()
         edge = random.choice(outgoingEdges)

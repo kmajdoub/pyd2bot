@@ -38,15 +38,17 @@ function closeFightModal() {
 function submitFightForm() {
     const accountId = document.getElementById('fightAccountId').value;
     const characterId = document.getElementById('fightCharacterId').value;
-    const pathValue = document.getElementById('fightPathsSelect').value; // Ensure this matches your select element's ID
-    const monsterLevelDiff = document.getElementById('monsterLvlCoefDiffInput').value; // Ensure this matches your input element's ID
+    const pathValue = document.getElementById('fightPathsSelect').value;
+    const monsterLevelDiff = document.getElementById('monsterLvlCoefDiffInput').value;
+    const fightsPerMinute = document.getElementById('fightsPerMinute').value;
 
     // Creating the data object
     const data = {
         accountId: accountId,
         characterId: characterId,
         pathId: pathValue,
-        monsterLvlCoefDiff: monsterLevelDiff
+        monsterLvlCoefDiff: monsterLevelDiff,
+        fightsPerMinute: fightsPerMinute
     };
 
     // Using fetch to make a POST request to your server
@@ -170,11 +172,8 @@ let runningBotsRefreshInterval = setInterval(updateRunningBots, 5000);
 function showLogModal(name) {
     var logModal = document.getElementById('logModal');
     var logDetails = document.getElementById('logDetails');
-    // Clear previous log data
     logDetails.innerHTML = '';
-    // Open the modal
     logModal.style.display = 'block';
-    // Start watching the log
     fetchLogAction(name, 'start');
 }
 

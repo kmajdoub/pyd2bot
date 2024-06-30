@@ -1,6 +1,6 @@
+from pyd2bot.data.models import Character
 from pyd2bot.logic.fight.messages.MuleSwitchedToCombatContext import \
     MuleSwitchedToCombatContext
-from pyd2bot.logic.managers.BotConfig import BotConfig
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
 from pydofus2.com.ankamagames.dofus.kernel.net.ConnectionsHandler import \
     ConnectionsHandler
@@ -30,8 +30,9 @@ from pydofus2.com.ankamagames.jerakine.types.enums.Priority import Priority
 
 class BotMuleFightFrame(Frame):
     
-    def __init__(self):
+    def __init__(self, leader: Character):
         super().__init__()
+        self.leader = leader
         
     @property
     def priority(self) -> int:
@@ -39,7 +40,7 @@ class BotMuleFightFrame(Frame):
 
     def pushed(self) -> bool:
         Logger().info("BotMuleFightFrame pushed")
-        Kernel.getInstance(BotConfig().leader.login).worker.process(MuleSwitchedToCombatContext(PlayedCharacterManager().id))
+        Kernel.getInstance(self.leader.accountId).worker.process(MuleSwitchedToCombatContext(PlayedCharacterManager().id))
         return True
 
     def pulled(self) -> bool:
@@ -61,5 +62,5 @@ class BotMuleFightFrame(Frame):
             return True
         
         elif isinstance(msg, (GameMapNoMovementMessage, GameActionFightNoSpellCastMessage, GameFightTurnStartPlayingMessage, TextInformationMessage)):
-            Kernel.getInstance(BotConfig().leader.login).worker.process(msg)
+            Kernel.getInstance(self.leader.accountId).worker.process(msg)
             return True

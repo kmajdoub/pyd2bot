@@ -14,7 +14,7 @@ from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.WorldGraph i
 from pydofus2.com.ankamagames.dofus.network.messages.game.dialog.LeaveDialogRequestMessage import \
     LeaveDialogRequestMessage
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
-from pydofus2.com.ankamagames.jerakine.pathfinding.Pathfinding import Pathfinding
+from pydofus2.com.ankamagames.jerakine.pathfinding.Pathfinding import PathFinding
 
 
 class UseZaap(AbstractBehavior):
@@ -35,13 +35,13 @@ class UseZaap(AbstractBehavior):
         self.teleportDestinationListener: Listener = None
         if not PlayedCharacterManager().isZaapKnown(dstMapId):
             return self.finish(self.DST_ZAAP_NOT_KNOWN, "Destination zaap is not a known zaap!")
-        if Kernel().interactivesFrame:
+        if Kernel().interactiveFrame:
             self.openCurrMapZaapDialog()
         else:
             self.onceFramePushed("RoleplayInteractivesFrame", self.openCurrMapZaapDialog)
 
     def openCurrMapZaapDialog(self):
-        self.zaapIe = Kernel().interactivesFrame.getZaapIe()
+        self.zaapIe = Kernel().interactiveFrame.getZaapIe()
         if not self.zaapIe:
             return self.finish(self.ZAAP_NOTFOUND, "No Zaap IE found in the current Map")
         if self.checkZaapRpZone():
@@ -64,8 +64,8 @@ class UseZaap(AbstractBehavior):
             Logger().error("Zaap is not reachable, maybe its in a different rp zone than the player!")
             zaapLinkedRpZone = MapDisplayManager().dataMap.cells[self.zaapIe.position.cellId].linkedZone
             playerLinkedRpZone = PlayedCharacterManager().currentZoneRp
-            currMapVerticies = WorldGraph().getVertices(PlayedCharacterManager().currentMap.mapId)
-            Logger().debug(f"Current map verticies: {currMapVerticies}")
+            currMapvertices = WorldGraph().getVertices(PlayedCharacterManager().currentMap.mapId)
+            Logger().debug(f"Current map vertices: {currMapvertices}")
             if zaapLinkedRpZone != playerLinkedRpZone:
                 Logger().debug(f"Zaap is in a different rp zone than the player, zaap rp zone: {zaapLinkedRpZone}, player rp zone: {playerLinkedRpZone}")
                 Logger().debug(f"Auto travelling to zaap rp zone {zaapLinkedRpZone}")
@@ -98,7 +98,7 @@ class UseZaap(AbstractBehavior):
         if playerEntity is None:
             Logger().error("Player entity not found, while trying to find nearest cell to Zaap!")
             return None
-        movePath = Pathfinding().findPath(playerEntity.position, self.zaapIe.position)
+        movePath = PathFinding().findPath(playerEntity.position, self.zaapIe.position)
         if movePath is None:
             return None
         return movePath.end

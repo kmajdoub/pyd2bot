@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING
 
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
+from pyd2bot.data.enums import ServerNotificationEnum
 from pydofus2.com.ankamagames.atouin.HaapiEventsManager import HaapiEventsManager
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
 from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import KernelEventsManager
@@ -27,7 +28,7 @@ class ToggleRideMount(AbstractBehavior):
         super().__init__()
     
     def onServerTextInfo(self, event, msgId, msgType, textId, text, params):
-        if textId == 5336:  # Ride has no energy left
+        if textId == ServerNotificationEnum.MOUNT_HAS_NO_ENERGY_LEFT:  # Mount has no energy left
             self.finish(self.NO_ENERGY_LEFT, text)
 
     def useToggleRideMountShortcut(self):

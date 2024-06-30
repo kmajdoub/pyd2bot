@@ -2,8 +2,8 @@ import random
 import time
 from typing import Iterator, Set
 
-from pyd2bot.models.farmPaths.AbstractFarmPath import AbstractFarmPath
-from pyd2bot.models.farmPaths.RandomAreaFarmPath import NoTransitionFound
+from pyd2bot.farmPaths.AbstractFarmPath import AbstractFarmPath
+from pyd2bot.farmPaths.RandomAreaFarmPath import NoTransitionFound
 from pydofus2.com.ankamagames.dofus.datacenter.world.SubArea import SubArea
 from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.astar.AStar import \
     AStar
@@ -23,12 +23,12 @@ class RandomSubAreaFarmPath(AbstractFarmPath):
         self,
         name: str,
         startVertex: Vertex,
-        transitionTypeWhitelist: list = None,
+        allowedTransitions: list = None,
     ) -> None:
         super().__init__()
         self.name = name
         self.startVertex = startVertex
-        self.transitionTypeWhitelist = transitionTypeWhitelist
+        self.allowedTransitions = allowedTransitions
         self._subArea = None
     
     @property
@@ -36,18 +36,18 @@ class RandomSubAreaFarmPath(AbstractFarmPath):
         if not self._subArea:
             self._subArea = SubArea.getSubAreaByMapId(self.startVertex.mapId)
         return self._subArea.mapIds
-    
+
     def init(self):
         self._subArea = SubArea.getSubAreaByMapId(self.startVertex.mapId)
-        Logger().info(f"RandomSubAreaFarmPath {self.name} initialized with {len(self.verticies)} verticies")
+        Logger().info(f"RandomSubAreaFarmPath {self.name} initialized with {len(self.vertices)} vertices")
 
-    def recentVisitedVerticies(self):
+    def recentVisitedVertices(self):
         self._recent_visited = [(_, time_added) for (_, time_added) in self._recent_visited if (time.time() - time_added) < 60 * 5]
         return [v for v, _ in self._recent_visited]
     
-    def __next__(self, forbidenEdges) -> Edge:
+    def __next__(self, forbiddenEdges) -> Edge:
         outgoingEdges = list(self.outgoingEdges(onlyNonRecentVisited=True))
-        outgoingEdges = [e for e in outgoingEdges if e not in forbidenEdges]
+        outgoingEdges = [e for e in outgoingEdges if e not in forbiddenEdges]
         if not outgoingEdges:
             raise NoTransitionFound()
         edge = random.choice(outgoingEdges)
@@ -81,11 +81,11 @@ class RandomSubAreaFarmPath(AbstractFarmPath):
         return ret
 
     def __iter__(self) -> Iterator[Vertex]:
-        for it in self.verticies:
+        for it in self.vertices:
             yield it
 
     def __in__(self, vertex: Vertex) -> bool:
-        return vertex in self.verticies
+        return vertex in self.vertices
 
     def to_json(self) -> dict:
         return {
@@ -96,7 +96,7 @@ class RandomSubAreaFarmPath(AbstractFarmPath):
                 "mapId": self.startVertex.mapId,
                 "mapRpZone": self.startVertex.zoneId,
             },
-            "transitionTypeWhitelist": self.transitionTypeWhitelist,
+            "allowedTransitions": self.allowedTransitions,
         }
 
     def hasValidTransition(self, edge: Edge) -> bool:
@@ -104,8 +104,8 @@ class RandomSubAreaFarmPath(AbstractFarmPath):
             GroupItemCriterion
 
         
-        if self.transitionTypeWhitelist:
-            transitions = [tr for tr in edge.transitions if TransitionTypeEnum(tr.type) in self.transitionTypeWhitelist]
+        if self.allowedTransitions:
+            transitions = [tr for tr in edge.transitions if TransitionTypeEnum(tr.type) in self.allowedTransitions]
         else:
             transitions = edge.transitions
         
@@ -124,11 +124,11 @@ class RandomSubAreaFarmPath(AbstractFarmPath):
             valid = True
         return valid
     
-    def getNextEdge(self, forbidenEdges=None, onlyNonRecent=False) -> Vertex:
+    def getNextEdge(self, forbiddenEdges=None, onlyNonRecent=False) -> Vertex:
         outgoingEdges = list(self.outgoingEdges(onlyNonRecentVisited=onlyNonRecent))
-        if forbidenEdges is None:
-            forbidenEdges = []
-        outgoingEdges = [e for e in outgoingEdges if e not in forbidenEdges]
+        if forbiddenEdges is None:
+            forbiddenEdges = []
+        outgoingEdges = [e for e in outgoingEdges if e not in forbiddenEdges]
         if not outgoingEdges:
             raise NoTransitionFound()
         edge = random.choice(outgoingEdges)

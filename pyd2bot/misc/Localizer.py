@@ -50,10 +50,10 @@ class Localizer:
     ZAAP_GFX = 410
     BANK_GFX = 401
 
-    _phenixesByAreaId = dict[int, list]()
+    _phenixByAreaId = dict[int, list]()
     base_dir = os.path.dirname(os.path.abspath(__file__))
     with open(os.path.join(base_dir, "areaInfos.json"), "r") as f:
-        AREAINFOS: dict = json.load(f)
+        AREA_INFOS: dict = json.load(f)
     with open(os.path.join(base_dir, "banks.json"), "r") as f:
         BANKS: dict = json.load(f)
 
@@ -66,7 +66,7 @@ class Localizer:
         subareaId = MapDisplayManager().currentDataMap.subareaId
         subarea = SubArea.getSubAreaById(subareaId)
         areaId = subarea._area.id
-        return cls.AREAINFOS[str(areaId)]["phoenix"]["mapId"]
+        return cls.AREA_INFOS[str(areaId)]["phoenix"]["mapId"]
 
     @classmethod
     def findClosestHintMapByGfx(cls, mapId, gfx):
@@ -81,7 +81,7 @@ class Localizer:
             return AStar().search(WorldGraph(), startVertex, candidates)
 
     @classmethod
-    def findPathtoClosestZaap(
+    def findPathToClosestZaap(
         cls,
         startMapId,
         maxCost=float("inf"),
@@ -121,11 +121,11 @@ class Localizer:
                 Logger().warning(f"Could not find a candidate zaap for map {startMapId}")
                 return None, None
             Logger().debug(f"Found {len(candidates)} candidates maps for closest zaap to map {startMapId}")
-            return cls.findPathtoClosestVertexCandidate(startVertex, candidates)
+            return cls.findPathToClosestVertexCandidate(startVertex, candidates)
         return None
 
     @classmethod
-    def findPathtoClosestVertexCandidate(cls, vertex: Vertex, candidates: list[Vertex]):
+    def findPathToClosestVertexCandidate(cls, vertex: Vertex, candidates: list[Vertex]):
         Logger().info(f"Searching closest map from vertex to one of the candidates")
         if not candidates:
             Logger().warning(f"No candidates to search path to!")
@@ -142,6 +142,6 @@ class Localizer:
 
 if __name__ == "__main__":
     Logger.logToConsole = True
-    r = Localizer.findPathtoClosestZaap(startMapId=128452097, onlyKnownZaap=False)
+    r = Localizer.findPathToClosestZaap(startMapId=128452097, onlyKnownZaap=False)
     endMapId = r[-1].dst.mapId
     print(f"Found path to closest zaap {endMapId} from map 128452097")

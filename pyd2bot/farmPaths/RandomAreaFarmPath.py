@@ -2,7 +2,7 @@ import random
 from time import perf_counter
 from typing import Iterator, Set
 
-from pyd2bot.models.farmPaths.AbstractFarmPath import AbstractFarmPath
+from pyd2bot.farmPaths.AbstractFarmPath import AbstractFarmPath
 from pydofus2.com.ankamagames.dofus.datacenter.world.MapPosition import \
     MapPosition
 from pydofus2.com.ankamagames.dofus.datacenter.world.SubArea import SubArea
@@ -27,20 +27,19 @@ class RandomAreaFarmPath(AbstractFarmPath):
         self,
         name: str,
         startVertex: Vertex,
-        transitionTypeWhitelist: list = None,
+        allowedTransitions: list = None,
         subAreaBlacklist: list = None,
     ) -> None:
         super().__init__()
         self.name = name
         self.startVertex = startVertex
-        self.transitionTypeWhitelist: list[TransitionTypeEnum] = transitionTypeWhitelist
+        self.allowedTransitions: list[TransitionTypeEnum] = allowedTransitions
         self.subAreaBlacklist = subAreaBlacklist if subAreaBlacklist is not None else []
 
     def init(self):
         self.area = SubArea.getSubAreaByMapId(self.startVertex.mapId).area
         self.subAreas = self.getAllSubAreas()
-        self.verticies = self.reachableVerticies()
-        Logger().info(f"RandomAreaFarmPath {self.name} initialized with {len(self.verticies)} verticies")
+        Logger().info(f"RandomAreaFarmPath {self.name} initialized with {len(self.vertices)} vertices")
 
     @property
     def mapIds(self) -> Set[int]:
@@ -50,13 +49,13 @@ class RandomAreaFarmPath(AbstractFarmPath):
 
     @property
     def pourcentExplored(self):
-        return 100 * len(self._lastVisited) / len(self.verticies)
+        return 100 * len(self._lastVisited) / len(self.vertices)
 
     def getClosestUnvisited(self):
         bestDist = float("inf")
         bestSolution = None
         currMp = MapPosition.getMapPositionById(self.currentVertex.mapId)
-        for v in self.verticies:
+        for v in self.vertices:
             if v.mapId == self.currentVertex.mapId:
                 continue
             if v not in self._lastVisited:
@@ -69,11 +68,12 @@ class RandomAreaFarmPath(AbstractFarmPath):
             Logger().error(f"No unvisited vertex found")
         return bestSolution
     
-    def getNextEdge(self, forbidenEdges=None, onlyNonRecent=False) -> Vertex:
+    def getNextEdge(self, forbiddenEdges=None, onlyNonRecent=False) -> Vertex:
         outgoingEdges = list(self.outgoingEdges(onlyNonRecentVisited=onlyNonRecent))
-        if forbidenEdges is None:
-            forbidenEdges = []
-        outgoingEdges = [e for e in outgoingEdges if e not in forbidenEdges]
+        if forbiddenEdges is not None:
+            if not isinstance(forbiddenEdges, (list, set)):
+                raise ValueError(f"ForbiddenEdges must be a list or a set")
+            outgoingEdges = [e for e in outgoingEdges if e not in forbiddenEdges]
         if not outgoingEdges:
             raise NoTransitionFound()
         edge = random.choice(outgoingEdges)
@@ -90,9 +90,8 @@ class RandomAreaFarmPath(AbstractFarmPath):
         from pydofus2.com.ankamagames.dofus.datacenter.items.criterion.GroupItemCriterion import \
             GroupItemCriterion
 
-        
-        if self.transitionTypeWhitelist:
-            transitions = [tr for tr in edge.transitions if TransitionTypeEnum(tr.type) in self.transitionTypeWhitelist]
+        if self.allowedTransitions:
+            transitions = [tr for tr in edge.transitions if TransitionTypeEnum(tr.type) in self.allowedTransitions]
         else:
             transitions = edge.transitions
         
@@ -130,11 +129,11 @@ class RandomAreaFarmPath(AbstractFarmPath):
         return ret
     
     def __iter__(self) -> Iterator[Vertex]:
-        for it in self.verticies:
+        for it in self.vertices:
             yield it
 
     def __in__(self, vertex: Vertex) -> bool:
-        return vertex in self.verticies
+        return vertex in self.vertices
     
     def getAllSubAreas(self):
         subAreas = []
@@ -160,6 +159,6 @@ class RandomAreaFarmPath(AbstractFarmPath):
                 "mapId": self.startVertex.mapId,
                 "mapRpZone": self.startVertex.zoneId,
             },
-            "transitionTypeWhitelist": self.transitionTypeWhitelist,
+            "allowedTransitions": self.allowedTransitions,
             "subAreaBlacklist": self.subAreaBlacklist,
         }

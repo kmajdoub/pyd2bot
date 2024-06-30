@@ -4,14 +4,15 @@ import os
 import time
 import sys
 import traceback
+from venv import create
 from flask import Flask, jsonify, request, render_template
 from flask_socketio import SocketIO
 from marshmallow import ValidationError
 from forms.schemas import FarmSessionSchema, FightSessionSchema
 from pyd2bot.logic.managers.AccountManager import AccountManager
 from pyd2bot.Pyd2Bot import Pyd2Bot
-from pyd2bot.logic.managers.BotConfig import BotConfig
-from pyd2bot.models.session.models import JobFilter, Path, Session, SessionStatus, SessionType, UnloadType
+from pyd2bot.data.models import JobFilter, Path, Session, SessionTypeEnum, UnloadTypeEnum
+from pydofus2.com.ClientStatusEnum import ClientStatusEnum
 from pydofus2.com.ankamagames.dofus.kernel.net.DisconnectionReasonEnum import DisconnectionReasonEnum
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.InventoryManager import InventoryManager
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import PlayedCharacterManager
@@ -35,7 +36,7 @@ signal.signal(signal.SIGTERM, signal_handler)
 paths_file = os.path.join(os.path.dirname(__file__), "db", "paths.json")
 with open(paths_file, "r") as f:
     paths_json = json.load(f)
-    paths: dict[str, Path] = {json_path["id"]: Path.from_dict(json_path) for json_path in paths_json}
+    paths: dict[str, Path] = {json_path["id"]: Path(**json_path) for json_path in paths_json}
 
 staticdir = os.path.join(os.path.dirname(__file__), "static")
 dofus_data_file = os.path.join(staticdir, "dofusData", "dofus_data.json")
@@ -92,44 +93,24 @@ class BotManagerApp:
         self.setup_routes()
 
     @staticmethod
-    def get_basic_session(account_id: int, character_id: float, session_type: SessionType) -> Session:
-        accountkey = AccountManager.get_accountkey(account_id)
-        character = AccountManager.get_character(accountkey, character_id)
-        apikey = AccountManager.get_apikey(accountkey)
-        cert = AccountManager.get_cert(accountkey)
+    def get_basic_session(account_id: int, character_id: float, session_type: SessionTypeEnum) -> Session:
+        account = AccountManager.get_account(account_id)
+        character = account.get_character(character_id)
         return Session(
             id=account_id,
             character=character,
-            unloadType=UnloadType.BANK,
-            apikey=apikey,
-            cert=cert,
+            unloadType=UnloadTypeEnum.BANK,
+            credentials=account.credentials,
             type=session_type,
         )
 
     def start_bot_session(self, session: Session):
         bot = Pyd2Bot(session)
-        bot.addShutDownListener(self.on_bot_shutdown)
-        self._running_bots[session.character.login] = bot
-        self._bots_run_infos[session.character.login] = {
-            "name": bot.name,
-            "startTime": time.time(),
-            "character": session.character.name,
-            "activity": session.type.name,
-            "kamas": "N/A",
-            "level": "N/A",
-            "pods": "N/A",
-            "fights_count": 0,
-            "earned_kamas": 0,
-            "earned_levels": 0,
-            "path_name": "N/A",
-            "status": "Starting...",
-            "runtime": "0s",
-            "endTime": "N/A",
-        }
+        bot.addShutdownListener(self.on_bot_shutdown)
         bot.start()
 
     def teardown(self, *args):
-        for bot in self._running_bots.values():
+        for bot in Pyd2Bot._running_clients:
             bot.shutdown(DisconnectionReasonEnum.WANTED_SHUTDOWN, "Brutal shutdown because of app reload")
         self.socketio.stop()
 
@@ -156,18 +137,20 @@ class BotManagerApp:
             account_id = data.get("accountId")
             character_id = data.get("characterId")
             path_id = data.get("pathId")
-            session = self.get_basic_session(account_id, character_id, SessionType.FIGHT)
+            session = self.get_basic_session(account_id, character_id, SessionTypeEnum.FIGHT)
             # check if bot already running on this accounId
-            if session.character.login in self._running_bots:
-                return jsonify({"error": f"Bot already running for account {account_id}"}), 400
+            for bot in Pyd2Bot._running_clients:
+                if str(session.character.accountId) == bot.name:
+                    return jsonify({"error": f"Bot already running for account {account_id}"}), 400
             session.monsterLvlCoefDiff = data.get("monsterLvlCoefDiff")
             session.path = paths[path_id]
+            session.fightsPerMinute = data.get("fightsPerMinute", 1)
             self.start_bot_session(session)
             return jsonify({"message": "Solo fight initiated successfully"}), 200
 
         @self.app.route("/farm", methods=["GET"])
         def get_farm_data():
-            farm_session_types = [SessionType.FARM, SessionType.MULTIPLE_PATHS_FARM]
+            farm_session_types = [SessionTypeEnum.FARM, SessionTypeEnum.MULTIPLE_PATHS_FARM]
             return (
                 jsonify(
                     {
@@ -197,23 +180,23 @@ class BotManagerApp:
             number_of_covers = data.get("number_of_covers")
             session = self.get_basic_session(account_id, character_id, session_type)
             # check if bot already running on this accounId
-            if session.character.login in self._running_bots:
+            if session.character.accountId in self._running_bots:
                 return jsonify({"error": f"Bot already running for account {account_id}"}), 400
             session.type = session_type
-            if session_type == SessionType.FARM:
+            if session_type == SessionTypeEnum.FARM:
                 if path_id not in paths:
                     return jsonify({"error": f"Path {path_id} not found"}), 400
                 session.path = paths[path_id]
-            elif session_type == SessionType.MULTIPLE_PATHS_FARM:
+            elif session_type == SessionTypeEnum.MULTIPLE_PATHS_FARM:
                 for path_id in paths_ids:
                     if path_id not in paths:
                         return jsonify({"error": f"Path {path_id} not found"}), 400
-                session.number_of_covers = number_of_covers
+                session.numberOfCovers = number_of_covers
                 session.pathsList = [paths[path_id] for path_id in paths_ids]
             else:
                 return jsonify({"error": f"Invalid session type: {session_type}"}), 400
             try:
-                session.jobFilters = [JobFilter.from_dict(job) for job in job_filters]
+                session.jobFilters = [JobFilter(**job) for job in job_filters]
             except Exception as e:
                 return jsonify({"error": f"Invalid jobFilters: {e}"}), 400
             self.start_bot_session(session)
@@ -223,7 +206,7 @@ class BotManagerApp:
         @self.app.route("/treasurehunt/<account_id>/<character_id>")
         def trasurehunt(account_id, character_id):
             try:
-                session = self.get_basic_session(account_id, character_id, SessionType.TREASURE_HUNT)
+                session = self.get_basic_session(account_id, character_id, SessionTypeEnum.TREASURE_HUNT)
                 self.start_bot_session(session)
             except Exception as e:
                 return jsonify({"status": "error", "message": f"Error : {e}"})
@@ -240,7 +223,6 @@ class BotManagerApp:
                 bot.shutdown(DisconnectionReasonEnum.WANTED_SHUTDOWN, "User wanted to stop bot")
                 bot.join()
                 self._running_bots.pop(botname)
-                # self._bots_run_infos.pop(botname)
             return jsonify({"status": "success", "message": f"Stopped bot {botname}"})
 
         @self.app.route("/get_running_bots")
@@ -249,15 +231,13 @@ class BotManagerApp:
             for bot_oper in self._bots_run_infos.values():
                 bot = self._running_bots.get(bot_oper["name"])
                 if bot:
-                    bot_status = bot.getState()
+                    bot_status = bot._status
                     bot_oper["status"] = bot_status.name
-                    stopped = bot_status in [SessionStatus.TERMINATED, SessionStatus.CRASHED, SessionStatus.BANNED]
+                    stopped = bot_status in [ClientStatusEnum.TERMINATED, ClientStatusEnum.CRASHED, ClientStatusEnum.BANNED]
                     if not stopped:
-                        path = BotConfig.getInstance(bot_oper["name"]).curr_path
                         bot_oper["endTime"] = time.time()
                         bot_oper["runTime"] = format_runtime(bot_oper["startTime"], bot_oper.get("endTime", None))
-                        bot_oper["path_name"] = path.name if path else "N/A"
-                        bot_oper["fights_count"] = bot._nbrFightsDone
+                        bot_oper["fights_count"] = bot.
                         bot_oper["earned_kamas"] = bot._earnedKamas
                         bot_oper["earned_levels"] = bot._earnedLevels
                         playermanager = PlayedCharacterManager.getInstance(bot_oper["name"])
@@ -316,9 +296,9 @@ class BotManagerApp:
                 return jsonify({"message": f"Error while importing accounts: {e}"})
             return jsonify({"message": "Accounts imported successfully"})
 
-    def on_bot_shutdown(self, login, reason, message):
-        print(f"Bot {login} shutdown: {reason}\n{message}")
-        # self._running_bots.pop(login)
+    def on_bot_shutdown(self, accountId, reason, message):
+        print(f"Bot {accountId} shutdown: {reason}\n{message}")
+        # self._running_bots.pop(accountId)
 
     def run(self, debug=True, port=5000):
         self.socketio.run(self.app, debug=debug, port=port)

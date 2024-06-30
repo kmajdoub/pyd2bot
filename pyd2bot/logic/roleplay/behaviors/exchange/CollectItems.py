@@ -6,9 +6,9 @@ from pyd2bot.logic.roleplay.behaviors.exchange.BotExchange import (
     BotExchange, ExchangeDirectionEnum)
 from pyd2bot.logic.roleplay.behaviors.movement.AutoTripUseZaap import \
     AutoTripUseZaap
-from pyd2bot.misc.BotEventsmanager import BotEventsManager
+from pyd2bot.misc.BotEventsManager import BotEventsManager
 from pyd2bot.misc.Localizer import BankInfos
-from pyd2bot.models.session.models import Character
+from pyd2bot.data.models import Character
 from pydofus2.com.ankamagames.berilia.managers.Listener import Listener
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 
@@ -34,13 +34,13 @@ class CollectItems(AbstractBehavior):
         super().__init__()
 
     def run(self, bankInfos: BankInfos, guest: Character, items: list = None) -> bool:
-        Logger().info(f"[CollectFromGuest] collect from {guest.login} started")
+        Logger().info(f"[CollectFromGuest] collect from {guest.accountId} started")
         self.guest = guest
         self.bankInfos = bankInfos
         self.items = items
         self.state = CollecteState.GOING_TO_BANK
-        self.guestDisconnectedListener = BotEventsManager().onceBotDisconnected(self.guest.login, self.onGuestDisconnected, originator=self)
-        AutoTripUseZaap().start(self.bankInfos.npcMapId, 1, callback=self.onTripEnded, parent=self)
+        self.guestDisconnectedListener = BotEventsManager().onceBotDisconnected(self.guest.accountId, self.onGuestDisconnected, originator=self)
+        self.travelUsingZaap(self.bankInfos.npcMapId, callback=self.onTripEnded)
 
     def onGuestDisconnected(self):
         Logger().error("[CollectFromGuest] Guest disconnected!")

@@ -1,5 +1,6 @@
 import threading
 
+from pyd2bot.BotSettings import BotSettings
 from pyd2bot.logic.common.rpcMessages.ComeToCollectMessage import \
     ComeToCollectMessage
 from pyd2bot.logic.common.rpcMessages.GetCurrentVertexMessage import \
@@ -7,14 +8,13 @@ from pyd2bot.logic.common.rpcMessages.GetCurrentVertexMessage import \
 from pyd2bot.logic.common.rpcMessages.GetStatusMessage import GetStatusMessage
 from pyd2bot.logic.common.rpcMessages.RCPResponseMessage import RPCResponseMessage
 from pyd2bot.logic.common.rpcMessages.RPCMessage import RPCMessage
-from pyd2bot.logic.managers.BotConfig import BotConfig
 from pyd2bot.logic.roleplay.behaviors.exchange.CollectItems import CollectItems
 from pyd2bot.logic.roleplay.behaviors.movement.AutoTrip import AutoTrip
 from pyd2bot.logic.roleplay.behaviors.movement.ChangeMap import ChangeMap
 from pyd2bot.logic.roleplay.messages.FollowTransitionMessage import FollowTransitionMessage
 from pyd2bot.logic.roleplay.messages.MoveToVertexMessage import MoveToVertexMessage
 from pyd2bot.logic.roleplay.messages.SellerVacantMessage import SellerVacantMessage
-from pyd2bot.misc.BotEventsmanager import BotEventsManager
+from pyd2bot.misc.BotEventsManager import BotEventsManager
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
 from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import KernelEventsManager
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
@@ -79,14 +79,14 @@ class BotRPCFrame(Frame):
             elif isinstance(msg, ComeToCollectMessage):
                 def onresponse(result, error):
                     if error:
-                        Logger().error(f"[RPCFrame] Error while trying to meet the guest {msg.guestInfos.login} to collect resources: {error}")
+                        Logger().error(f"[RPCFrame] Error while trying to meet the guest {msg.guestInfos.accountId} to collect resources: {error}")
                     for _, instance in Kernel.getInstances():
                         instance.worker.process(SellerVacantMessage(threading.current_thread().name))
-                    BotConfig.SELLER_VACANT.set()
-                    if BotConfig.SELLER_LOCK.locked():
-                        BotConfig.SELLER_LOCK.release()
+                    BotSettings.SELLER_VACANT.set()
+                    if BotSettings.SELLER_LOCK.locked():
+                        BotSettings.SELLER_LOCK.release()
                 if CollectItems().isRunning():
-                    Logger().error(f"[RPCFrame] can't start collect with {msg.guestInfos.login} because collect is already running with {CollectItems().guest.login}")
+                    Logger().error(f"[RPCFrame] can't start collect with {msg.guestInfos.accountId} because collect is already running with {CollectItems().guest.accountId}")
                     rsp = RPCResponseMessage(msg, data=False)
                     self.send(rsp)
                     return True

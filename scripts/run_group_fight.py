@@ -3,7 +3,7 @@ import os
 import sys
 
 from PyQt5 import QtGui, QtWidgets
-from pyd2bot.models.session.models import Path, PathType, Session, SessionType, UnloadType
+from pyd2bot.data.models import Path, PathTypeEnum, Session, SessionTypeEnum, UnloadTypeEnum
 from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.TransitionTypeEnum import TransitionTypeEnum
 from system_tray import SystemTrayIcon
 
@@ -21,7 +21,7 @@ currdir = os.path.dirname(os.path.abspath(__file__))
 paths_file = os.path.join(os.path.dirname(__file__), "..", "app", "db", "paths.json")
 with open(paths_file, "r") as f:
     paths_json = json.load(f)
-    paths: dict[str, Path] = {json_path["id"]: Path.from_dict(json_path) for json_path in paths_json}
+    paths: dict[str, Path] = {json_path["id"]: Path(**json_path) for json_path in paths_json}
     
 if __name__ == "__main__":
     # Logger.logToConsole = True
@@ -32,15 +32,15 @@ if __name__ == "__main__":
     farmer = {"account_key": 244588168247577056, "character_id": 829955506469}
     farmer_creds = AccountManager.get_credentials(farmer["account_key"], farmer["character_id"])
     session_dict = {
-        "id": farmer_creds["character"].login,
+        "id": farmer_creds["character"].accountId,
         "character": farmer_creds["character"],
-        "unloadType": UnloadType.BANK.value,
-        "type": SessionType.MULTIPLE_PATHS_FARM.value,
+        "unloadType": UnloadTypeEnum.BANK.value,
+        "type": SessionTypeEnum.MULTIPLE_PATHS_FARM.value,
         "pathsList": [paths["Cania_Plains_Mine"], paths["Astrub_Mine"], paths["Dyna_Mine"], paths["Korussant_Mine"]],
         "apikey": farmer_creds["apikey"],
         "cert": farmer_creds["cert"]
     }
-    bot = Pyd2Bot(Session.from_dict(session_dict))
+    bot = Pyd2Bot(Session(**session_dict))
     bots.append(bot)
     leader = {
         "account_key": 244588168247577395, "character_id": 710703972643
@@ -61,29 +61,29 @@ if __name__ == "__main__":
     for player in followers:
         creds = AccountManager.get_credentials(player["account_key"], player["character_id"])
         session_dict = {
-            "id": creds["character"].login,
+            "id": creds["character"].accountId,
             "character": creds["character"],
-            "unloadType": UnloadType.BANK.value,
-            "type": SessionType.MULE_FIGHT.value,
+            "unloadType": UnloadTypeEnum.BANK.value,
+            "type": SessionTypeEnum.MULE_FIGHT.value,
             "leader": leader_creds["character"],
             "apikey": creds["apikey"],
             "cert": creds["cert"]
         }
         followers_chars.append(creds["character"])
-        bot = Pyd2Bot(Session.from_dict(session_dict))
+        bot = Pyd2Bot(Session(**session_dict))
         bots.append(bot)
         
     session_dict = {
-        "id": leader_creds["character"].login,
+        "id": leader_creds["character"].accountId,
         "character": leader_creds["character"],
-        "unloadType": UnloadType.BANK.value,
-        "type": SessionType.FIGHT.value,
+        "unloadType": UnloadTypeEnum.BANK.value,
+        "type": SessionTypeEnum.FIGHT.value,
         "followers": followers_chars,
         "path": paths["astrub_village"],
         "apikey": leader_creds["apikey"],
         "cert": leader_creds["cert"]
     }
-    bot = Pyd2Bot(Session.from_dict(session_dict))
+    bot = Pyd2Bot(Session(**session_dict))
     bots.append(bot)
     icon = QtGui.QIcon(os.path.join(currdir, "icon.png"))
     trayIcon = SystemTrayIcon(icon, bots)

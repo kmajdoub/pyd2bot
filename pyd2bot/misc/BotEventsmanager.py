@@ -2,14 +2,13 @@ from enum import auto
 from time import perf_counter
 from typing import TYPE_CHECKING
 
-from pyd2bot.logic.managers.BotConfig import BotConfig
 from pydofus2.com.ankamagames.berilia.managers.EventsHandler import (
     Event, EventsHandler)
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
 from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import \
     KernelEventsManager
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
-from pydofus2.com.ankamagames.jerakine.metaclasses.Singleton import Singleton
+from pydofus2.com.ankamagames.jerakine.metaclass.Singleton import Singleton
 from pydofus2.com.ankamagames.jerakine.types.positions.MovementPath import \
     MovementPath
 
@@ -38,9 +37,9 @@ class BotEventsManager(EventsHandler, metaclass=Singleton):
 
         return self.once(BotEventsManager.ALL_PARTY_MEMBERS_IDLE, onEvt, originator=originator)
 
-    def oncePartyMemberShowed(self, callback, args=[], originator=None):
+    def oncePartyMemberShowed(self, partyMembers, callback, args=[], originator=None):
         def onActorShowed(e, infos: "GameRolePlayHumanoidInformations"):
-            for follower in BotConfig().followers:
+            for follower in partyMembers:
                 if int(follower.id) == int(infos.contextualId):
                     Logger().info("[BotEventsManager] Party member %s showed" % follower.name)
                     callback(e, *args)
@@ -80,8 +79,8 @@ class BotEventsManager(EventsHandler, metaclass=Singleton):
     def onceBotConnected(self, instanceId, callback, timeout=None, ontimeout=None, originator=None):
         started = perf_counter()
 
-        def onBotConnected(event: Event, conenctedBotInstanceId):
-            if conenctedBotInstanceId == instanceId:
+        def onBotConnected(event: Event, connectedBotInstanceId):
+            if connectedBotInstanceId == instanceId:
                 event.listener.delete()
                 return callback()
             remaining = perf_counter() - started

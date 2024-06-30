@@ -51,7 +51,7 @@ class UseSkill(AbstractBehavior):
         self,
         ie: InteractiveElementData = None,
         cell=None,
-        exactDistination=False,
+        exactDestination=False,
         waitForSkillUsed=True,
         elementId=None,
         skilluid=None,
@@ -66,7 +66,7 @@ class UseSkill(AbstractBehavior):
                     self.element = ie.element
                     self.skillId = ie.skillId
                     self.cell = cell
-                    self.exactDistination = exactDistination
+                    self.exactDestination = exactDestination
                     self.waitForSkillUsed = waitForSkillUsed
                     self._useSkill()
                 return self.getInteractiveElement(elementId, skilluid, onIeFound)
@@ -79,13 +79,13 @@ class UseSkill(AbstractBehavior):
         self.elementPosition = ie.position
         self.element = ie.element
         self.cell = cell
-        self.exactDistination = exactDistination
+        self.exactDestination = exactDestination
         self.waitForSkillUsed = waitForSkillUsed
         self._useSkill()
         
     def onUseSkillCellReached(self, code, err, landingCell):
         if err:
-            if code == MapMove.PLAYER_STOPED:
+            if code == MapMove.PLAYER_STOPPED:
                 if self._wanted_player_stop:
                     return self.finish(self._stop_code, self._stop_message)
             return self.finish(code, err)
@@ -98,13 +98,13 @@ class UseSkill(AbstractBehavior):
             skill = Skill.getSkillById(skillId)
             Logger().debug(f"Using {skill.name}, range {skill.range}, id {skill.id}")
             if skill.id in [211, 184] :
-                self._curr_skill_mp, _ = Kernel().interactivesFrame.getNearestCellToIe(self.element, self.elementPosition)
+                self._curr_skill_mp, _ = Kernel().interactiveFrame.getNearestCellToIe(self.element, self.elementPosition)
             if not self._curr_skill_mp:
                 self._curr_skill_mp = self.elementPosition
             if self.waitForSkillUsed:
                 self.on(KernelEvent.IElemBeingUsed, self.onUsingInteractive,)
                 self.on(KernelEvent.InteractiveElementUsed, self.onUsedInteractive)
-            self.mapMove(destCell=self._curr_skill_mp.cellId, exactDistination=False, callback=self.onUseSkillCellReached)
+            self.mapMove(destCell=self._curr_skill_mp.cellId, exactDestination=False, callback=self.onUseSkillCellReached)
         else:
             self.finish(self.NO_ENABLED_SKILLS, f"Interactive element has no enabled skills!")
 
@@ -125,7 +125,7 @@ class UseSkill(AbstractBehavior):
     def onUsedInteractive(self, event, entityId, usedElementId):
         if self.elementId == usedElementId:
             if entityId != PlayedCharacterManager().id:
-                if self.elementId in Kernel().interactivesFrame._statedElm:
+                if self.elementId in Kernel().interactiveFrame._statedElm:
                     if MapMove().isRunning():
                         self._wanted_player_stop = True
                         self._stop_code = self.ELEM_TAKEN
@@ -135,7 +135,7 @@ class UseSkill(AbstractBehavior):
             else:            
                 if self.useErrorListener:
                     self.useErrorListener.delete()
-                if self.elementId in Kernel().interactivesFrame._statedElm:
+                if self.elementId in Kernel().interactiveFrame._statedElm:
                     if self.targetIe.element.enabledSkills[0].skillId not in [114]:
                         self.once(
                             KernelEvent.InteractiveElemUpdate,
@@ -167,7 +167,7 @@ class UseSkill(AbstractBehavior):
             if self._reach_skillcell_fails > 3:
                 return self.finish(self.USE_ERROR, f"Use Error for element {elementId} - Server refuses to move player to skill cell")
             Logger().debug(f"retrying for {self._reach_skillcell_fails} time")
-            return self.mapMove(destCell=self._curr_skill_mp.cellId, exactDistination=False, callback=self.onUseSkillCellReached, cellsblacklist=self._cells_blacklist)
+            return self.mapMove(destCell=self._curr_skill_mp.cellId, exactDestination=False, callback=self.onUseSkillCellReached, cellsblacklist=self._cells_blacklist)
         self.finish(self.USE_ERROR, f"Use Error for element {elementId}!")
         
     def onUseError(self, event, elementId):
@@ -206,11 +206,11 @@ class UseSkill(AbstractBehavior):
         InactivityManager().activity()
 
     def getInteractiveElement(self, elementId, skilluid, callback) -> InteractiveElementData:
-        if Kernel().interactivesFrame is None:
+        if Kernel().interactiveFrame is None:
             Logger().warning("No roleplay interactive frame found, waiting for it to get pushed")
             return self.onceFramePushed(
                 "RoleplayInteractivesFrame",
                 self.getInteractiveElement,
                 [elementId, skilluid, callback],
             )
-        callback(Kernel().interactivesFrame.getInteractiveElement(elementId, skilluid))
+        callback(Kernel().interactiveFrame.getInteractiveElement(elementId, skilluid))

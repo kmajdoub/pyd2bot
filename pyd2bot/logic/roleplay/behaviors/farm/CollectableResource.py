@@ -1,6 +1,7 @@
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List
 
+from pyd2bot.data.models import JobFilter
 from pydofus2.com.ankamagames.atouin.managers.MapDisplayManager import \
     MapDisplayManager
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import \
@@ -9,7 +10,7 @@ from pydofus2.com.ankamagames.dofus.logic.game.roleplay.frames.RoleplayInteracti
     CollectableElement
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 from pydofus2.com.ankamagames.jerakine.pathfinding.Pathfinding import \
-    Pathfinding
+    PathFinding
 
 if TYPE_CHECKING:
     from pyd2bot.logic.roleplay.behaviors.AbstractFarmBehavior import \
@@ -39,7 +40,7 @@ class CollectableResource:
 
     @property
     def distance(self):
-        movePath = Pathfinding().findPath(PlayedCharacterManager().entity.position, self.position)
+        movePath = PathFinding().findPath(PlayedCharacterManager().entity.position, self.position)
         if movePath is None:
             return -1
         return len(movePath.path)
@@ -52,7 +53,7 @@ class CollectableResource:
                 Logger().debug("Player entity not found!")
                 self._nearestCell = None
                 return None
-            movePath = Pathfinding().findPath(playerEntity.position, self.position)
+            movePath = PathFinding().findPath(playerEntity.position, self.position)
             if movePath is None:
                 self._nearestCell = None
                 return None
@@ -65,20 +66,22 @@ class CollectableResource:
 
     @property
     def hasRequiredLevel(self):
-        return PlayedCharacterManager().joblevel(self.resource.skill.parentJobId) >= self.resource.skill.levelMin
+        return PlayedCharacterManager().getJobLevel(self.resource.skill.parentJobId) >= self.resource.skill.levelMin
 
-    def isFiltered(self, jobFilter):
-        jobId = self.resource.skill.parentJobId
-        return jobId not in jobFilter or (jobFilter[jobId] and self.resource.skill.gatheredRessource.id not in jobFilter[jobId])
+    def isFiltered(self, jobFilters: List[JobFilter]) -> bool:
+        for jobFilter in jobFilters:
+            if jobFilter.matchesResource(self.jobId, self.resourceId):
+                return False
+        return True
 
     @property
-    def canCollecte(self):
+    def canCollect(self):
         return self.resource.enabled and self.hasRequiredLevel and self.reachable
 
-    def canFarm(self, jobFilter=None):
-        if jobFilter:
-            return self.canCollecte and not self.isFiltered(jobFilter)
-        return self.canCollecte
+    def canFarm(self, jobFilters: List[JobFilter]=None):
+        if jobFilters:
+            return self.canCollect and not self.isFiltered(jobFilters)
+        return self.canCollect
 
     def farm(self, callback, caller: 'AbstractFarmBehavior'=None):
         caller.useSkill(

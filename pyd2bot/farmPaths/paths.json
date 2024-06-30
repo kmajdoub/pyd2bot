@@ -1,7 +1,7 @@
 [
     {
         "id": "Cania_Plains_Mine",
-        "type": 3,
+        "type": "CustomRandomFarmPath",
         "mapIds": [
             133431302,
             133431300,
@@ -16,7 +16,7 @@
     },
     {
         "id": "Tirith_Mine",
-        "type": 3,
+        "type": "CustomRandomFarmPath",
         "mapIds": [
             88213774,
             97259013,
@@ -44,7 +44,7 @@
     },
     {
         "id": "Diggum_Mine",
-        "type": 3,
+        "type": "CustomRandomFarmPath",
         "mapIds": [
             97260033,
             97261059,
@@ -60,7 +60,7 @@
     },
     {
         "id": "Astrub_Mine",
-        "type": 3,
+        "type": "CustomRandomFarmPath",
         "mapIds": [
             188482052,
             188483076,
@@ -69,7 +69,7 @@
     },
     {
         "id": "Dyna_Mine",
-        "type": 3,
+        "type": "CustomRandomFarmPath",
         "mapIds": [
             193331715,
             193200131,
@@ -89,7 +89,7 @@
     },
     {
         "id": "Porco_Mine",
-        "type": 3,
+        "type": "CustomRandomFarmPath",
         "mapIds": [
             30671116,
             30671110,
@@ -99,7 +99,7 @@
     },
     {
         "id": "Korussant_Mine",
-        "type": 3,
+        "type": "CustomRandomFarmPath",
         "mapIds": [
             185862148,
             97255951,
@@ -118,7 +118,7 @@
     },
     {
         "id": "mine_1",
-        "type": 3,
+        "type": "CustomRandomFarmPath",
         "mapIds": [
             185863169,
             4460546,
@@ -129,7 +129,7 @@
     },
     {
         "id": "mine_3",
-        "type": 3,
+        "type": "CustomRandomFarmPath",
         "mapIds": [
             88212250,
             97255955,
@@ -148,7 +148,7 @@
     },
     {
         "id": "mine_4",
-        "type": 3,
+        "type": "CustomRandomFarmPath",
         "mapIds": [
             104072452,
             104858121,
@@ -163,7 +163,7 @@
     },
     {
         "id": "mine_5",
-        "type": 3,
+        "type": "CustomRandomFarmPath",
         "mapIds": [
             88213267,
             97255949,
@@ -182,7 +182,7 @@
     },
     {
         "id": "mine_7",
-        "type": 3,
+        "type": "CustomRandomFarmPath",
         "mapIds": [
             88087305,
             117440512,
@@ -203,7 +203,7 @@
     },
     {
         "id": "mine_8",
-        "type": 3,
+        "type": "CustomRandomFarmPath",
         "mapIds": [
             88081925,
             97255937,
@@ -215,27 +215,38 @@
         ]
     },
     {
-        "id": "ankarnam_lvl1",
-        "type": 0,
-        "startVertex": {"mapId": 154010883, "zoneId": 1},
-        "transitionTypeWhitelist": [1, 2]
+        "id": "Ankarnam_LVL1",
+        "type": "RandomSubAreaFarmPath",
+        "startMapId": 154010883,
+        "startZoneId": 1,
+        "allowedTransitions": [1, 2]
     },
     {
-        "id": "ankarnam_lvl5",
-        "type": 0,
-        "startVertex": {"mapId": 154010884, "zoneId": 1},
-        "transitionTypeWhitelist": [1, 2]
+        "id": "Ankarnam_LVL5",
+        "type": "RandomSubAreaFarmPath",
+        "startMapId": 154010884, 
+        "startZoneId": 1,
+        "allowedTransitions": [1, 2]
     },
     {
-        "id": "ankarnam_lvl10",
-        "type": 0,
-        "startVertex": {"mapId": 153880064, "zoneId": 1},
-        "transitionTypeWhitelist": [1, 2]
+        "id": "Ankarnam_LVL10",
+        "type": "RandomSubAreaFarmPath",
+        "startMapId": 153880064, 
+        "startZoneId": 1,
+        "allowedTransitions": [1, 2]
     },
     {
-        "id": "astrub_village",
-        "type": 0,
-        "startVertex": {"mapId": 191106048, "zoneId": 1},
-        "transitionTypeWhitelist": [1, 2]
+        "id": "Astrub_City",
+        "type": "RandomSubAreaFarmPath",
+        "startMapId": 191106048, 
+        "startZoneId": 1,
+        "allowedTransitions": [1, 2]
+    },
+    {
+        "id": "Astrub_Forest",
+        "type": "RandomSubAreaFarmPath",
+        "startMapId": 189531146,
+        "startZoneId": 1,
+        "allowedTransitions": [1, 2]
     }
 ]

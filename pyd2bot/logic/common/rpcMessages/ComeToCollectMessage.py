@@ -1,6 +1,6 @@
 from pyd2bot.logic.common.rpcMessages.RPCMessage import RPCMessage
 from pyd2bot.misc.Localizer import BankInfos
-from pyd2bot.models.session.models import Character
+from pyd2bot.data.models import Character
 
 
 class ComeToCollectMessage(RPCMessage):

@@ -368,3 +368,50 @@ pre {
 tr.banned {
     background-color: #ffdddd; /* Light red for banned rows */
 }
+
+form {
+    display: flex;
+    flex-direction: column;
+}
+
+form label, form input, form select, form button {
+    margin-bottom: 15px; /* Add space between form items */
+}
+
+form input[type=number], form select {
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px; /* Rounded borders for inputs and selects */
+    width: calc(100% - 22px); /* Adjust width for padding and border */
+}
+
+form button {
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    padding: 14px 20px;
+    border: none;
+    border-radius: 4px; /* Rounded borders for button */
+    cursor: pointer;
+}
+
+form button:hover {
+    background-color: #45a049; /* Darker shade of green on hover */
+}
+
+#addSessionButton {
+    background-color: #007bff;
+    color: white;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+#addSessionButton:hover {
+    background-color: #0056b3;
+}
+
+#sessionsList {
+    margin-top: 20px;
+}

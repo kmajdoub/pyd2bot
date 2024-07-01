@@ -269,15 +269,15 @@ class Account(BaseModel):
     id: int
     type: str
     login: str
-    nickname: str
     firstname: str
     lastname: str
-    nicknameWithTag: str
-    tag: int
     security: List[str]
     addedDate: str  # Consider using datetime for date handling
     locked: bool
     avatar: str
+    nicknameWithTag: Optional[str] = None
+    nickname: Optional[str] = None
+    tag: Optional[int] = None
     apikey: Optional[str] = None
     certId: Optional[int] = 0
     certHash: Optional[str] = ""

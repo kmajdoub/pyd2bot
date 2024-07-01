@@ -58,7 +58,7 @@ class AccountCharactersFetcher(DofusClient):
             PlayerManager().charactersList.clear()
             Kernel().characterFrame.changeToServer(self.currServer.id)
         else:
-            self.changeServer = False
+            self.changeServer = True
             Kernel().serverSelectionFrame.selectServer(self.currServer.id)
         KernelEventsManager().once(KernelEvent.CharactersList, self.onCharactersList)
 

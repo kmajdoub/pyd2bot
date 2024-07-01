@@ -290,7 +290,6 @@ class Account(BaseModel):
         for character in self.characters:
             if character.id == charId:
                 return character
-        print(self.characters)
         return None
 
     @property

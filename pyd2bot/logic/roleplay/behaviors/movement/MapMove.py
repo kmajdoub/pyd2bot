@@ -52,6 +52,10 @@ class MapMove(AbstractBehavior):
         self.move_request_accepted = False
         self.move()
 
+    def tearDown(self):
+        self.callback = None
+        self.finish(None, None)
+        
     def stop(self) -> None:
         if not PlayedCharacterManager().isFighting:
             player = PlayedCharacterManager().entity
@@ -74,6 +78,10 @@ class MapMove(AbstractBehavior):
         return True
         
     def move(self) -> bool:
+        if PlayedCharacterManager().isFighting:
+            self.tearDown()
+            return
+
         rpmframe = Kernel().movementFrame
         
         if not rpmframe:
@@ -113,6 +121,10 @@ class MapMove(AbstractBehavior):
         self.finish(reason, self.errMsg % reason.name, None)
 
     def requestMovement(self) -> None:
+        if PlayedCharacterManager().isFighting:
+            self.tearDown()
+            return
+
         if len(self.movePath) == 0:
             return self.finish(True, None, self.dstCell)
         self.once(
@@ -129,6 +141,10 @@ class MapMove(AbstractBehavior):
         self.sendMoveRequest()
 
     def onMoveRequestReject(self, reason: MovementFailError) -> None:
+        if PlayedCharacterManager().isFighting:
+            self.tearDown()
+            return
+
         self.waiting_move_request_accept = False
         self.countMoveFail += 1
         if self.countMoveFail > 3:
@@ -139,7 +155,9 @@ class MapMove(AbstractBehavior):
 
     def sendMoveRequest(self):
         if PlayedCharacterManager().isFighting:
+            self.tearDown()
             return
+
         self.waiting_move_request_accept = True
         self.once(
             KernelEvent.PlayerMovementCompleted, callback=self.onMovementCompleted
@@ -148,6 +166,10 @@ class MapMove(AbstractBehavior):
         Logger().info(f"Requested move from {PlayedCharacterManager().currentCellId} to {self.dstCell.cellId}")
 
     def onPlayerMoving(self, event, clientMovePath: MovementPath):
+        if PlayedCharacterManager().isFighting:
+            self.tearDown()
+            return
+
         self.waiting_move_request_accept = False
         self.move_request_accepted = True
         Logger().info(f"Move request accepted : len={len(clientMovePath)}")
@@ -160,6 +182,10 @@ class MapMove(AbstractBehavior):
             BenchmarkTimer(0.4, self.stop).start()
 
     def onMovementCompleted(self, event, success):
+        if PlayedCharacterManager().isFighting:
+            self.tearDown()
+            return
+
         if success:
             Logger().info("Player completed movement")
             self.finish(success, None, self._landingCell)

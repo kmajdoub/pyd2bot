@@ -1,6 +1,7 @@
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
 from pydofus2.com.ankamagames.atouin.managers.MapDisplayManager import MapDisplayManager
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
+from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import KernelEventsManager
 from pydofus2.com.ankamagames.berilia.managers.Listener import Listener
 from pydofus2.com.ankamagames.dofus.datacenter.jobs.Skill import Skill
 from pydofus2.com.ankamagames.dofus.internalDatacenter.taxi.TeleportDestinationWrapper import \
@@ -40,6 +41,10 @@ class UseZaap(AbstractBehavior):
         else:
             self.onceFramePushed("RoleplayInteractivesFrame", self.openCurrMapZaapDialog)
 
+    def onServerInfo(self, event, msgId, msgType, textId, msgContent, params):
+        if textId == 325865:
+            KernelEventsManager().send(KernelEvent.KamasLostFromTeleport, params[0])
+
     def openCurrMapZaapDialog(self):
         self.zaapIe = Kernel().interactiveFrame.getZaapIe()
         if not self.zaapIe:
@@ -64,11 +69,11 @@ class UseZaap(AbstractBehavior):
             Logger().error("Zaap is not reachable, maybe its in a different rp zone than the player!")
             zaapLinkedRpZone = MapDisplayManager().dataMap.cells[self.zaapIe.position.cellId].linkedZone
             playerLinkedRpZone = PlayedCharacterManager().currentZoneRp
-            currMapvertices = WorldGraph().getVertices(PlayedCharacterManager().currentMap.mapId)
-            Logger().debug(f"Current map vertices: {currMapvertices}")
+            currMapVertices = WorldGraph().getVertices(PlayedCharacterManager().currentMap.mapId)
+            Logger().debug(f"Current map vertices: {currMapVertices}")
             if zaapLinkedRpZone != playerLinkedRpZone:
-                Logger().debug(f"Zaap is in a different rp zone than the player, zaap rp zone: {zaapLinkedRpZone}, player rp zone: {playerLinkedRpZone}")
-                Logger().debug(f"Auto travelling to zaap rp zone {zaapLinkedRpZone}")
+                Logger().warning(f"Zaap is in a different rp zone than the player, zaap rp zone: {zaapLinkedRpZone}, player rp zone: {playerLinkedRpZone}")
+                Logger().debug(f"Auto traveling to zaap rp zone {zaapLinkedRpZone}")
                 self.autoTrip(PlayedCharacterManager().currentMap.mapId, zaapLinkedRpZone, callback=self.onZaapRpZoneReached)
                 return True
         return False
@@ -77,7 +82,7 @@ class UseZaap(AbstractBehavior):
         Logger().debug("maybe Zaap in a different rp zone than the player")
         if self.checkZaapRpZone():
             return
-        self.finish(self.ZAAP_USE_ERROR, "Zaap is in same map as the player but is not usable reachable")
+        self.finish(self.ZAAP_USE_ERROR, "Zaap is in same map as the player but is not usable!")
 
     def onZaapRpZoneReached(self, code, err):
         if err:
@@ -124,21 +129,22 @@ class UseZaap(AbstractBehavior):
                         lambda e: self.finish(self.NOT_RICH_ENOUGH, err),
                     )
                 self.onceMapProcessed(self.onDestMapProcessed)
+                self.on(KernelEvent.ServerTextInfo, self.onServerInfo)
                 return Kernel().zaapFrame.teleportRequest(dst.cost, ttype, dst.destinationType, dst.mapId)
         else:
             ConnectionsHandler().send(LeaveDialogRequestMessage())
-            err = f"Didnt find dest zaap {self.dstMapId} in teleport destinations, destinations: {[d.mapId for d in destinations]}"
+            err = f"Zaap {self.dstMapId} not in available destinations: {[d.mapId for d in destinations]}"
             return self.on(
                 KernelEvent.LeaveDialog,
                 lambda e: self.finish(self.DST_ZAAP_NOT_KNOWN, err),
             )
 
-    def onZapSaveEnd(self, code, err):
+    def onZaapSaved(self, code, err):
         if err:
             Logger().error(f"Save zaap failed for reason: {err}")
         self.finish(True, None)
     
     def onDestMapProcessed(self, event=None):
         if self.bsaveZaap and Kernel().zaapFrame.spawnMapId != PlayedCharacterManager().currentMap.mapId:
-            return self.saveZaap(self.onZapSaveEnd)
+            return self.saveZaap(self.onZaapSaved)
         return self.finish(True, None)

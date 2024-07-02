@@ -2,8 +2,6 @@ from typing import Iterable, Tuple
 
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
 from pyd2bot.logic.roleplay.behaviors.movement.MapMove import MapMove
-from pyd2bot.logic.roleplay.behaviors.movement.RequestMapData import \
-    RequestMapData
 from pyd2bot.logic.roleplay.behaviors.skill.UseSkill import UseSkill
 from pydofus2.com.ankamagames.berilia.managers.EventsHandler import (Event,
                                                                      Listener)
@@ -142,6 +140,7 @@ class ChangeMap(AbstractBehavior):
         if PlayedCharacterManager().isInFight:
             self.stop(True)
             return
+
         if not self.transition.isValid:
             return self.finish(self.INVALID_TRANSITION, "Trying to follow a non valid transition")
         if self.dstMapId == PlayedCharacterManager().currentMap.mapId:
@@ -154,6 +153,7 @@ class ChangeMap(AbstractBehavior):
         if PlayedCharacterManager().isInFight:
             self.stop(True)
             return
+
         self.mapChangeReqSent = False
         if self.isInteractiveTr():
             self.interactiveMapChange()
@@ -167,6 +167,10 @@ class ChangeMap(AbstractBehavior):
             self.finish(self.INVALID_TRANSITION, f"Unsupported transition type {self.trType.name}")
 
     def getScrollCells(self):
+        if PlayedCharacterManager().isInFight:
+            self.stop(True)
+            return
+
         if self.transition.id in self.forbiddenScrollCells:
             if self.transition.cell not in self.forbiddenScrollCells[self.transition]:
                 yield self.transition.cell
@@ -179,6 +183,10 @@ class ChangeMap(AbstractBehavior):
                 yield c
 
     def onRequestRejectedByServer(self, event: Event, reason: MovementFailError):
+        if PlayedCharacterManager().isInFight:
+            self.stop(True)
+            return
+
         if MapMove().isRunning():
             KernelEventsManager().clearAllByOrigin(MapMove())
             MapMove().callback = lambda code, err: None
@@ -199,6 +207,10 @@ class ChangeMap(AbstractBehavior):
         self.requestMapData(callback=onResult)
 
     def onMapRequestFailed(self, reason: MovementFailError):
+        if PlayedCharacterManager().isInFight:
+            self.stop(True)
+            return
+
         Logger().warning(f"Request failed for reason: {reason.name}")
         self._tr_fails_details[self.transition] = f"Change map request failed for reason : {reason.name}"
         self.requestTimeoutCount = 0
@@ -219,13 +231,17 @@ class ChangeMap(AbstractBehavior):
             self.askChangeMap()
 
     def onRequestTimeout(self, listener: Listener):
+        if PlayedCharacterManager().isInFight:
+            self.stop(True)
+            return
+
         if not self.running.is_set():
             Logger().warning("Map change request timeout called while behavior not running!")
             return listener.delete()
         Logger().warning("Map change timeout!")
         if MapMove().isRunning():
             listener.armTimer()
-            return Logger().warning(f"Change map timer kicked while map move to cell stil resolving!")
+            return Logger().warning(f"Change map timer kicked while map move to cell still running!")
         if self.isInteractiveTr():
             self.onMapRequestFailed(MovementFailError.MAPCHANGE_TIMEOUT)
         elif not self.isMapActionTr():
@@ -238,8 +254,12 @@ class ChangeMap(AbstractBehavior):
         else:
             self.onMapRequestFailed(MovementFailError.MAPCHANGE_TIMEOUT)
 
-    def onDestMapProcessedTimeout(self, listene: Listener):
-        listene.delete()
+    def onDestMapProcessedTimeout(self, listener: Listener):
+        if PlayedCharacterManager().isInFight:
+            self.stop(True)
+            return
+
+        listener.delete()
         self.finish(False, "Request Map data timeout")
 
     def onCurrentMap(self, event: Event, mapId: int):
@@ -267,6 +287,10 @@ class ChangeMap(AbstractBehavior):
         self.onceMapProcessed(callback=callback, mapId=mapId, timeout=20, ontimeout=self.onDestMapProcessedTimeout)
 
     def setupMapChangeListener(self):
+        if PlayedCharacterManager().isInFight:
+            self.stop(True)
+            return
+
         if self.mapChangeListener:
             self.mapChangeListener.delete()
         self.mapChangeListener = self.on(
@@ -277,6 +301,10 @@ class ChangeMap(AbstractBehavior):
         )
 
     def setupMapChangeRejectListener(self):
+        if PlayedCharacterManager().isInFight:
+            self.stop(True)
+            return
+
         if self.mapChangeRejectListener:
             self.mapChangeRejectListener.delete()
 
@@ -289,8 +317,12 @@ class ChangeMap(AbstractBehavior):
             self.requestRejectedEvent,
             onReqReject,
         )
-
-    def handleOnsameCellForMapActionCell(self):
+    
+    def handleOnSameCellForMapActionCell(self):
+        if PlayedCharacterManager().isInFight:
+            self.stop(True)
+            return
+        
         self.currentMPChilds = MapPoint.fromCellId(self.mapChangeCellId).iterChildren(False, True)
         try:
             x, y = next(self.currentMPChilds)
@@ -300,14 +332,25 @@ class ChangeMap(AbstractBehavior):
             )
 
         def onMapChangedWhileResolving(event: Event, mapId):
+            if PlayedCharacterManager().isInFight:
+                self.stop(True)
+                return
+    
             event.listener.delete()
             self.finish(self.MAP_CHANGED_UNEXPECTEDLY, "Map changed unexpectedly while resolving.")
 
         def onWaitForMCAfterResolve(listener: Listener):
+            if PlayedCharacterManager().isInFight:
+                self.stop(True)
+                return
+    
             listener.delete()
             self.mapMove(self.mapChangeCellId, self.exactDestination, callback=self.onMoveToMapChangeCell)
 
         def onMoved(code, err, landingCell):
+            if PlayedCharacterManager().isInFight:
+                self.stop(True)
+                return
             if err:
                 try:
                     x, y = next(self.currentMPChilds)
@@ -327,9 +370,13 @@ class ChangeMap(AbstractBehavior):
         return self.mapMove(MapPoint.fromCoords(x, y).cellId, self.exactDestination, callback=onMoved)
 
     def onMoveToMapChangeCell(self, code, error, landingcell):
+        if PlayedCharacterManager().isInFight:
+            self.stop(True)
+            return
+
         if code == MapMove.ALREADY_ONCELL and self.isMapActionTr():
             Logger().debug("Already on map action cell, need to move away from it first")
-            return self.handleOnsameCellForMapActionCell()
+            return self.handleOnSameCellForMapActionCell()
         elif code == MovementFailError.MOVE_REQUEST_REJECTED:
             if self.isScrollTr():
                 if self.transition not in self.forbiddenScrollCells:
@@ -348,6 +395,10 @@ class ChangeMap(AbstractBehavior):
             self._scrollMapChangeRequestTimer = BenchmarkTimer(0.5, self.sendMapChangeRequest).start()
 
     def actionMapChange(self):
+        if PlayedCharacterManager().isInFight:
+            self.stop(True)
+            return
+
         self.requestRejectedEvent = KernelEvent.MovementRequestRejected
         self.movementError = MovementFailError.MOVE_REQUEST_REJECTED
         self.exactDestination = True
@@ -356,6 +407,10 @@ class ChangeMap(AbstractBehavior):
         self.mapMove(self.mapChangeCellId, self.exactDestination, callback=self.onMoveToMapChangeCell)
 
     def scrollMapChange(self):
+        if PlayedCharacterManager().isInFight:
+            self.stop(True)
+            return
+
         self.requestRejectedEvent = KernelEvent.MovementRequestRejected
         self.movementError = MovementFailError.MOVE_REQUEST_REJECTED
         self.exactDestination = True
@@ -366,7 +421,7 @@ class ChangeMap(AbstractBehavior):
             if self.edge:
                 return self.followEdge()
             return self.finish(
-                MovementFailError.NO_VALID_SCROLL_CELL, f"Tryied all scroll map change cells but no one changed map"
+                MovementFailError.NO_VALID_SCROLL_CELL, f"Tried all scroll map change cells but no one changed map"
             )
         self.setupMapChangeListener()
         self.mapMove(
@@ -378,6 +433,10 @@ class ChangeMap(AbstractBehavior):
         )
 
     def onChangeMapIE(self, code, err):
+        if PlayedCharacterManager().isInFight:
+            self.stop(True)
+            return
+
         if err:
             if code == UseSkill.USE_ERROR:
                 if self.edge:
@@ -387,6 +446,10 @@ class ChangeMap(AbstractBehavior):
         self.setupMapChangeRejectListener()
 
     def interactiveMapChange(self):
+        if PlayedCharacterManager().isInFight:
+            self.stop(True)
+            return
+
         self.requestRejectedEvent = KernelEvent.InteractiveUseError
         self.movementError = MovementFailError.INTERACTIVE_USE_ERROR
         self.exactDestination = False
@@ -408,8 +471,10 @@ class ChangeMap(AbstractBehavior):
         return self.trType == TransitionTypeEnum.INTERACTIVE
 
     def sendMapChangeRequest(self):
-        if PlayedCharacterManager().isFighting:
+        if PlayedCharacterManager().isInFight:
+            self.stop(True)
             return
+
         cmmsg = ChangeMapMessage()
         cmmsg.init(int(self.transition.transitionMapId), False)
         ConnectionsHandler().send(cmmsg)

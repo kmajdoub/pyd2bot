@@ -41,6 +41,7 @@ class CollectStats(AbstractBehavior):
                 (KernelEvent.JobExperienceUpdate, self.onJobExperience, {}),
                 (KernelEvent.KamasUpdate, self.onKamasUpdate, {}),
                 (KernelEvent.FightStarted, self.onFight, {}),
+                (KernelEvent.KamasLostFromTeleport, self.onKamasTeleport, {})
             ]
         )
         self.waitingForStatsBoost = threading.Event()
@@ -59,6 +60,10 @@ class CollectStats(AbstractBehavior):
             for listener in self.update_listeners:
                 BenchmarkTimer(0.1, lambda: listener(event, self.playerStats)).start()
     
+    def onKamasTeleport(self, event, amount):
+        self.playerStats.kamasSpentTeleporting += amount
+        self.onPlayerUpdate(event)
+        
     def onKamasUpdate(self, event, totalKamas):
         Logger().debug(f"Player kamas updated : {totalKamas}")
         if self.totalKamas is not None:

@@ -38,15 +38,12 @@ class BotSettings:
     
     SELLER_VACANT = threading.Event()
     SELLER_LOCK = threading.Lock()
-    TAKE_NAP_AFTER_HOURS = 2
-    NAP_DURATION_MINUTES = 20
-
 
     # Static constants for random range
-    MIN_NAP_AFTER_HOURS = 2.0
-    MAX_NAP_AFTER_HOURS = 6.0
-    MIN_NAP_DURATION_MINUTES = 20.0
-    MAX_NAP_DURATION_MINUTES = 2.0 * 60
+    MIN_NAP_AFTER_HOURS = 1.0
+    MAX_NAP_AFTER_HOURS = 2.0
+    MIN_NAP_DURATION_MINUTES = 10.0
+    MAX_NAP_DURATION_MINUTES = 20.0
 
     @classmethod
     def generate_random_nap_timeout(cls):

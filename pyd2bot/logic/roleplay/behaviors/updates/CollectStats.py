@@ -43,7 +43,7 @@ class CollectStats(AbstractBehavior):
                 (KernelEvent.FightStarted, self.onFight, {}),
                 (KernelEvent.KamasLostFromTeleport, self.onKamasTeleport, {}),
                 (KernelEvent.KamasGained, self.onKamasGained, {}),
-                ((KernelEvent.TreasureHuntFinished, self.onHuntFinished, {}),)
+                (KernelEvent.TreasureHuntFinished, self.onHuntFinished, {})
             ]
         )
         self.waitingForStatsBoost = threading.Event()

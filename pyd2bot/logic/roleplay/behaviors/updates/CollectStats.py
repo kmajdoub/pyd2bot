@@ -43,6 +43,7 @@ class CollectStats(AbstractBehavior):
                 (KernelEvent.FightStarted, self.onFight, {}),
                 (KernelEvent.KamasLostFromTeleport, self.onKamasTeleport, {}),
                 (KernelEvent.KamasGained, self.onKamasGained, {})
+                ((KernelEvent.TreasureHuntFinished, self.onHuntFinished, {}),)
             ]
         )
         self.waitingForStatsBoost = threading.Event()
@@ -56,6 +57,10 @@ class CollectStats(AbstractBehavior):
     def removeHandler(self, callback):
         self.update_listeners.remove(callback)
 
+    def onHuntFinished(self, event, questType):
+        self.playerStats.nbrTreasuresHuntsDone += 1
+        self.onPlayerUpdate(event)
+
     def onPlayerUpdate(self, event):
         if self.update_listeners:
             for listener in self.update_listeners:
@@ -63,7 +68,7 @@ class CollectStats(AbstractBehavior):
     
     def onKamasGained(self, event, amount):
         self.playerStats.earnedKamas += int(amount)
-        self.onPlayerUpdate(amount)
+        self.onPlayerUpdate(event)
 
     def onKamasTeleport(self, event, amount):
         self.playerStats.kamasSpentTeleporting += int(amount)

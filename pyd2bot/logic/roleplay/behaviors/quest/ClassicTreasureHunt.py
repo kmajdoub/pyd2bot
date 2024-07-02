@@ -24,8 +24,6 @@ from pydofus2.com.ankamagames.dofus.internalDatacenter.quests.TreasureHuntStepWr
 from pydofus2.com.ankamagames.dofus.internalDatacenter.quests.TreasureHuntWrapper import \
     TreasureHuntWrapper
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
-from pydofus2.com.ankamagames.dofus.logic.common.managers.PlayerManager import \
-    PlayerManager
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.InventoryManager import \
     InventoryManager
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import \
@@ -58,7 +56,7 @@ WRONG_ANSWERS_FILE = os.path.join(CURR_DIR, "wrongAnswers.json")
 
 class ClassicTreasureHunt(AbstractBehavior):
     UNABLE_TO_FIND_HINT = 475556
-    UNSUPPORTED_THUNT_TYPE = 475557
+    UNSUPPORTED_HUNT_TYPE = 475557
     TAKE_QUEST_MAPID = 128452097
     TAKE_QUEST_ZONEID = 1
     TREASURE_HUNT_ATM_IEID = 484993
@@ -105,7 +103,7 @@ class ClassicTreasureHunt(AbstractBehavior):
         average_gain = 0.3 * self._gained_kamas // self._hunts_done
         return average_gain
 
-    def submitet_flag_maps(self):
+    def submitted_flag_maps(self):
         return [
             _.mapId
             for _ in self.infos.stepList
@@ -168,7 +166,7 @@ class ClassicTreasureHunt(AbstractBehavior):
                 KernelEvent.ClientShutdown, f"Treasure hunt flag request error : {result} {err}"
             )
 
-    def onTelportToDistributorNearestZaap(self, code, err):
+    def onTeleportToDistributorNearestZaap(self, code, err):
         if code == UseTeleportItem.CANT_USE_ITEM_IN_MAP:
             self.travelUsingZaap(
                 self.TAKE_QUEST_MAPID, withSaveZaap=True, maxCost=self.maxCost, callback=self.onTakeQuestMapReached
@@ -177,17 +175,17 @@ class ClassicTreasureHunt(AbstractBehavior):
             self.autoTrip(self.TAKE_QUEST_MAPID, self.TAKE_QUEST_ZONEID, callback=self.onTakeQuestMapReached)
 
     def goToHuntAtm(self):
-        Logger().debug(f"AutoTravelling to treasure hunt ATM")
+        Logger().debug(f"AutoTraveling to treasure hunt ATM")
         distanceToTHATMZaap = MapTools.distanceBetweenTwoMaps(self.currentMapId, self.ZAAP_HUNT_MAP)
         Logger().debug(f"Distance to ATM Zaap is {distanceToTHATMZaap} maps steps")
         if distanceToTHATMZaap > 12:
             if int(Kernel().zaapFrame.spawnMapId) == int(self.ZAAP_HUNT_MAP):
                 iw = ItemWrapper._cacheGId.get(self.RAPPEL_POTION_GUID)
                 if iw:
-                    return self.useTeleportItem(iw, callback=self.onTelportToDistributorNearestZaap)
+                    return self.useTeleportItem(iw, callback=self.onTeleportToDistributorNearestZaap)
                 for iw in InventoryManager().inventory.getView("storageConsumables").content:
                     if iw.objectGID == self.RAPPEL_POTION_GUID:
-                        return self.useTeleportItem(iw, callback=self.onTelportToDistributorNearestZaap)
+                        return self.useTeleportItem(iw, callback=self.onTeleportToDistributorNearestZaap)
                 else:
                     Logger().debug(f"No rappel potions found in player consumable view")
             else:
@@ -215,7 +213,7 @@ class ClassicTreasureHunt(AbstractBehavior):
             return self.onceMapProcessed(lambda: self.onHuntFinished(event, questType))
         if self.guessedAnswers:
             for _, poiId, answerMapId in self.guessedAnswers:
-                Logger().debug(f"Will memorise guessed answers : {self.guessedAnswers}")
+                Logger().debug(f"Will memorize the guessed answers : {self.guessedAnswers}")
                 self.memorizeHint(answerMapId, poiId)
             self.guessedAnswers.clear()
             self.guessMode = False
@@ -297,7 +295,7 @@ class ClassicTreasureHunt(AbstractBehavior):
             if not mapId:
                 return None
             Logger().debug(f"iter {i + 1}: nextMapId {mapId}.")
-            if mapId in self.submitet_flag_maps():
+            if mapId in self.submitted_flag_maps():
                 Logger().debug(f"Map {mapId} has already been submitted for a previous step")
                 continue
             if self.currentStep.type == TreasureHuntStepTypeEnum.DIRECTION_TO_POI:
@@ -359,12 +357,12 @@ class ClassicTreasureHunt(AbstractBehavior):
         else:
             self.currentStep = self.infos.stepList[idx]
             if not ignoreSame and lastStep == self.currentStep:
-                return self.finish(self.STEP_DIDNT_CHANGE, "Step didnt change after update!")
+                return self.finish(self.STEP_DIDNT_CHANGE, "Step didn't change after update!")
             self.startMapId = self.infos.stepList[idx - 1].mapId
         Logger().debug(f"Infos:\n{self.infos}")
         if self.currentStep is not None:
             if self.currentStep.type != TreasureHuntStepTypeEnum.DIRECTION_TO_POI:
-                Logger().debug(f"AutoTravelling to treasure hunt step {idx}, start map {self.startMapId}")
+                Logger().debug(f"AutoTraveling to treasure hunt step {idx}, start map {self.startMapId}")
                 self.travelUsingZaap(self.startMapId, maxCost=self.maxCost, callback=self.onStartMapReached)
             else:
                 self.onStartMapReached(True, None)
@@ -391,7 +389,7 @@ class ClassicTreasureHunt(AbstractBehavior):
             self.infos = Kernel().questFrame.getTreasureHunt(questType)
             self.solveNextStep()
         else:
-            return self.finish(self.UNSUPPORTED_THUNT_TYPE, f"Unsupported treasure hunt type : {questType}")
+            return self.finish(self.UNSUPPORTED_HUNT_TYPE, f"Unsupported treasure hunt type : {questType}")
 
     def onStartMapReached(self, code, err):
         if err:
@@ -423,4 +421,4 @@ class ClassicTreasureHunt(AbstractBehavior):
                 self.currentStep.count, self.currentStep.direction, callback=self.onNextHintMapReached, parent=self
             )
         else:
-            return self.finish(self.UNSUPPORTED_THUNT_TYPE, f"Unsupported hunt step type {self.currentStep.type}")
+            return self.finish(self.UNSUPPORTED_HUNT_TYPE, f"Unsupported hunt step type {self.currentStep.type}")

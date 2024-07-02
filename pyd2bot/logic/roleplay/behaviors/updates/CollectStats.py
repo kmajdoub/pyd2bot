@@ -42,7 +42,7 @@ class CollectStats(AbstractBehavior):
                 (KernelEvent.KamasUpdate, self.onKamasUpdate, {}),
                 (KernelEvent.FightStarted, self.onFight, {}),
                 (KernelEvent.KamasLostFromTeleport, self.onKamasTeleport, {}),
-                (KernelEvent.KamasGained, self.onKamasGained, {})
+                (KernelEvent.KamasGained, self.onKamasGained, {}),
                 ((KernelEvent.TreasureHuntFinished, self.onHuntFinished, {}),)
             ]
         )

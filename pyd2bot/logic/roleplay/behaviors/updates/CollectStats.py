@@ -103,16 +103,15 @@ class CollectStats(AbstractBehavior):
         self.onPlayerUpdate(event)
 
     def onObjectAdded(self, event, iw):
-        # HaapiEventsManager().sendRandomEvent()
-        # if iw.objectGID not in ClassicTreasureHunt.CHESTS_GUID:
-        #     averageKamasWon = (
-        #         Kernel().averagePricesFrame.getItemAveragePrice(iw.objectGID) * iw.quantity
-        #     )
-        #     Logger().debug(f"Average kamas won from item: {averageKamasWon}")
-        #     self.estimated_kamas_won += averageKamasWon
-        # self.playerStats.add_item_gained(iw.objectGID, iw.quantity)
-        # self.onPlayerUpdate(event)
-        pass
+        HaapiEventsManager().sendRandomEvent()
+        if iw.objectGID not in ClassicTreasureHunt.CHESTS_GUID:
+            averageKamasWon = (
+                Kernel().averagePricesFrame.getItemAveragePrice(iw.objectGID) * iw.quantity
+            )
+            Logger().debug(f"Average kamas won from item: {averageKamasWon}")
+            self.estimated_kamas_won += averageKamasWon
+        self.playerStats.add_item_gained(iw.objectGID, iw.quantity)
+        self.onPlayerUpdate(event)
 
     def onJobExperience(self, event, oldJobXp, jobExp: JobExperience):
         Logger().info(f"Job {jobExp.jobId} has gained {jobExp.jobXP} xp")

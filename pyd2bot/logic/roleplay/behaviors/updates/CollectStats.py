@@ -61,7 +61,7 @@ class CollectStats(AbstractBehavior):
                 BenchmarkTimer(0.1, lambda: listener(event, self.playerStats)).start()
     
     def onKamasTeleport(self, event, amount):
-        self.playerStats.kamasSpentTeleporting += amount
+        self.playerStats.kamasSpentTeleporting += int(amount)
         self.onPlayerUpdate(event)
         
     def onKamasUpdate(self, event, totalKamas):

@@ -43,7 +43,7 @@ class UseZaap(AbstractBehavior):
 
     def onServerInfo(self, event, msgId, msgType, textId, msgContent, params):
         if textId == 325865:
-            KernelEventsManager().send(KernelEvent.KamasLostFromTeleport, params[0])
+            KernelEventsManager().send(KernelEvent.KamasLostFromTeleport, int(params[0]))
 
     def openCurrMapZaapDialog(self):
         self.zaapIe = Kernel().interactiveFrame.getZaapIe()

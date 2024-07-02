@@ -42,6 +42,7 @@ class CollectStats(AbstractBehavior):
                 (KernelEvent.KamasUpdate, self.onKamasUpdate, {}),
                 (KernelEvent.FightStarted, self.onFight, {}),
                 (KernelEvent.KamasLostFromTeleport, self.onKamasTeleport, {})
+                (KernelEvent.KamasGained, self.onKamasGained)
             ]
         )
         self.waitingForStatsBoost = threading.Event()
@@ -60,6 +61,10 @@ class CollectStats(AbstractBehavior):
             for listener in self.update_listeners:
                 BenchmarkTimer(0.1, lambda: listener(event, self.playerStats)).start()
     
+    def onKamasGained(self, event, amount):
+        self.playerStats.earnedKamas += int(amount)
+        self.onPlayerUpdate(amount)
+
     def onKamasTeleport(self, event, amount):
         self.playerStats.kamasSpentTeleporting += int(amount)
         self.onPlayerUpdate(event)
@@ -110,6 +115,7 @@ class CollectStats(AbstractBehavior):
             )
             Logger().debug(f"Average kamas won from item: {averageKamasWon}")
             self.estimated_kamas_won += averageKamasWon
+            self.playerStats.estimatedKamasWon += averageKamasWon
         self.playerStats.add_item_gained(iw.objectGID, iw.quantity)
         self.onPlayerUpdate(event)
 

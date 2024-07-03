@@ -82,7 +82,7 @@ class CollectStats(AbstractBehavior):
         
     def onKamasUpdate(self, event, totalKamas):
         Logger().debug(f"Player kamas updated : {totalKamas}")
-        if self.initial_kamas is not None:
+        if self.initial_kamas is None:
             self.initial_kamas = totalKamas
         else:
             self.playerStats.earnedKamas = totalKamas - self.initial_kamas

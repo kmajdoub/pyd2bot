@@ -1,5 +1,3 @@
-import threading
-
 from pyd2bot.data.models import PlayerStats
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
 from pyd2bot.logic.roleplay.behaviors.quest.ClassicTreasureHunt import ClassicTreasureHunt
@@ -146,20 +144,15 @@ class CollectStats(AbstractBehavior):
         self.playerStats.nbrFightsDone += 1
         self.onPlayerUpdate(event)
 
-    def get_dict_diff(old_dict, new_dict):
+    def get_dict_diff(self, old_dict, new_dict):
         """
         Get the difference between two dictionaries.
         Returns a dictionary with only the changed keys and their new values.
         """
         set_old = set(old_dict.items())
         set_new = set(new_dict.items())
-        
-        # Get symmetric difference
         diff_set = set_old ^ set_new
-        
-        # Convert back to dictionary, only for new values
         diff_dict = {key: value for key, value in diff_set if key in new_dict}
-        
         return diff_dict
 
     def onPlayerUpdate(self, event):

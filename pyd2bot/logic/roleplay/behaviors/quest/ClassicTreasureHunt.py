@@ -3,12 +3,14 @@ import os
 import random
 import threading
 
+from pyd2bot.BotSettings import BotSettings
 from pyd2bot.data.enums import ServerNotificationEnum
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
 from pyd2bot.logic.roleplay.behaviors.movement.AutoTripUseZaap import AutoTripUseZaap
 from pyd2bot.logic.roleplay.behaviors.quest.FindHintNpc import FindHintNpc
 from pyd2bot.logic.roleplay.behaviors.teleport.UseTeleportItem import \
     UseTeleportItem
+from pydofus2.com.ClientStatusEnum import ClientStatusEnum
 from pydofus2.com.ankamagames.atouin.HaapiEventsManager import HaapiEventsManager
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
 from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import \
@@ -64,7 +66,6 @@ class ClassicTreasureHunt(AbstractBehavior):
     RAPPEL_POTION_GUID = 548
     CHESTS_GUID = [15260, 15248, 15261, 15262, 15560, 15270]
     ZAAP_HUNT_MAP = 142087694
-    REST_TIME_BETWEEN_HUNTS = 60 * 2
     STEP_DIDNT_CHANGE = 47555822
     Rose_of_the_Sands_GUID = 15263
 
@@ -100,8 +101,8 @@ class ClassicTreasureHunt(AbstractBehavior):
     def maxCost(self):
         if not self._hunts_done:
             return self.defaultMaxCost
-        average_gain = 0.3 * self._gained_kamas // self._hunts_done
-        return average_gain
+        average_gain = 0.5 * self._gained_kamas // self._hunts_done
+        return max(average_gain, 0)
 
     def submitted_flag_maps(self):
         return [
@@ -138,6 +139,8 @@ class ClassicTreasureHunt(AbstractBehavior):
     def onTextInformation(self, event, msgId, msgType, textId, msgContent, params):
         if textId == ServerNotificationEnum.KAMAS_GAINED:
             self._gained_kamas += int(params[0])
+        elif textId == ServerNotificationEnum.KAMAS_LOST:
+            self._gained_kamas -= int(params[0])
             
     def onDigAnswer(self, event, wrongFlagCount, result, treasureHuntDigAnswerText):
         if result == TreasureHuntDigRequestEnum.TREASURE_HUNT_DIG_WRONG_AND_YOU_KNOW_IT:
@@ -224,8 +227,9 @@ class ClassicTreasureHunt(AbstractBehavior):
                 Kernel().inventoryManagementFrame.useItem(iw)
                 BenchmarkTimer(3, lambda: self.onHuntFinished(event, questType)).start()
         else:
-            wait_time = self.REST_TIME_BETWEEN_HUNTS + abs(random.gauss(0, self.REST_TIME_BETWEEN_HUNTS)) # Add some noise
+            wait_time = BotSettings.REST_TIME_BETWEEN_HUNTS + abs(random.gauss(0, BotSettings.REST_TIME_BETWEEN_HUNTS))
             Logger().debug(f"Sleeping for {round(wait_time / 60)} minutes before going to the next hunt, to avoid getting kicked.")
+            KernelEventsManager().send(KernelEvent.ClientStatusUpdate, ClientStatusEnum.TAKING_BREAK)
             BenchmarkTimer(wait_time, lambda: self.goToHuntAtm()).start()
 
     def onTakeQuestMapReached(self, code, err):
@@ -235,10 +239,10 @@ class ClassicTreasureHunt(AbstractBehavior):
         self.useSkill(
             elementId=self.TREASURE_HUNT_ATM_IEID,
             skilluid=self.TREASURE_HUNT_ATM_SKILLUID,
-            callback=self.onTreasurHuntTaken,
+            callback=self.onTreasureHuntTaken,
         )
 
-    def onTreasurHuntTaken(self, code, err):
+    def onTreasureHuntTaken(self, code, err):
         if err:
             return self.finish(code, err)
         self.once(KernelEvent.TreasureHuntRequestAnswer, self.onTreaSureHuntRequestAnswer)
@@ -296,7 +300,7 @@ class ClassicTreasureHunt(AbstractBehavior):
                 return None
             Logger().debug(f"iter {i + 1}: nextMapId {mapId}.")
             if mapId in self.submitted_flag_maps():
-                Logger().debug(f"Map {mapId} has already been submitted for a previous step")
+                Logger().debug(f"Map {mapId} has already been submitted for a previous step!")
                 continue
             if self.currentStep.type == TreasureHuntStepTypeEnum.DIRECTION_TO_POI:
                 if (self.startMapId, self.currentStep.poiLabel, mapId) in self.wrongAnswers:

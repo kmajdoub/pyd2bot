@@ -44,6 +44,7 @@ class BotSettings:
     MAX_NAP_AFTER_HOURS = 2.0
     MIN_NAP_DURATION_MINUTES = 10.0
     MAX_NAP_DURATION_MINUTES = 20.0
+    REST_TIME_BETWEEN_HUNTS = 20
 
     @classmethod
     def generate_random_nap_timeout(cls):

@@ -8,6 +8,7 @@ class ServerNotificationEnum:
     MOUNT_HAS_NO_ENERGY_LEFT = 5336
     INACTIVITY_WARNING = 5123
     KAMAS_GAINED = 325840
+    KAMAS_LOST = 325865
 
 class SessionTypeEnum(str, Enum):
     SOLO_FIGHT = 'SOLO_FIGHT'

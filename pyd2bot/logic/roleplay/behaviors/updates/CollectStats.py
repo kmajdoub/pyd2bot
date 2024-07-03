@@ -144,13 +144,29 @@ class CollectStats(AbstractBehavior):
         self.playerStats.nbrFightsDone += 1
         self.onPlayerUpdate(event)
 
+    def flatten_dict(self, d, parent_key='', sep='.'):
+        """
+        Flatten a nested dictionary. Keys will be concatenated with `sep`.
+        """
+        items = []
+        for k, v in d.items():
+            new_key = f"{parent_key}{sep}{k}" if parent_key else k
+            if isinstance(v, dict):
+                items.extend(self.flatten_dict(v, new_key, sep=sep).items())
+            else:
+                items.append((new_key, v))
+        return dict(items)
+
+
     def get_dict_diff(self, old_dict, new_dict):
         """
         Get the difference between two dictionaries.
         Returns a dictionary with only the changed keys and their new values.
         """
-        set_old = set(old_dict.items())
-        set_new = set(new_dict.items())
+        flat_old = self.flatten_dict(old_dict)
+        flat_new = self.flatten_dict(new_dict)
+        set_old = set(flat_old.items())
+        set_new = set(flat_new.items())
         diff_set = set_old ^ set_new
         diff_dict = {key: value for key, value in diff_set if key in new_dict}
         return diff_dict

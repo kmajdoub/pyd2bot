@@ -1,4 +1,5 @@
 
+from pyd2bot.data.enums import ServerNotificationEnum
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
 from pyd2bot.misc.Localizer import Localizer
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
@@ -14,7 +15,7 @@ from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 class OpenBank(AbstractBehavior):
     STORAGE_OPEN_TIMEDOUT = 9874521
     WRONG_EXCHANGE_TYPE = 556988
-    NOT_ENOUGH_KAMS = 3258253
+    NOT_ENOUGH_KAMAS = 3258253
     
     def __init__(self):
         super().__init__()
@@ -39,8 +40,10 @@ class OpenBank(AbstractBehavior):
         )
 
     def onTextInformation(self, event, msgId, msgType, textId, msgContent, params):
-        if textId == 325825:
-            self.finish(self.NOT_ENOUGH_KAMS, "Not enough kamas to open bank")
+        if textId == ServerNotificationEnum.NOT_ENOUGH_KAMAS:
+            self.finish(self.NOT_ENOUGH_KAMAS, "Not enough kamas to open bank")
+        elif textId == ServerNotificationEnum.KAMAS_LOST:
+            KernelEventsManager().send(KernelEvent.KamasLostFromBankOpen, int(params[0]))
             
     def onBankManDialogEnded(self, code, error):
         if error:

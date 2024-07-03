@@ -1,3 +1,4 @@
+from pyd2bot.data.enums import ServerNotificationEnum
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
 from pydofus2.com.ankamagames.atouin.managers.MapDisplayManager import MapDisplayManager
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
@@ -42,13 +43,13 @@ class UseZaap(AbstractBehavior):
             self.onceFramePushed("RoleplayInteractivesFrame", self.openCurrMapZaapDialog)
 
     def onServerInfo(self, event, msgId, msgType, textId, msgContent, params):
-        if textId == 325865:
+        if textId == ServerNotificationEnum.KAMAS_LOST:
             KernelEventsManager().send(KernelEvent.KamasLostFromTeleport, int(params[0]))
 
     def openCurrMapZaapDialog(self):
         self.zaapIe = Kernel().interactiveFrame.getZaapIe()
         if not self.zaapIe:
-            return self.finish(self.ZAAP_NOTFOUND, "No Zaap IE found in the current Map")
+            return self.finish(self.ZAAP_NOTFOUND, "No Zaap IE found in the current Map!")
         if self.checkZaapRpZone():
             return
         self.once(
@@ -145,6 +146,7 @@ class UseZaap(AbstractBehavior):
         self.finish(True, None)
     
     def onDestMapProcessed(self, event=None):
+        KernelEventsManager().send(KernelEvent.ZAAP_TELEPORT)
         if self.bsaveZaap and Kernel().zaapFrame.spawnMapId != PlayedCharacterManager().currentMap.mapId:
             return self.saveZaap(self.onZaapSaved)
         return self.finish(True, None)

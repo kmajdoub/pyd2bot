@@ -23,11 +23,10 @@ class CollectStats(AbstractBehavior):
     def __init__(self, listeners: list[callable]=None):
         super().__init__()
         self.playerStats = PlayerStats()
-        self.totalKamas = None
+        self.initial_kamas = None
         if listeners is None:
             listeners = []
         self.update_listeners = listeners
-        self.estimated_kamas_won = 0
 
     def run(self) -> bool:
         self.onMultiple(
@@ -43,12 +42,11 @@ class CollectStats(AbstractBehavior):
                 (KernelEvent.FightStarted, self.onFight, {}),
                 (KernelEvent.KamasLostFromTeleport, self.onKamasTeleport, {}),
                 (KernelEvent.KamasGained, self.onKamasGained, {}),
-                (KernelEvent.TreasureHuntFinished, self.onHuntFinished, {})
+                (KernelEvent.TreasureHuntFinished, self.onHuntFinished, {}),
+                (KernelEvent.ZAAP_TELEPORT, self.onTeleportWithZaap, {}),
+                (KernelEvent.KamasLostFromBankOpen, self.onLostKamasByBankOpen, {})
             ]
         )
-        self.waitingForStatsBoost = threading.Event()
-        self.playerStats.currentLevel = PlayedCharacterManager().limitedLevel
-        self.onPlayerUpdate("Init")
         return True
     
     def addHandler(self, callback):
@@ -66,6 +64,14 @@ class CollectStats(AbstractBehavior):
             for listener in self.update_listeners:
                 BenchmarkTimer(0.1, lambda: listener(event, self.playerStats)).start()
     
+    def onLostKamasByBankOpen(self, event, amount):
+        self.playerStats.kamasSpentOpeningBank += int(amount)
+        self.onPlayerUpdate(event)
+        
+    def onTeleportWithZaap(self, event):
+        self.playerStats.numberOfTeleports += 1
+        self.onPlayerUpdate(event)
+        
     def onKamasGained(self, event, amount):
         self.playerStats.earnedKamas += int(amount)
         self.onPlayerUpdate(event)
@@ -76,12 +82,11 @@ class CollectStats(AbstractBehavior):
         
     def onKamasUpdate(self, event, totalKamas):
         Logger().debug(f"Player kamas updated : {totalKamas}")
-        if self.totalKamas is not None:
-            diff = totalKamas - self.totalKamas
-            if diff > 0:
-                self.playerStats.earnedKamas += diff
-        self.totalKamas = totalKamas
-        self.onPlayerUpdate(event)
+        if self.initial_kamas is not None:
+            self.initial_kamas = totalKamas
+        else:
+            self.playerStats.earnedKamas = totalKamas - self.initial_kamas
+            self.onPlayerUpdate(event)
                       
     def onJobLevelUp(self, event, jobId, jobName, lastJobLevel, newLevel, podsBonus):
         HaapiEventsManager().sendProfessionsOpenEvent()
@@ -107,7 +112,6 @@ class CollectStats(AbstractBehavior):
                 Kernel().averagePricesFrame.getItemAveragePrice(iw.objectGID) * qty
             )
             Logger().debug(f"Average kamas won from item: {averageKamasWon}")
-            self.estimated_kamas_won += averageKamasWon
             self.playerStats.estimatedKamasWon += averageKamasWon
         self.playerStats.add_item_gained(iw.objectGID, qty)
         self.onPlayerUpdate(event)
@@ -119,7 +123,6 @@ class CollectStats(AbstractBehavior):
                 Kernel().averagePricesFrame.getItemAveragePrice(iw.objectGID) * iw.quantity
             )
             Logger().debug(f"Average kamas won from item: {averageKamasWon}")
-            self.estimated_kamas_won += averageKamasWon
             self.playerStats.estimatedKamasWon += averageKamasWon
         self.playerStats.add_item_gained(iw.objectGID, iw.quantity)
         self.onPlayerUpdate(event)
@@ -127,8 +130,12 @@ class CollectStats(AbstractBehavior):
     def onJobExperience(self, event, oldJobXp, jobExp: JobExperience):
         Logger().info(f"Job {jobExp.jobId} has gained {jobExp.jobXP} xp")
 
-    def onMapDataProcessed(self, event, map):
+    def onMapDataProcessed(self, event, mapId):
         HaapiEventsManager().sendRandomEvent()
+        self.playerStats.currentLevel = PlayedCharacterManager().limitedLevel
+        self.playerStats.currentMapId = mapId
+        self.playerStats.add_visited_map(mapId)
+        self.onPlayerUpdate(event)
     
     def onAchievementFinished(self, event, achievement):
         if PlayedCharacterManager().isFighting:

@@ -22,6 +22,7 @@ class CollectStats(AbstractBehavior):
 
     def __init__(self, listeners: list[callable]=None):
         super().__init__()
+        self._oldStats = None
         self.playerStats = PlayerStats()
         self.initial_kamas = None
         if listeners is None:
@@ -58,11 +59,6 @@ class CollectStats(AbstractBehavior):
     def onHuntFinished(self, event, questType):
         self.playerStats.nbrTreasuresHuntsDone += 1
         self.onPlayerUpdate(event)
-
-    def onPlayerUpdate(self, event):
-        if self.update_listeners:
-            for listener in self.update_listeners:
-                BenchmarkTimer(0.1, lambda: listener(event, self.playerStats)).start()
     
     def onLostKamasByBankOpen(self, event, amount):
         self.playerStats.kamasSpentOpeningBank += int(amount)
@@ -149,3 +145,30 @@ class CollectStats(AbstractBehavior):
     def onFight(self, event):
         self.playerStats.nbrFightsDone += 1
         self.onPlayerUpdate(event)
+
+    def get_dict_diff(old_dict, new_dict):
+        """
+        Get the difference between two dictionaries.
+        Returns a dictionary with only the changed keys and their new values.
+        """
+        set_old = set(old_dict.items())
+        set_new = set(new_dict.items())
+        
+        # Get symmetric difference
+        diff_set = set_old ^ set_new
+        
+        # Convert back to dictionary, only for new values
+        diff_dict = {key: value for key, value in diff_set if key in new_dict}
+        
+        return diff_dict
+
+    def onPlayerUpdate(self, event):
+        serialized_stats = self.playerStats.model_dump()
+        if self._oldStats is not None:
+            data_to_send = self.get_dict_diff(serialized_stats, self._oldStats)
+        else:
+            data_to_send = serialized_stats
+        self._oldStats = serialized_stats
+        if self.update_listeners:
+            for listener in self.update_listeners:
+                BenchmarkTimer(0.1, lambda: listener(event, data_to_send)).start()

@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
 from pydofus2.com.ankamagames.dofus.datacenter.npcs.Npc import Npc
+from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
 from pydofus2.com.ankamagames.dofus.kernel.net.ConnectionsHandler import \
     ConnectionsHandler
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.InactivityManager import InactivityManager
@@ -43,13 +44,15 @@ class NpcDialog(AbstractBehavior):
         self.dialogLeftListener = None
         self.npc: Npc = None
         self._textParams = {}
-        self._textParams["m"] = False;
-        self._textParams["f"] = True;
-        self._textParams["n"] = True;
-        self._textParams["g"] = False;
+        self._textParams["m"] = False
+        self._textParams["f"] = True
+        self._textParams["n"] = True
+        self._textParams["g"] = False
+        if npcId not in Kernel().roleplayEntitiesFrame._npcList:
+            Logger().warning(f"Npc id {npcId} not found in map npcs list")
         msg = NpcGenericActionRequestMessage()
         msg.init(self.npcId, self.npcOpenDialogId, self.npcMapId)
-        self.once(KernelEvent.LeaveDialog, self.onNpcDialogleft)
+        self.once(KernelEvent.LeaveDialog, self.onNpcDialogClosed)
         self.once(KernelEvent.NpcQuestion, self.onNpcQuestion)
         self.on(KernelEvent.ServerTextInfo, self.onServerTextInfo)
         ConnectionsHandler().send(msg)
@@ -113,6 +116,6 @@ class NpcDialog(AbstractBehavior):
         ConnectionsHandler().send(msg)
         InactivityManager().activity()
     
-    def onNpcDialogleft(self, event):
+    def onNpcDialogClosed(self, event):
         self.finish(0, None)
 

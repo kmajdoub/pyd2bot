@@ -46,6 +46,7 @@ class BehaviorApi:
                 info["replies"] = {int(k): v for k, v in info["replies"].items()}
                 Logger().info(f"Special destination {label} matched for srcAreaId={srcAreaId}, dstAreaId={dstAreaId} :\n{info}")
                 return info
+        Logger().debug(f"Not a special destination : srcAreaId {srcAreaId}, dstAreaId {dstAreaId}")
         return None
 
     def travelUsingZaap(self, dstMapId, dstZoneId=None, withSaveZaap=False, maxCost=None, excludeMaps=[], check_special_dest=True, callback=None):

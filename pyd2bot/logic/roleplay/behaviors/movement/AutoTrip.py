@@ -44,7 +44,7 @@ class AutoTrip(AbstractBehavior):
             if self.destVertex is None:
                 Logger().warning(f"Destination vertex not found for map {self.dstMapId} and zone {self.dstRpZone}")
         self.path = path
-        AStar().resetForbinedEdges()
+        AStar().resetForbiddenEdges()
         self.walkToNextStep()
 
     def currentEdgeIndex(self):

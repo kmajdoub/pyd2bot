@@ -17,7 +17,7 @@
             ]
         }
     },
-    "saharrach_from_amakna": {
+    "saharrach_from_madrestam": {
         "srcAreaId": [0, 5, 6, 18, 7, 8, 11, 15, 28],
         "dstAreaId": [61],
         "preference": 100,

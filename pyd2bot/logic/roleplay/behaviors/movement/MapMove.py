@@ -163,7 +163,6 @@ class MapMove(AbstractBehavior):
             KernelEvent.PlayerMovementCompleted, callback=self.onMovementCompleted
         )
         Kernel().movementFrame.sendMovementRequest(self.movePath, self.dstCell)
-        Logger().info(f"Requested move from {PlayedCharacterManager().currentCellId} to {self.dstCell.cellId}")
 
     def onPlayerMoving(self, event, clientMovePath: MovementPath):
         if PlayedCharacterManager().isFighting:

@@ -34,14 +34,14 @@ class AbstractBehavior(BehaviorApi, metaclass=Singleton):
         if self.parent and not self.parent.running.is_set():
             Logger().debug(f"Cancel start for reason : parent behavior died.")
             return
-        KernelEventsManager().send(KernelEvent.ClientStatusUpdate, f"Starting_{type(self).__name__}")
+        KernelEventsManager().send(KernelEvent.ClientStatusUpdate, f"STARTING_{type(self).__name__.upper()}")
         self.callback = callback
         self.parent = parent
         if self.parent:
             self.parent.children.append(self)
         if self.running.is_set():
             error = f"{type(self).__name__} already running by parent {self.parent}."
-            KernelEventsManager().send(KernelEvent.ClientStatusUpdate, f"Error_{type(self).__name__}", {"error": error, "code": self.ALREADY_RUNNING})
+            KernelEventsManager().send(KernelEvent.ClientStatusUpdate, f"ERROR_{type(self).__name__.upper()}", {"error": error, "code": self.ALREADY_RUNNING})
             if self.callback:
                 self.callback(self.ALREADY_RUNNING, error)
             else:
@@ -71,9 +71,9 @@ class AbstractBehavior(BehaviorApi, metaclass=Singleton):
             self.parent.children.remove(self)
         error = f"[{type(self).__name__}] failed for reason : {error}" if error else None
         if error:
-            KernelEventsManager().send(KernelEvent.ClientStatusUpdate, f"Error_{type(self).__name__}", {"error": error, "code": str(code)})
+            KernelEventsManager().send(KernelEvent.ClientStatusUpdate, f"ERROR_{type(self).__name__.upper()}", {"error": error, "code": str(code)})
         else:
-            KernelEventsManager().send(KernelEvent.ClientStatusUpdate, f"Finished_{type(self).__name__}")
+            KernelEventsManager().send(KernelEvent.ClientStatusUpdate, f"FINISHED_{type(self).__name__.upper()}")
         if callback is not None:
             callback(code, error, *args, **kwargs)
         else:

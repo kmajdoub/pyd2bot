@@ -17,6 +17,24 @@
             ]
         }
     },
+    "saharrach_from_amakna": {
+        "srcAreaId": [0, 5, 6, 18, 7, 8, 11, 15, 28],
+        "dstAreaId": [61],
+        "preference": 100,
+        "exclude_self": true,
+        "npcMapId": 68422145.0,
+        "npcId": -20001,
+        "openDialogActionId": 3,
+        "landingMapId": 173670914.0,
+        "replies": {
+            "51804": [
+                69540
+            ],
+            "51805": [
+                69541
+            ]
+        }
+    },
     "new_valonia_from_madrestam": {
         "srcAreaId": [0, 5, 6, 18, 7, 8, 11, 15, 28, 45],
         "dstAreaId": [93],

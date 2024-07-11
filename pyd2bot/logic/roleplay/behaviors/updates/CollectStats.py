@@ -4,6 +4,7 @@ from pyd2bot.logic.roleplay.behaviors.quest.ClassicTreasureHunt import ClassicTr
 from pydofus2.com.ankamagames.atouin.HaapiEventsManager import \
     HaapiEventsManager
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
+from pydofus2.com.ankamagames.dofus.internalDatacenter.items.ItemWrapper import ItemWrapper
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
 from pydofus2.com.ankamagames.dofus.kernel.net.ConnectionsHandler import \
     ConnectionsHandler
@@ -99,24 +100,24 @@ class CollectStats(AbstractBehavior):
         self.playerStats.currentLevel = newLevel
         self.onPlayerUpdate(event)
                                         
-    def onItemObtained(self, event, iw, qty):
+    def onItemObtained(self, event, iw: ItemWrapper, qty):
         HaapiEventsManager().sendRandomEvent()
         if iw.objectGID not in ClassicTreasureHunt.CHESTS_GUID:
             averageKamasWon = (
                 Kernel().averagePricesFrame.getItemAveragePrice(iw.objectGID) * qty
             )
-            Logger().debug(f"Average kamas won from item: {averageKamasWon}")
+            Logger().debug(f"Average kamas won from item obtained {iw.name}: {averageKamasWon}")
             self.playerStats.estimatedKamasWon += averageKamasWon
         self.playerStats.add_item_gained(iw.objectGID, qty)
         self.onPlayerUpdate(event)
 
-    def onObjectAdded(self, event, iw):
+    def onObjectAdded(self, event, iw: ItemWrapper):
         HaapiEventsManager().sendRandomEvent()
         if iw.objectGID not in ClassicTreasureHunt.CHESTS_GUID:
             averageKamasWon = (
                 Kernel().averagePricesFrame.getItemAveragePrice(iw.objectGID) * iw.quantity
             )
-            Logger().debug(f"Average kamas won from item: {averageKamasWon}")
+            Logger().debug(f"Average kamas won from object added {iw.name}: {averageKamasWon}")
             self.playerStats.estimatedKamasWon += averageKamasWon
         self.playerStats.add_item_gained(iw.objectGID, iw.quantity)
         self.onPlayerUpdate(event)
@@ -157,24 +158,19 @@ class CollectStats(AbstractBehavior):
                 items.append((new_key, v))
         return dict(items)
 
-
     def get_dict_diff(self, old_dict, new_dict):
         """
         Get the difference between two dictionaries.
         Returns a dictionary with only the changed keys and their new values.
         """
-        flat_old = self.flatten_dict(old_dict)
-        flat_new = self.flatten_dict(new_dict)
-        set_old = set(flat_old.items())
-        set_new = set(flat_new.items())
-        diff_set = set_old ^ set_new
-        diff_dict = {key: value for key, value in diff_set if key in new_dict}
+        # Identify keys present in the new dict that are not in the old dict or have different values
+        diff_dict = {k: v for k, v in new_dict.items() if k not in old_dict or old_dict[k] != v}
         return diff_dict
 
     def onPlayerUpdate(self, event):
         serialized_stats = self.playerStats.model_dump()
         if self._oldStats is not None:
-            data_to_send = self.get_dict_diff(serialized_stats, self._oldStats)
+            data_to_send = self.get_dict_diff(self._oldStats, serialized_stats)
         else:
             data_to_send = serialized_stats
         self._oldStats = serialized_stats

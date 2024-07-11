@@ -101,7 +101,7 @@ class ClassicTreasureHunt(AbstractBehavior):
     def maxCost(self):
         if not self._hunts_done:
             return self.defaultMaxCost
-        average_gain = 0.5 * self._gained_kamas // self._hunts_done
+        average_gain = 2 * self._gained_kamas // self._hunts_done
         return max(average_gain, 0)
 
     def submitted_flag_maps(self):

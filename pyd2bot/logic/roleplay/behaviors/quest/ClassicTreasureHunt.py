@@ -156,7 +156,7 @@ class ClassicTreasureHunt(AbstractBehavior):
                 self.guessedAnswers.remove(answer)
             self.wrongAnswers.add(answer)
             with open(WRONG_ANSWERS_FILE, "w") as fp:
-                json.dump({"recordedWrongAnswers": list(self.wrongAnswers)}, fp)
+                json.dump({"recordedWrongAnswers": list(self.wrongAnswers)}, fp, indent=4)
             self.solveNextStep(True)
         elif result in [
             TreasureHuntFlagRequestEnum.TREASURE_HUNT_FLAG_ERROR_UNDEFINED,

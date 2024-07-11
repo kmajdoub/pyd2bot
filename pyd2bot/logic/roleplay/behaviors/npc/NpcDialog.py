@@ -20,9 +20,6 @@ from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 from pydofus2.com.ankamagames.jerakine.utils.pattern.PatternDecoder import \
     PatternDecoder
 
-if TYPE_CHECKING:
-    pass
-
 class NpcDialog(AbstractBehavior):
     NO_MORE_REPLIES = 10235
     NO_PROGRAMMED_REPLY = 10236
@@ -48,8 +45,9 @@ class NpcDialog(AbstractBehavior):
         self._textParams["f"] = True
         self._textParams["n"] = True
         self._textParams["g"] = False
-        if npcId not in Kernel().roleplayEntitiesFrame._npcList:
-            Logger().warning(f"Npc id {npcId} not found in map npcs list")
+        npcList = Kernel().roleplayEntitiesFrame._npcList if Kernel().roleplayEntitiesFrame else {}
+        if npcId not in npcList:
+            Logger().warning(f"Npc id {npcId} not found in map npcs list {npcList}")
         msg = NpcGenericActionRequestMessage()
         msg.init(self.npcId, self.npcOpenDialogId, self.npcMapId)
         self.once(KernelEvent.LeaveDialog, self.onNpcDialogClosed)
@@ -86,19 +84,21 @@ class NpcDialog(AbstractBehavior):
         possibleReplies = self.npcQuestionsReplies.get(messageId)
         if not possibleReplies:
             possibleReplies = self.npcQuestionsReplies.get(-1) # wildcard
-        for rep in possibleReplies:
-            if rep in visibleReplies:
-                return rep
+        if possibleReplies:
+            for rep in possibleReplies:
+                if rep in visibleReplies:
+                    return rep
         return None
     
     def onNpcQuestion(self, event, messageId, dialogParams, visibleReplies):
+        Logger().info(f"Received NPC question : {messageId}")
+        Logger().info(f"Visible replies : {visibleReplies}")
+        
         replyId = self.findReply(messageId, visibleReplies)
         
         if not replyId:
-            return self.finish(self.NO_PROGRAMMED_REPLY, f"Reply {self.npcQuestionsReplies[messageId]} not found in npc possible replies")
+            return self.finish(self.NO_PROGRAMMED_REPLY, f"No programmed Reply found for NPC question {messageId} in {self.npcQuestionsReplies}")
         
-        Logger().info(f"Received NPC question : {messageId}")
-        Logger().info(f"Visible replies : {visibleReplies}")
         self.npc = Npc.getNpcById(self.npcId)
         if self.npc:
             for msg in self.npc.dialogMessages:

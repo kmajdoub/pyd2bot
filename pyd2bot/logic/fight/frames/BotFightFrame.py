@@ -739,6 +739,9 @@ class BotFightFrame(Frame):
             return True
 
         elif isinstance(msg, GameFightTurnReadyRequestMessage):
+            if not Kernel().battleFrame:
+                Logger().error("Game fight ready message received but no battle frame found in the kernel!")
+                return True
             if Kernel().battleFrame._executingSequence:
                 Logger().warn("Delaying turn end acknowledgement because we're still in a sequence.")
                 self._confirmTurnEnd = True

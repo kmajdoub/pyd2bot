@@ -23,15 +23,12 @@
         "preference": 100,
         "exclude_self": true,
         "npcMapId": 68422145.0,
-        "npcId": -20001,
+        "npcId": -20000,
         "openDialogActionId": 3,
         "landingMapId": 173670914.0,
         "replies": {
-            "51804": [
-                69540
-            ],
-            "51805": [
-                69541
+            "25721": [
+                30858
             ]
         }
     },
@@ -44,7 +41,7 @@
         "npcId": -20004,
         "kamas_cost": 100,
         "openDialogActionId": 3,
-        "landingMapId": 223347712.0,
+        "landingMapId": 173277701.0,
         "replies": {
             "51204": [
                 68743

@@ -146,18 +146,21 @@ class ClassicTreasureHunt(AbstractBehavior):
         if result == TreasureHuntDigRequestEnum.TREASURE_HUNT_DIG_WRONG_AND_YOU_KNOW_IT:
             self.finish(result, f"Treasure hunt dig failed for reason : {treasureHuntDigAnswerText}")
 
+    def onWrongAnswer(self):
+        answer = (self.startMapId, self.currentStep.poiLabel, self.currentMapId)
+        Logger().debug(f"Wrong answer : {answer}")
+        if answer in self.guessedAnswers:
+            self.guessedAnswers.remove(answer)
+        self.wrongAnswers.add(answer)
+        with open(WRONG_ANSWERS_FILE, "w") as fp:
+            json.dump({"recordedWrongAnswers": list(self.wrongAnswers)}, fp, indent=4)
+        self.solveNextStep(True)
+        
     def onFlagRequestAnswer(self, event, result, err):
         if result == TreasureHuntFlagRequestEnum.TREASURE_HUNT_FLAG_OK:
             pass
         elif result in [TreasureHuntFlagRequestEnum.TREASURE_HUNT_FLAG_WRONG]:
-            answer = (self.startMapId, self.currentStep.poiLabel, self.currentMapId)
-            Logger().debug(f"Wrong answer : {answer}")
-            if answer in self.guessedAnswers:
-                self.guessedAnswers.remove(answer)
-            self.wrongAnswers.add(answer)
-            with open(WRONG_ANSWERS_FILE, "w") as fp:
-                json.dump({"recordedWrongAnswers": list(self.wrongAnswers)}, fp, indent=4)
-            self.solveNextStep(True)
+            self.onWrongAnswer()
         elif result in [
             TreasureHuntFlagRequestEnum.TREASURE_HUNT_FLAG_ERROR_UNDEFINED,
             TreasureHuntFlagRequestEnum.TREASURE_HUNT_FLAG_TOO_MANY,
@@ -165,6 +168,9 @@ class ClassicTreasureHunt(AbstractBehavior):
             TreasureHuntFlagRequestEnum.TREASURE_HUNT_FLAG_WRONG_INDEX,
             TreasureHuntFlagRequestEnum.TREASURE_HUNT_FLAG_SAME_MAP,
         ]:
+            if result == TreasureHuntFlagRequestEnum.TREASURE_HUNT_FLAG_SAME_MAP:
+                self.onWrongAnswer()
+                return
             KernelEventsManager().send(
                 KernelEvent.ClientShutdown, f"Treasure hunt flag request error : {result} {err}"
             )

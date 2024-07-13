@@ -3,6 +3,7 @@ from time import perf_counter
 
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
 from pyd2bot.logic.roleplay.behaviors.movement.ChangeMap import ChangeMap
+from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
 from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import \
     KernelEventsManager
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import \
@@ -52,15 +53,19 @@ class AutoTrip(AbstractBehavior):
         for i, step in enumerate(self.path):
             if step.src.UID == v.UID:
                 return i
+        Logger().error("Unable to find current player vertex index in the path!")
 
-    def onNextmapProcessed(self, code, error):
+    def onNextMapProcessed(self, code, error):
         if error:
             currentIndex = self.currentEdgeIndex()
+            if not currentIndex:
+                KernelEventsManager().send(KernelEvent.ClientRestart, "restart cause couldn't find the player current index in the current path!")
+                return
             nextEdge = self.path[currentIndex]
             if code in [
                 ChangeMap.INVALID_TRANSITION,
                 MovementFailError.CANT_REACH_DEST_CELL,
-                MovementFailError.MAPCHANGE_TIMEOUT,
+                MovementFailError.MAP_CHANGE_TIMEOUT,
                 MovementFailError.NO_VALID_SCROLL_CELL,
                 MovementFailError.INVALID_TRANSITION,
             ]:
@@ -68,18 +73,18 @@ class AutoTrip(AbstractBehavior):
                 
                 if self._nbr_follow_edge_fails >= 3:
                     Logger().debug("Exceeded max number of fails, will ignore this edge.")
-                    AStar().addForbidenEdge(nextEdge)
-                    return self.findPath(self.dstMapId, self.dstRpZone, self.onPathFindResul)
+                    AStar().addForbiddenEdge(nextEdge)
+                    return self.findPath(self.dstMapId, self.dstRpZone, self.onPathFindResult)
 
                 def retry(code, err):
                     if err:
                         return self.finish(code, err)
-                    self.findPath(self.dstMapId, self.dstRpZone, self.onPathFindResul)
+                    self.findPath(self.dstMapId, self.dstRpZone, self.onPathFindResult)
                     
                 self._nbr_follow_edge_fails += 1
                 return self.requestMapData(callback=retry)
             else:
-                Logger().debug(f"Error while auto travelling : {error}")
+                Logger().debug(f"Error while auto traveling : {error}")
                 return self.finish(code, error)
         self._nbr_follow_edge_fails = 0
         self.walkToNextStep()
@@ -99,19 +104,19 @@ class AutoTrip(AbstractBehavior):
                 return self.finish(True, None)
             currentIndex = self.currentEdgeIndex()
             if currentIndex is None:
-                return self.findPath(self.dstMapId, self.dstRpZone, self.onPathFindResul)
+                return self.findPath(self.dstMapId, self.dstRpZone, self.onPathFindResult)
             Logger().debug(f"Current step index: {currentIndex + 1}/{len(self.path)}")
             nextEdge = self.path[currentIndex]
             Logger().debug(f"Moving using next edge :")
             Logger().debug(f"\t|- src {nextEdge.src.mapId} -> dst {nextEdge.dst.mapId}")
             for tr in nextEdge.transitions:
                 Logger().debug(f"\t| => {tr}")
-            self.changeMap(edge=nextEdge, callback=self.onNextmapProcessed)
+            self.changeMap(edge=nextEdge, callback=self.onNextMapProcessed)
         else:
             self.state = AutoTripState.CALCULATING_PATH
-            self.findPath(self.dstMapId, self.dstRpZone, self.onPathFindResul)
+            self.findPath(self.dstMapId, self.dstRpZone, self.onPathFindResult)
 
-    def onPathFindResul(self, code, error, path):
+    def onPathFindResult(self, code, error, path):
         if error:
             return self.finish(code, error)
         if len(path) == 0:

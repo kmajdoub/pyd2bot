@@ -243,16 +243,16 @@ class ChangeMap(AbstractBehavior):
             listener.armTimer()
             return Logger().warning(f"Change map timer kicked while map move to cell still running!")
         if self.isInteractiveTr():
-            self.onMapRequestFailed(MovementFailError.MAPCHANGE_TIMEOUT)
+            self.onMapRequestFailed(MovementFailError.MAP_CHANGE_TIMEOUT)
         elif not self.isMapActionTr():
             self.requestTimeoutCount += 1
             if self.requestTimeoutCount > self.MAX_TIMEOUT_COUNT:
                 listener.delete()
-                return self.onMapRequestFailed(MovementFailError.MAPCHANGE_TIMEOUT)
+                return self.onMapRequestFailed(MovementFailError.MAP_CHANGE_TIMEOUT)
             listener.armTimer()
             self.sendMapChangeRequest()
         else:
-            self.onMapRequestFailed(MovementFailError.MAPCHANGE_TIMEOUT)
+            self.onMapRequestFailed(MovementFailError.MAP_CHANGE_TIMEOUT)
 
     def onDestMapProcessedTimeout(self, listener: Listener):
         if PlayedCharacterManager().isInFight:

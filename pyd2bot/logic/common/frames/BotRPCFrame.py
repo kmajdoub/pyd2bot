@@ -108,7 +108,7 @@ class BotRPCFrame(Frame):
             else:
                 def onresp(errType, error):
                     if error:
-                        if errType == MovementFailError.CANT_REACH_DEST_CELL or errType == MovementFailError.MAPCHANGE_TIMEOUT:
+                        if errType == MovementFailError.CANT_REACH_DEST_CELL or errType == MovementFailError.MAP_CHANGE_TIMEOUT:
                             AutoTrip().start(msg.dstMapId, 1, callback=onresp)
                         else:
                             KernelEventsManager().send(KernelEvent.ClientRestart, f"Follow transition failed for reason : {error}")

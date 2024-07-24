@@ -58,7 +58,7 @@ class AutoTrip(AbstractBehavior):
     def onNextMapProcessed(self, code, error):
         if error:
             currentIndex = self.currentEdgeIndex()
-            if not currentIndex:
+            if currentIndex is None:
                 KernelEventsManager().send(KernelEvent.ClientRestart, "restart cause couldn't find the player current index in the current path!")
                 return
             nextEdge = self.path[currentIndex]

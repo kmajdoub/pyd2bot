@@ -68,7 +68,7 @@ class RandomSubAreaFarmPath(AbstractFarmPath):
         outgoingEdges = WorldGraph().getOutgoingEdgesFromVertex(vertex)
         ret = []
         for edge in outgoingEdges:
-            if edge.dst.mapId in self._subArea.mapIds:
+            if edge.dst.mapId in self.mapIds:
                 if self.hasValidTransition(edge):
                     if onlyNonRecentVisited:
                         if edge.dst in self._lastVisited:

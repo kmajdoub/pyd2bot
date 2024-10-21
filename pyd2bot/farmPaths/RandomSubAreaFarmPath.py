@@ -65,6 +65,8 @@ class RandomSubAreaFarmPath(AbstractFarmPath):
     def outgoingEdges(self, vertex=None, onlyNonRecentVisited=False) -> Iterator[Edge]:
         if vertex is None:
             vertex = self.currentVertex
+        if not self._subArea:
+            self._subArea = SubArea.getSubAreaByMapId(vertex.mapId)
         outgoingEdges = WorldGraph().getOutgoingEdgesFromVertex(vertex)
         ret = []
         for edge in outgoingEdges:

@@ -59,6 +59,7 @@ WRONG_ANSWERS_FILE = os.path.join(CURR_DIR, "wrongAnswers.json")
 class ClassicTreasureHunt(AbstractBehavior):
     UNABLE_TO_FIND_HINT = 475556
     UNSUPPORTED_HUNT_TYPE = 475557
+    UNSUBSCRIBED = 475558
     TAKE_QUEST_MAPID = 128452097
     TAKE_QUEST_ZONEID = 1
     TREASURE_HUNT_ATM_IEID = 484993
@@ -126,7 +127,8 @@ class ClassicTreasureHunt(AbstractBehavior):
             (KernelEvent.ObjectAdded, self.onObjectAdded, {}),
             (KernelEvent.TreasureHuntFlagRequestAnswer, self.onFlagRequestAnswer, {}),
             (KernelEvent.TreasureHuntDigAnswer, self.onDigAnswer, {}),
-            (KernelEvent.ServerTextInfo, self.onTextInformation, {})
+            (KernelEvent.ServerTextInfo, self.onTextInformation, {}),
+            (KernelEvent.NonSubscriberPopup, self.onSubscriptionLimitation, {})
         ])
     
         self.defaultMaxCost = min(PlayedCharacterApi.inventoryKamas(), 550)
@@ -135,6 +137,9 @@ class ClassicTreasureHunt(AbstractBehavior):
             self.solveNextStep()
         else:
             self.goToHuntAtm()
+
+    def onSubscriptionLimitation(self, event, mods, text):
+        self.finish(self.UNSUBSCRIBED, text)
 
     def onTextInformation(self, event, msgId, msgType, textId, msgContent, params):
         if textId == ServerNotificationEnum.KAMAS_GAINED:

@@ -22,5 +22,11 @@
         "npcActionId": 3,
         "npcId": -20000,
         "openBankReplyId": 64367
+    },
+    "Pandala": {
+        "npcMapId": 99095051.0,
+        "npcActionId": 3,
+        "npcId": -20000,
+        "openBankReplyId": 64367
     }
 }

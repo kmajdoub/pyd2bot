@@ -94,6 +94,7 @@ class Pyd2Bot(DofusClient):
         elif self.session.type == SessionTypeEnum.GROUP_FIGHT:
             Logger().info(f"Starting group fight behavior for {self.name}")
             mainBehavior = GroupLeaderFarmFights(
+                self.session.character,
                 self.session.getPathFromDto(),
                 self.session.fightsPerMinute,
                 self.session.fightPartyMembers,

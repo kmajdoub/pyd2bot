@@ -22,6 +22,7 @@ class AutoUpgradeStats(AbstractBehavior):
         super().__init__()
         self.primaryStatId = primaryStatId
         self.waitingForStatsBoost = threading.Event()
+        self.IS_BACKGROUND_TASK = True
 
     def run(self) -> bool:
         self.on(KernelEvent.CharacterStats, self.onBotStats)

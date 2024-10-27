@@ -312,7 +312,7 @@ class AutoTripUseZaap(AbstractBehavior):
         cls, dst_vertex: Vertex, src_mapId=None, src_vertex=None, maxLen=float("inf")
     ) -> Tuple[Vertex, int, list[Edge]]:
         if dst_vertex is None:
-            None, None, None
+            None, None
         if src_vertex is None:
             if src_mapId == dst_vertex.mapId:
                 return dst_vertex, []
@@ -337,7 +337,7 @@ class AutoTripUseZaap(AbstractBehavior):
                 return src_vertex, []
             path = AStar().search(WorldGraph(), src_vertex, dst_vertex, maxPathLength=maxLen)
             if path is None:
-                return None, None, None
+                return None, None
             final_src_vertex = src_vertex
             minDist = len(path)
         return final_src_vertex, path

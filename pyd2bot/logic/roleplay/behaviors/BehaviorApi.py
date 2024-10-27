@@ -298,11 +298,11 @@ class BehaviorApi:
 
         PartyLeader().start(callback=callback, parent=self)
 
-    def waitForMembersIdle(self, members, callback=None):
+    def waitForMembersIdle(self, members, leader, callback=None):
         from pyd2bot.logic.roleplay.behaviors.party.WaitForMembersIdle import \
             WaitForMembersIdle
 
-        WaitForMembersIdle().start(members, callback=callback, parent=self)
+        WaitForMembersIdle().start(members, leader, callback=callback, parent=self)
 
     def waitForMembersToShow(self, members, callback=None):
         from pyd2bot.logic.roleplay.behaviors.party.WaitForMembersToShow import \

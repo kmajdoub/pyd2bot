@@ -17,6 +17,7 @@ class AbstractBehaviorState(Enum):
     IDLE = 2
     
 class AbstractBehavior(BehaviorApi, metaclass=Singleton):
+    IS_BACKGROUND_TASK = False
     ALREADY_RUNNING = 666
     STOPPED = 988273
     _onEmptyCallbacks = dict[str, list[callable]]()
@@ -116,10 +117,10 @@ class AbstractBehavior(BehaviorApi, metaclass=Singleton):
         return result
 
     @classmethod
-    def getOtherRunning(cls) -> list['AbstractBehavior']:
+    def getOtherRunningBehaviors(cls) -> list['AbstractBehavior']:
         result = []
-        for behavior in AbstractBehavior.getSubs():
-            if not behavior.parent and type(behavior).__name__ != cls.__name__ and behavior.isRunning():
+        for behavior in cls.getRunning():
+            if type(behavior).__name__ != cls.__name__:
                 result.append(behavior)
         return result
 

@@ -22,8 +22,17 @@ if TYPE_CHECKING:
 
 class GroupLeaderFarmFights(SoloFarmFights):
 
-    def __init__(self, path: AbstractFarmPath, fightsPerMinute: int, fightPartyMembers: list[Character], monsterLvlCoefDiff=None, followers: list[Character]=None, timeout=None):
+    def __init__(self, 
+                 leader: Character,
+                 path: AbstractFarmPath, 
+                 fightsPerMinute: int, 
+                 fightPartyMembers: list[Character], 
+                 monsterLvlCoefDiff=None, 
+                 followers: list[Character]=None, 
+                 timeout=None
+        ):
         super().__init__(path, fightsPerMinute, fightPartyMembers, monsterLvlCoefDiff, timeout)
+        self.leader = leader
         self.followers = followers
 
     def moveToNextStep(self):
@@ -33,7 +42,7 @@ class GroupLeaderFarmFights(SoloFarmFights):
     def makeAction(self):
         if self.followers:
             Logger().info("Waiting for party members to be idle.")
-            self.waitForMembersIdle(self.followers, callback=self.onMembersIdle)
+            self.waitForMembersIdle(self.followers, self.leader, callback=self.onMembersIdle)
             return False
         super().makeAction()
 

@@ -21,6 +21,7 @@ class CollectStats(AbstractBehavior):
 
     def __init__(self, listeners: list[callable]=None):
         super().__init__()
+        self.IS_BACKGROUND_TASK = True
         self._oldStats = None
         self.playerStats = PlayerStats()
         self.initial_kamas = None

@@ -41,19 +41,20 @@ class MuleFighter(AbstractBehavior):
     
     def onMoveToVertex(self, event: Event, vertex: Vertex):
         Logger().info(f"Move to vertex {vertex} received")
-        for behavior in self.getOtherRunning():
-            Logger().warning(f"I have other running behaviors {self.getOtherRunning()}, can't move to vertex.")
-            return behavior.onFinish(lambda: self.onMoveToVertex(event, vertex))
+        for behavior in self.getOtherRunningBehaviors():
+            if not behavior.IS_BACKGROUND_TASK:
+                Logger().warning(f"I have other non background tasks running {self.getOtherRunningBehaviors()}, can't move to vertex.")
+                return behavior.onFinish(lambda: self.onMoveToVertex(event, vertex))
         if PlayedCharacterManager().currVertex is not None:
             if PlayedCharacterManager().currVertex.UID != vertex.UID:
-                self.travelUsingZaap(vertex.mapId, vertex.zoneId, callback=self.onDestvertexTrip)
+                self.travelUsingZaap(vertex.mapId, vertex.zoneId, callback=self.onDestVertexTrip)
             else:
                 Logger().info("Dest vertex is the same as the current player vertex")
         else:
             Logger().error("Can't move with unknown player vertex")
             self.onceMapProcessed(lambda: self.onMoveToVertex(event, vertex))
 
-    def onDestvertexTrip(self, code, error):
+    def onDestVertexTrip(self, code, error):
         if error:
             Logger().error(f"Error while trying to move to destination vertex : {error}")
 

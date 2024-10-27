@@ -45,6 +45,7 @@ class MultiplePathsResourceFarm(AbstractBehavior):
         if err:
             Logger().debug(f"Error[{code}] during the farm path : {err}")
             self.forbidden_paths.append(self.currentPath)
+
         Logger().info(f"Starting next path")
         try:
             self.currentPath = next(self.iterPathsList)

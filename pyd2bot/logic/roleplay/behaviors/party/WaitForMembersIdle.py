@@ -1,6 +1,5 @@
 import json
 import threading
-from typing import TYPE_CHECKING
 
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
 from pyd2bot.data.models import Character
@@ -16,9 +15,6 @@ from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterMa
     PlayedCharacterManager
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 
-if TYPE_CHECKING:
-    pass
-
 class WaitForMembersIdle(AbstractBehavior):
     GET_STATUS_TIMEOUT = 992
     MEMBER_RECONNECT_WAIT_TIMEOUT = 30
@@ -31,32 +27,40 @@ class WaitForMembersIdle(AbstractBehavior):
         self.memberStatus = dict[str, str]()
         self.members = list[Character]()
 
-    def run(self, members: list[Character]) -> bool:
+    def run(self, members: list[Character], leader: Character) -> bool:
+        self.leader = leader
         self.members = members
-        Logger().debug("Waiting for party members Idle.")
         thread_name = threading.current_thread().name
         self.status_thread = threading.Thread(target=self.fetchStatuses, name=thread_name)
         self.status_thread.daemon = True
         self.status_thread.start()
         
     def fetchStatuses(self):
+        Logger().debug("Fetch status started")
         if not self.isRunning():
             return
         while not Kernel().worker.terminated.is_set():
+            Logger().debug("Fetching members statuses ...")
             self.memberStatus = {member.accountId: self.getMuleStatus(member.accountId) for member in self.members}
-            Logger().info(json.dumps(self.memberStatus, indent=2))
+            Logger().debug(json.dumps(self.memberStatus, indent=2))
             if any(status != "idle" for status in self.memberStatus.values()):
+                Logger().info(f"Some of the members are not idle!")
                 if any(status == "disconnected" for status in self.memberStatus.values()):
-                    if Kernel().worker.terminated.wait(20): 
+                    Logger().debug("Some members are disconnected will wait for 10 seconds before fetching again")
+                    if Kernel().worker.terminated.wait(5):
+                        Logger().debug("fetch members status will shutdown because worker terminated!")
                         return
                 else:
-                    if Kernel().worker.terminated.wait(2): 
+                    if Kernel().worker.terminated.wait(2):
+                        Logger().debug("fetch members status will shutdown because worker terminated!")
                         return
             else:
                 Logger().info(f"All members are idle.")
                 return self.finish(True, None)
+        Logger().debug("Fetch status finished because worker is terminated")
     
     def getMuleStatus(self, instanceId):
+        Logger().debug(f"Fetching player {instanceId} status")
         if not ConnectionsHandler.getInstance(instanceId) or \
             ConnectionsHandler.getInstance(instanceId).connectionType == ConnectionType.DISCONNECTED:
             return "disconnected"
@@ -70,7 +74,9 @@ class WaitForMembersIdle(AbstractBehavior):
             return "loadingMap"
         elif not Kernel.getInstance(instanceId).roleplayEntitiesFrame.mcidm_processed:
             return "processingMapData"
+        Logger().debug(f"Checking if player {instanceId} is running behaviors")
         for behavior in AbstractBehavior.getSubs(instanceId):
-            if type(behavior).__name__ != "MuleFighter" and behavior.isRunning():
+            Logger().debug(f"Player {instanceId} is running {type(behavior).__name__} behavior")
+            if type(behavior).__name__ != "MuleFighter" and behavior.isRunning() and not behavior.IS_BACKGROUND_TASK:
                 return str(behavior)
         return "idle"

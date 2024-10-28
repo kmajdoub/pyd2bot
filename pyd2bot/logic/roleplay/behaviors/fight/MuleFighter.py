@@ -1,4 +1,3 @@
-
 from time import perf_counter
 
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
@@ -34,17 +33,40 @@ class MuleFighter(AbstractBehavior):
         self.leader = leader
     
     def run(self):
-        self.checkIfLeaderInFight()
         self.on(KernelEvent.FightSwordShowed, self.onFightStarted)
         self.on(KernelEvent.ServerTextInfo, self.onServerNotif)
+        self.on(KernelEvent.FightEnded, self.onFightEnd)
         BotEventsManager().on(BotEventsManager.MOVE_TO_VERTEX, self.onMoveToVertex, originator=self)
+        self.checkPlayerState()
     
+    def onRevived(self, code, error, callback=None):
+        if error:
+            KernelEventsManager().send(KernelEvent.ClientShutdown, f"Error[{code}] while auto-reviving player: {error}")
+            return 
+        Logger().debug(f"Bot back on form, can continue mule fighting!")
+        if callback is not None:
+            callback()
+
+    def onFightEnd(self, event):
+        Logger().debug("Fight ended, waiting for roleplay to start before checking status")
+        self.once(KernelEvent.RoleplayStarted, lambda e: self.onceMapProcessed(self.checkPlayerState))
+
+    def checkPlayerState(self):
+        if PlayedCharacterManager().isDead():
+            Logger().warning("Mule is dead, we need to revive it!")
+            self.autoRevive(callback=lambda code, err: self.onRevived(code, err))
+
     def onMoveToVertex(self, event: Event, vertex: Vertex):
         Logger().info(f"Move to vertex {vertex} received")
+        if PlayedCharacterManager().isDead():
+            Logger().warning(f"Player is dead need to revive it first.")
+            return self.autoRevive(callback=lambda code, err: self.onRevived(code, err))
+        
         for behavior in self.getOtherRunningBehaviors():
             if not behavior.IS_BACKGROUND_TASK:
                 Logger().warning(f"I have other non background tasks running {self.getOtherRunningBehaviors()}, can't move to vertex.")
                 return behavior.onFinish(lambda: self.onMoveToVertex(event, vertex))
+
         if PlayedCharacterManager().currVertex is not None:
             if PlayedCharacterManager().currVertex.UID != vertex.UID:
                 self.travelUsingZaap(vertex.mapId, vertex.zoneId, callback=self.onDestVertexTrip)
@@ -88,11 +110,12 @@ class MuleFighter(AbstractBehavior):
     def onFightStarted(self, event: Event, infos: FightCommonInformations):
         for team in infos.fightTeams:
             if team.leaderId == self.leader.id:
+                Logger().debug("Leader started a fight!")
                 self.fightId = infos.fightId
                 return self.joinFight()
     
-    def onfight(self, event) -> None:
-        Logger().info("Leader fight joigned successfully")
+    def onFight(self, event) -> None:
+        Logger().info("Leader fight joined successfully")
 
     def onJoinFightTimeout(self, listener: Listener) -> None:
         Logger().warning("Join fight request timeout")
@@ -102,7 +125,7 @@ class MuleFighter(AbstractBehavior):
     def joinFight(self):
         self.joinFightListener = KernelEventsManager().once(
             KernelEvent.FightStarted, 
-            self.onfight, 
+            self.onFight, 
             timeout=self.FIGHT_JOIN_TIMEOUT, 
             ontimeout=self.onJoinFightTimeout, 
             originator=self
@@ -113,14 +136,6 @@ class MuleFighter(AbstractBehavior):
         gfjrmsg = GameFightJoinRequestMessage()
         gfjrmsg.init(self.leader.id, self.fightId)
         ConnectionsHandler().send(gfjrmsg)
-
-    def checkIfLeaderInFight(self):
-        if not PlayedCharacterManager().isFighting and Kernel().roleplayEntitiesFrame:
-            for fightId, fight in Kernel().roleplayEntitiesFrame._fights.items():
-                for team in fight.teams:
-                    if team.teamInfos.leaderId == self.leader.id:
-                        self.fightId = fightId
-                        return self.joinFight()
     
     def stop(self):
         self.finish(True, None)

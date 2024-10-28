@@ -14,7 +14,10 @@ from pydofus2.com.ankamagames.dofus.kernel.net.ConnectionType import \
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import \
     PlayedCharacterManager
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
-
+from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
+from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import \
+    KernelEventsManager
+    
 class WaitForMembersIdle(AbstractBehavior):
     GET_STATUS_TIMEOUT = 992
     MEMBER_RECONNECT_WAIT_TIMEOUT = 30
@@ -61,22 +64,28 @@ class WaitForMembersIdle(AbstractBehavior):
     
     def getMuleStatus(self, instanceId):
         Logger().debug(f"Fetching player {instanceId} status")
-        if not ConnectionsHandler.getInstance(instanceId) or \
-            ConnectionsHandler.getInstance(instanceId).connectionType == ConnectionType.DISCONNECTED:
-            return "disconnected"
-        elif ConnectionsHandler.getInstance(instanceId).connectionType == ConnectionType.TO_LOGIN_SERVER:
-            return "authenticating"
-        if PlayedCharacterManager.getInstance(instanceId).isInFight:
-            return "fighting"
-        elif not Kernel.getInstance(instanceId).roleplayEntitiesFrame:
-            return "outOfRolePlay"
-        elif MapDisplayManager.getInstance(instanceId).currentDataMap is None:
-            return "loadingMap"
-        elif not Kernel.getInstance(instanceId).roleplayEntitiesFrame.mcidm_processed:
-            return "processingMapData"
-        Logger().debug(f"Checking if player {instanceId} is running behaviors")
-        for behavior in AbstractBehavior.getSubs(instanceId):
-            Logger().debug(f"Player {instanceId} is running {type(behavior).__name__} behavior")
-            if type(behavior).__name__ != "MuleFighter" and behavior.isRunning() and not behavior.IS_BACKGROUND_TASK:
-                return str(behavior)
-        return "idle"
+        try:
+            if not ConnectionsHandler.getInstance(instanceId) or \
+                ConnectionsHandler.getInstance(instanceId).connectionType == ConnectionType.DISCONNECTED:
+                return "disconnected"
+            elif ConnectionsHandler.getInstance(instanceId).connectionType == ConnectionType.TO_LOGIN_SERVER:
+                return "authenticating"
+            if PlayedCharacterManager.getInstance(instanceId).isInFight:
+                return "fighting"
+            elif not Kernel.getInstance(instanceId).roleplayEntitiesFrame:
+                return "outOfRolePlay"
+            elif MapDisplayManager.getInstance(instanceId).currentDataMap is None:
+                return "loadingMap"
+            elif not Kernel.getInstance(instanceId).roleplayEntitiesFrame.mcidm_processed:
+                return "processingMapData"
+            elif PlayedCharacterManager.getInstance(instanceId).isDead():
+                return "muleIsDead"
+            Logger().debug(f"Checking if player {instanceId} is running behaviors")
+            for behavior in AbstractBehavior.getSubs(instanceId):
+                if type(behavior).__name__ != "MuleFighter" and behavior.isRunning() and not behavior.IS_BACKGROUND_TASK:
+                    return type(behavior).__name__
+            return "idle"
+        except Exception as e:
+            Logger().error("Something went wrong while fetching mule status", exc_info=True)
+            KernelEventsManager().send(KernelEvent.ClientShutdown, f"Error while fetching mule status: {e}")
+            raise

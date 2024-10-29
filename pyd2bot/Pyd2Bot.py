@@ -39,7 +39,7 @@ class Pyd2Bot(DofusClient):
         self._stats_collector = None
         self._main_behavior = None
         self._stats_auto_upgrade = None
-    
+
     def checkBreed(self, session: Session):
         if session.character.breedId not in BotSettings.defaultBreedConfig:
             supported_breeds = [BreedEnum.get_name(breedId) for breedId in BotSettings.defaultBreedConfig]
@@ -146,18 +146,18 @@ class Pyd2Bot(DofusClient):
                 afterTime=int(nap_duration_minutes * 60),
             )
             return
-        
+
         if err:
             Logger().error(err, exc_info=True)
             self.shutdown(DisconnectionReasonEnum.EXCEPTION_THROWN, err)
         else:
             self.shutdown(DisconnectionReasonEnum.WANTED_SHUTDOWN, "Main behavior ended successfully with code %s" % code)
-            
+
     def onTakeNapTimer(self, mainBehavior: AbstractBehavior):
         self._taking_a_nap = True
         if mainBehavior:
             mainBehavior.stop()
-        
+
     def switchActivity(self, code, err):
         self.onReconnect(None, f"Fake disconnect and take nap", afterTime=random.random() * 60 * 3)
 

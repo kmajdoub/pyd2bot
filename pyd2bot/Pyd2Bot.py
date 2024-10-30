@@ -17,6 +17,8 @@ from pyd2bot.logic.roleplay.behaviors.fight.MuleFighter import MuleFighter
 from pyd2bot.logic.roleplay.behaviors.fight.SoloFarmFights import SoloFarmFights
 from pyd2bot.logic.roleplay.behaviors.quest.ClassicTreasureHunt import ClassicTreasureHunt
 from pyd2bot.data.models import Session
+from pyd2bot.logic.roleplay.messages.TakeNapMessage import TakeNapMessage
+from pyd2bot.misc.BotEventsManager import BotEventsManager
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
 from pydofus2.com.ankamagames.dofus.kernel.net.DisconnectionReasonEnum import DisconnectionReasonEnum
 from pydofus2.com.ankamagames.dofus.network.enums.BreedEnum import BreedEnum
@@ -36,6 +38,7 @@ class Pyd2Bot(DofusClient):
         self.setCredentials(session.credentials.apikey, session.credentials.certId, session.credentials.certHash)
         self._stateUpdateListeners = []
         self._taking_a_nap = False
+        self._nap_duration = None
         self._stats_collector = None
         self._main_behavior = None
         self._stats_auto_upgrade = None
@@ -77,6 +80,13 @@ class Pyd2Bot(DofusClient):
         
     def startSessionMainBehavior(self):
         Logger().info(f"Starting main behavior for {self.name}, sessionType : {self.session.type.name}")
+        
+        BotEventsManager().on(
+            BotEventsManager.TAKE_NAP, 
+            self._on_take_nap, 
+            originator=self
+        )
+                
         mainBehavior = None
         
         if self.session.isFarmSession:
@@ -124,26 +134,54 @@ class Pyd2Bot(DofusClient):
             mainBehavior.start(callback=self.onMainBehaviorFinish)
 
         elif self.session.isMixed:
-            mainBehavior = random.choice([ResourceFarm(60 * 5), SoloFarmFights(60 * 3)])
+            mainBehavior = random.choice([ResourceFarm(60 * 5), SoloFarmFights(60 * 3), ClassicTreasureHunt()])
             mainBehavior.start(callback=self.switchActivity)
 
         self._main_behavior = mainBehavior
-        nap_timeout_hours = BotSettings.generate_random_nap_timeout()
         
-        self.nap_take_timer = BenchmarkTimer(
-            int(nap_timeout_hours * 60 * 60),
-            lambda: self.onTakeNapTimer(mainBehavior),
-        )
-        
-        self.nap_take_timer.start()
+        if not self.session.isMuleFighter:
+            nap_timeout_hours = BotSettings.generate_random_nap_timeout()
+            
+            self.nap_take_timer = BenchmarkTimer(
+                int(nap_timeout_hours * 60 * 60),
+                lambda: self.onTakeNapTimer(mainBehavior),
+            )
+            
+            self.nap_take_timer.start()
 
-    def onMainBehaviorFinish(self, code, err):
-        if self._taking_a_nap:
-            nap_duration_minutes = BotSettings.generate_random_nap_duration()
+    def _on_take_nap(self, event, nap_duration):
+        """Handle incoming nap notifications from leader"""
+        Logger().info(f"[{self.name}] Received nap notification for {nap_duration} minutes")
+        
+        if not isinstance(nap_duration, int) or nap_duration <= 0:
+            Logger().error(f"[{self.name}] Invalid nap duration received: {nap_duration}")
+            return
+            
+        self._nap_duration = nap_duration
+        self._taking_a_nap = True
+        
+        if self._main_behavior:
+            Logger().info(f"[{self.name}] Stopping current behavior before nap")
+            self._main_behavior.stop()
+        else:
+            Logger().info(f"[{self.name}] No active behavior, starting nap immediately")
             self.onReconnect(
                 None,
-                "Taking a nap for %s minutes" % nap_duration_minutes,
-                afterTime=int(nap_duration_minutes * 60),
+                f"Taking a nap for {self._nap_duration} minutes",
+                afterTime=int(self._nap_duration * 60),
+            )
+
+    def onMainBehaviorFinish(self, code, err):
+        self._main_behavior = None
+        
+        if self._taking_a_nap:
+            self._taking_a_nap = False
+            if self._nap_duration is None:
+                self._nap_duration = BotSettings.generate_random_nap_duration()
+            self.onReconnect(
+                None,
+                "Taking a nap for %s minutes" % self._nap_duration,
+                afterTime=int(self._nap_duration * 60),
             )
             return
 
@@ -154,8 +192,26 @@ class Pyd2Bot(DofusClient):
             self.shutdown(DisconnectionReasonEnum.WANTED_SHUTDOWN, "Main behavior ended successfully with code %s" % code)
 
     def onTakeNapTimer(self, mainBehavior: AbstractBehavior):
+        """Handle nap timer expiration for leader"""
         self._taking_a_nap = True
+        self._nap_duration = BotSettings.generate_random_nap_duration()
+        
+        # If this is a group leader, notify followers
+        if self.session.type == SessionTypeEnum.GROUP_FIGHT:
+            Logger().info(f"[{self.name}] Leader notifying {len(self.session.followers)} followers of {self._nap_duration} minute nap")
+            for follower in self.session.followers:
+                try:
+                    follower_instance = Kernel.getInstance(follower.accountId)
+                    if follower_instance:
+                        follower_instance.worker.process(TakeNapMessage(self._nap_duration))
+                        Logger().debug(f"[{self.name}] Sent nap notification to follower {follower.accountId}")
+                    else:
+                        Logger().warn(f"[{self.name}] Follower instance not found: {follower.accountId}")
+                except Exception as e:
+                    Logger().error(f"[{self.name}] Error notifying follower {follower.accountId}: {str(e)}")
+        
         if mainBehavior:
+            Logger().info(f"[{self.name}] Stopping behavior for nap")
             mainBehavior.stop()
 
     def switchActivity(self, code, err):

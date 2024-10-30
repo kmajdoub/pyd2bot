@@ -27,6 +27,7 @@ class BotEventsManager(EventsHandler, metaclass=Singleton):
     SELLER_AVAILABLE = auto()
     MOVE_TO_VERTEX = auto()
     ALL_MEMBERS_JOINED_FIGHT = auto()
+    TAKE_NAP = auto()
 
     def __init__(self):
         super().__init__()

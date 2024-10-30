@@ -27,6 +27,7 @@ from pydofus2.com.ankamagames.jerakine.benchmark.BenchmarkTimer import \
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 from pydofus2.com.ankamagames.jerakine.messages.Frame import Frame
 from pydofus2.com.ankamagames.jerakine.types.enums.Priority import Priority
+from pyd2bot.logic.roleplay.messages.TakeNapMessage import TakeNapMessage
 
 
 class BotRPCFrame(Frame):
@@ -77,7 +78,7 @@ class BotRPCFrame(Frame):
                 return True
 
             elif isinstance(msg, ComeToCollectMessage):
-                def onresponse(result, error):
+                def on_response(result, error):
                     if error:
                         Logger().error(f"[RPCFrame] Error while trying to meet the guest {msg.guestInfos.accountId} to collect resources: {error}")
                     for _, instance in Kernel.getInstances():
@@ -92,15 +93,23 @@ class BotRPCFrame(Frame):
                     return True
                 rsp = RPCResponseMessage(msg, data=True)
                 self.send(rsp)
-                CollectItems().start(msg.bankInfos, msg.guestInfos, None, callback=onresponse)
+                CollectItems().start(msg.bankInfos, msg.guestInfos, None, callback=on_response)
                 return True
         
         elif isinstance(msg, MoveToVertexMessage):
             BotEventsManager().send(BotEventsManager.MOVE_TO_VERTEX, msg.vertex)
             return True
-        
+
+        elif isinstance(msg, TakeNapMessage):
+            Logger().info(f"[{threading.current_thread().name}] Processing nap notification for {msg.nap_duration} minutes")
+            try:
+                BotEventsManager().send(BotEventsManager.TAKE_NAP, msg.nap_duration)
+            except Exception as e:
+                Logger().error(f"Error processing nap notification: {str(e)}")
+            return True
+
         elif isinstance(msg, FollowTransitionMessage):
-            Logger().info(f"Will follow transision {msg.transition}")
+            Logger().info(f"Will follow transition {msg.transition}")
             if msg.transition.transitionMapId == PlayedCharacterManager().currentMap.mapId:
                 Logger().warning(
                     f"Transition is heading to my current map ({msg.transition.transitionMapId}), nothing to do."

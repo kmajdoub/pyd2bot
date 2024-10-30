@@ -66,7 +66,7 @@ class MuleFighter(AbstractBehavior):
         
         # Initial state check
         self._check_player_state()
-
+        
     def _check_player_state(self):
         """Verify player state and handle revival if needed"""
         if PlayedCharacterManager().isDead():

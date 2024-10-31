@@ -61,8 +61,8 @@ class ClassicTreasureHunt(AbstractBehavior):
     UNSUPPORTED_HUNT_TYPE = 475557
     UNSUBSCRIBED = 475558
     TAKE_QUEST_MAPID = 128452097
-    TAKE_QUEST_ZONEID = 1
-    TREASURE_HUNT_ATM_IEID = 484993
+    TAKE_QUEST_ZONE_ID = 1
+    TREASURE_HUNT_ATM_IE_ID = 484993
     TREASURE_HUNT_ATM_SKILLUID = 152643320
     RAPPEL_POTION_GUID = 548
     CHESTS_GUID = [15260, 15248, 15261, 15262, 15560, 15270, 15264 ]
@@ -186,7 +186,7 @@ class ClassicTreasureHunt(AbstractBehavior):
                 self.TAKE_QUEST_MAPID, withSaveZaap=True, maxCost=self.maxCost, callback=self.onTakeQuestMapReached
             )
         else:
-            self.autoTrip(self.TAKE_QUEST_MAPID, self.TAKE_QUEST_ZONEID, callback=self.onTakeQuestMapReached)
+            self.autoTrip(self.TAKE_QUEST_MAPID, self.TAKE_QUEST_ZONE_ID, callback=self.onTakeQuestMapReached)
 
     def goToHuntAtm(self):
         Logger().debug(f"AutoTraveling to treasure hunt ATM")
@@ -248,7 +248,7 @@ class ClassicTreasureHunt(AbstractBehavior):
             return self.finish(code, err)
         Logger().debug(f"Getting treasure hunt from distributor")
         self.useSkill(
-            elementId=self.TREASURE_HUNT_ATM_IEID,
+            elementId=self.TREASURE_HUNT_ATM_IE_ID,
             skilluid=self.TREASURE_HUNT_ATM_SKILLUID,
             callback=self.onTreasureHuntTaken,
         )

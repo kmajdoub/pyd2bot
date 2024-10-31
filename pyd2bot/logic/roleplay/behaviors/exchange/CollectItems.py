@@ -11,8 +11,8 @@ from pydofus2.com.ankamagames.berilia.managers.Listener import Listener
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 
 
-class CollecteState(Enum):
-    WATING_MAP = 0
+class CollectState(Enum):
+    WAITING_MAP = 0
     IDLE = 4
     GOING_TO_BANK = 1
     INSIDE_BANK = 8
@@ -36,13 +36,13 @@ class CollectItems(AbstractBehavior):
         self.guest = guest
         self.bankInfos = bankInfos
         self.items = items
-        self.state = CollecteState.GOING_TO_BANK
+        self.state = CollectState.GOING_TO_BANK
         self.guestDisconnectedListener = BotEventsManager().onceBotDisconnected(self.guest.accountId, self.onGuestDisconnected, originator=self)
         self.travelUsingZaap(self.bankInfos.npcMapId, callback=self.onTripEnded)
 
     def onGuestDisconnected(self):
         Logger().error("[CollectFromGuest] Guest disconnected!")
-        if self.state == CollecteState.EXCHANGING_WITH_GUEST:
+        if self.state == CollectState.EXCHANGING_WITH_GUEST:
             BotExchange().stop()
         self.finish(True, None)
 
@@ -51,7 +51,7 @@ class CollectItems(AbstractBehavior):
             return
         if error is not None:
             return self.finish(False, error)        
-        self.state = CollecteState.EXCHANGING_WITH_GUEST
+        self.state = CollectState.EXCHANGING_WITH_GUEST
         BotExchange().start(ExchangeDirectionEnum.RECEIVE, self.guest, self.items, callback=self.onExchangeConcluded, parent=self)
     
     def onExchangeConcluded(self, code, error):
@@ -60,10 +60,10 @@ class CollectItems(AbstractBehavior):
             if code == 516493: # Inventory full
                 Logger().error(error)
                 UnloadInBank().start(True, self.bankInfos, callback=self.finish, parent=self)
-                self.state = CollecteState.UNLOADING_IN_BANK
+                self.state = CollectState.UNLOADING_IN_BANK
                 return
             return self.finish(code, error)
         Logger().info("[CollectFromGuest] Exchange with guest ended successfully.")
         UnloadInBank().start(True, self.bankInfos, callback=self.finish, parent=self)
-        self.state = CollecteState.UNLOADING_IN_BANK
+        self.state = CollectState.UNLOADING_IN_BANK
 

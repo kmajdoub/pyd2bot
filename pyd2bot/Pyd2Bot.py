@@ -2,7 +2,7 @@ import random
 
 from pyd2bot.BotSettings import BotSettings
 from pyd2bot.data.enums import SessionTypeEnum
-from pyd2bot.logic.roleplay.behaviors.exchange.SellItem import SellItem
+from pyd2bot.logic.roleplay.behaviors.bidhouse.SellFromBagBehavior import SellFromBagBehavior
 from pyd2bot.logic.roleplay.behaviors.updates.AutoUpgradeStats import AutoUpgradeStats
 from pyd2bot.logic.roleplay.behaviors.updates.CollectStats import CollectStats
 from pyd2bot.logic.common.frames.BotRPCFrame import BotRPCFrame
@@ -81,8 +81,8 @@ class Pyd2Bot(DofusClient):
         
     def startSessionMainBehavior(self):
         Logger().info(f"Starting main behavior for {self.name}, sessionType : {self.session.type.name}")
-        self._main_behavior = SellItem()
-        self._main_behavior.start(747, 100, callback=self.onMainBehaviorFinish)
+        self._main_behavior = SellFromBagBehavior(312, 100)
+        self._main_behavior.start(callback=self.onMainBehaviorFinish)
         return
         
         BotEventsManager().on(

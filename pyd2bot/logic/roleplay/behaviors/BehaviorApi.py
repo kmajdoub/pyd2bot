@@ -52,19 +52,25 @@ class BehaviorApi:
     def travelUsingZaap(self, dstMapId, dstZoneId=None, withSaveZaap=False, maxCost=None, excludeMaps=[], check_special_dest=True, callback=None):
         from pyd2bot.logic.roleplay.behaviors.movement.AutoTripUseZaap import \
             AutoTripUseZaap
-        
+            
+        currVertex = PlayedCharacterManager().currVertex
+        if currVertex.mapId == dstMapId:
+            if dstZoneId is None or currVertex.zoneId == dstZoneId:
+                Logger().info("Player already at the destination!")
+                return callback(0, None)
+                
         if check_special_dest:
             if self.checkSpecialDestination(dstMapId, dstZoneId, callback=callback):
                 return
             
         if not maxCost:
-            maxCost = InventoryManager().inventory.kamas * 0.3
+            maxCost = InventoryManager().inventory.kamas
             Logger().debug(f"Player max teleport cost is {maxCost}")
 
         dstsubArea = SubArea.getSubAreaByMapId(dstMapId)
         
         if PlayerManager().isBasicAccount() and not dstsubArea.basicAccountAllowed:
-            return callback(0, "Destination map is not allowed for basic accounts!")
+            return callback(1, "Destination map is not allowed for basic accounts!")
             
         if PlayedCharacterManager().currentSubArea.id == self.CELECTIAL_SUBAREA_ID and dstsubArea.id != self.CELECTIAL_SUBAREA_ID:
             Logger().info(f"Player is in celestial dimension, and wants to get out of there.")
@@ -381,6 +387,44 @@ class BehaviorApi:
             UnloadInBank
 
         UnloadInBank().start(return_to_start, bankInfos, callback=callback, parent=self)
+
+    def retrieveFromBank(self, items_gids: list[int], get_max_quantities: bool = True, return_to_start: bool = False, bank_infos=None, callback=None):
+        """
+        Retrieve items from bank by their GIDs.
+        
+        Args:
+            items_gids: List of item GIDs to retrieve
+            get_max_quantities: Whether to get all available quantities (True) or specific amounts (False)
+            return_to_start: Whether to return to starting position after retrieval
+            bank_infos: Optional bank location info, will find closest if not provided
+            callback: Completion callback function
+        """
+        from pyd2bot.logic.roleplay.behaviors.bank.RetrieveFromBank import RetrieveFromBank
+        
+        behavior = RetrieveFromBank()
+        behavior.start(items_gids, get_max_quantities, return_to_start, bank_infos, callback=callback, parent=self)
+        return behavior
+
+    def sellFromBag(
+        self, 
+        object_gid: int, 
+        quantity: int, 
+        callback=None
+    ):
+        """
+        Sell items from inventory in the marketplace.
+        Automatically travels to marketplace and lists items at competitive prices.
+        
+        Args:
+            object_gid: GID of the item to sell
+            quantity: Quantity of items to sell in each listing
+            callback: Completion callback function
+        """
+        from pyd2bot.logic.roleplay.behaviors.bidhouse.SellFromBagBehavior import SellFromBagBehavior
+        
+        behavior = SellFromBagBehavior(object_gid, quantity)
+        behavior.start(callback=callback, parent=self)
+        return behavior
 
     def on(self, event_id, callback, timeout=None, ontimeout=None, retryNbr=None, retryAction=None, once=False):
         return KernelEventsManager().on(

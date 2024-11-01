@@ -1,5 +1,6 @@
 from typing import Optional, Tuple
 
+from pyd2bot.data.enums import ServerNotificationEnum
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
 from pydofus2.com.ankamagames.dofus.internalDatacenter.items.ItemWrapper import ItemWrapper
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
@@ -7,6 +8,7 @@ from pydofus2.com.ankamagames.dofus.kernel.net.ConnectionsHandler import Connect
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.InventoryManager import InventoryManager
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import PlayedCharacterManager
 from pydofus2.com.ankamagames.dofus.network.messages.game.context.roleplay.npc.NpcGenericActionRequestMessage import NpcGenericActionRequestMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.dialog.LeaveDialogRequestMessage import LeaveDialogRequestMessage
 from pydofus2.com.ankamagames.dofus.network.messages.game.inventory.exchanges.ExchangeBidHouseInListUpdatedMessage import ExchangeBidHouseInListUpdatedMessage
 from pydofus2.com.ankamagames.dofus.network.messages.game.inventory.exchanges.ExchangeBidHouseItemRemoveOkMessage import ExchangeBidHouseItemRemoveOkMessage
 from pydofus2.com.ankamagames.dofus.network.messages.game.inventory.exchanges.ExchangeBidHouseSearchMessage import ExchangeBidHouseSearchMessage
@@ -44,7 +46,8 @@ class AbstractMarketBehavior(AbstractBehavior):
         "INVALID_QUANTITY": 7676967,
         "OBJECT_NOT_FOUND": 7676966,
         "HDV_NOT_FOUND": 7676999,
-        "INSUFFICIENT_KAMAS": 7676968
+        "INSUFFICIENT_KAMAS": 7676968,
+        "NO_MORE_SELL_SLOTS": 78876968
     }
 
     # States where we're actively selling/updating
@@ -61,22 +64,25 @@ class AbstractMarketBehavior(AbstractBehavior):
         self._item: Optional[ItemWrapper] = None
         self.hdv_vertex = None
         self.path_to_hdv = None
+        self.item_category = None
         self.on(KernelEvent.MessageReceived, self._handle_message)
+        self.on(KernelEvent.ServerTextInfo, self._on_server_notif)
 
+    def _on_server_notif(self, event, msgId, msgType, textId, msgContent, params):
+        if textId == ServerNotificationEnum.CANT_SELL_ANYMORE_ITEMS:
+            self.finish(self.ERROR_CODES["NO_MORE_SELL_SLOTS"], "There is no more sell slot")
+            
     def _validate_marketplace_access(self) -> bool:
         """
         Validate marketplace accessibility and setup paths
         Returns: bool indicating if access is valid
         """
-        if not self._item:
-            return self.finish(self.ERROR_CODES["OBJECT_NOT_FOUND"], "Item not found in inventory")
-            
         # Get marketplace type for item category
-        hdv_gfx_id = self.ITEM_TYPE_TO_MARKETPLACE_GFX_ID.get(self._item.category)
+        hdv_gfx_id = self.ITEM_TYPE_TO_MARKETPLACE_GFX_ID.get(self.item_category)
         if not hdv_gfx_id:
             return self.finish(
                 self.ERROR_CODES["HDV_NOT_FOUND"], 
-                f"Unsupported item category: {self._item.category}"
+                f"Unsupported item category: {self.item_category}"
             )
             
         # Find path to nearest marketplace
@@ -123,7 +129,6 @@ class AbstractMarketBehavior(AbstractBehavior):
                     self._logger.info("Initialize market state with rules from seller descriptor")
                     self._market.init_from_seller_descriptor(msg)
                     self._handle_sell_mode_msg(msg)
-                return
 
             # Handle item type descriptions
             if isinstance(msg, ExchangeTypesItemsExchangerDescriptionForUserMessage):
@@ -131,14 +136,12 @@ class AbstractMarketBehavior(AbstractBehavior):
                 if msg.objectGID == self.object_gid:
                     self._market.handle_type_description(msg)
                     self._handle_search_msg(msg)  # Continue the behavior chain
-                return
         
             # Price check response - update market state
             if isinstance(msg, ExchangeBidPriceForSellerMessage):
                 if msg.genericId == self.object_gid:
                     self._market.handle_price_info(msg)
                     self._handle_price_msg(msg)  # <-- This is key - continue the behavior chain
-                return
 
             # Price updates (process in any state)
             if isinstance(msg, ExchangeBidHouseInListUpdatedMessage):
@@ -148,16 +151,14 @@ class AbstractMarketBehavior(AbstractBehavior):
                         for quantity, old_price, new_price in changes:
                             if quantity == self.quantity:
                                 self._on_price_changed(old_price, new_price)
-                return
 
             # Handle removals/sales
             if isinstance(msg, ExchangeBidHouseItemRemoveOkMessage):
-                if msg.sellerId == PlayedCharacterManager().id:
-                    listing = self._market.handle_listing_remove(msg)
-                    if listing:
-                        self._on_listing_removed(listing)
-                return
-
+                # msg.sellerId is actually the objectUID of the removed listing
+                listing = self._market.remove_listing(msg.sellerId)
+                if listing:
+                    self._on_listing_removed(listing)
+                    self._logger.info(f"Removed listing {listing.uid} from market state")
 
             # Let subclasses handle other messages
             self._handle_behavior_specific(msg)
@@ -171,7 +172,7 @@ class AbstractMarketBehavior(AbstractBehavior):
         self._logger.debug("Opening marketplace...")
         self._state = "OPENING_HDV"
         
-        if self._item.category == ItemCategoryEnum.RESOURCES_CATEGORY:
+        if self.item_category == ItemCategoryEnum.RESOURCES_CATEGORY:
             element = Kernel().interactiveFrame.getIeByTypeId(
                 self.RESOURCE_MARKETPLACE_ELEMENT_TYPE_ID
             )
@@ -189,7 +190,7 @@ class AbstractMarketBehavior(AbstractBehavior):
         else:
             return self.finish(
                 self.ERROR_CODES["HDV_NOT_FOUND"],
-                f"Unsupported marketplace type: {self._item.category}"
+                f"Unsupported marketplace type: {self.item_category}"
             )
 
     def _enter_sell_mode(self) -> None:
@@ -265,6 +266,13 @@ class AbstractMarketBehavior(AbstractBehavior):
         msg = ExchangeObjectModifyPricedMessage()
         msg.init(new_price, object_uid, self.quantity)
         ConnectionsHandler().send(msg)
+        
+    def close_marketplace(self):
+        ConnectionsHandler().send(LeaveDialogRequestMessage())
+        return self.on(
+            KernelEvent.LeaveDialog,
+            lambda _: self.finish(0),
+        )
 
     # Callbacks
     def _on_marketplace_map_reached(self, code: int, error: str) -> None:

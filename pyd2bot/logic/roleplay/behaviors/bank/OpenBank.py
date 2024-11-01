@@ -13,9 +13,9 @@ from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 
 
 class OpenBank(AbstractBehavior):
-    STORAGE_OPEN_TIMEDOUT = 9874521
+    STORAGE_OPEN_TIMED_OUT = 9874521
     WRONG_EXCHANGE_TYPE = 556988
-    NOT_ENOUGH_KAMAS = 3258253
+    INSUFFICIENT_KAMAS = 3258253
     
     def __init__(self):
         super().__init__()
@@ -41,25 +41,27 @@ class OpenBank(AbstractBehavior):
 
     def onTextInformation(self, event, msgId, msgType, textId, msgContent, params):
         if textId == ServerNotificationEnum.NOT_ENOUGH_KAMAS:
-            self.finish(self.NOT_ENOUGH_KAMAS, "Not enough kamas to open bank")
+            self.finish(self.INSUFFICIENT_KAMAS, "Insufficient kamas to open bank")
         elif textId == ServerNotificationEnum.KAMAS_LOST:
-            KernelEventsManager().send(KernelEvent.KamasLostFromBankOpen, int(params[0]))
+            self.send(KernelEvent.KamasLostFromBankOpen, int(params[0]))
             
     def onBankManDialogEnded(self, code, error):
         if error:
             return self.finish(code, error)
         Logger().info("Ended bank man dialog waiting for storage to open...")
-        KernelEventsManager().once(
+        self.once(
             event_id=KernelEvent.ExchangeBankStartedWithStorage, 
             callback=self.onStorageOpen,
             timeout=30,
-            ontimeout=lambda: self.finish(self.STORAGE_OPEN_TIMEDOUT, "Dialog with Bank NPC ended correctly but storage didnt open on time!"),
-            originator=self
+            ontimeout=lambda: self.finish(self.STORAGE_OPEN_TIMED_OUT, "Dialog with Bank NPC ended correctly but storage didnt open on time!"),
         )
+    
+    def onBankContent(self, event, objects, kamas):
+        self.finish(0)
         
     def onStorageOpen(self, event, exchangeType, pods):
         if exchangeType == ExchangeTypeEnum.BANK:
             Logger().info("Bank storage opened")
-            return self.finish(True, None)
+            self.once(KernelEvent.InventoryContent, self.onBankContent)
         else:
             self.finish(self.WRONG_EXCHANGE_TYPE ,f"Expected BANK storage to open but another type of exchange '{ExchangeTypeEnum.BANK}'!")

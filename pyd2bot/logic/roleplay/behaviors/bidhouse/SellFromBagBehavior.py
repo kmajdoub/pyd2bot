@@ -32,7 +32,8 @@ class SellFromBagBehavior(AbstractMarketBehavior):
         self._item = self.get_item_from_inventory(self.object_gid)
         if not self._item:
             return self.finish(self.ERROR_CODES["OBJECT_NOT_FOUND"], "Item not found in inventory")
-            
+        
+        self.item_category = self._item.category
         self._quantity_in_inventory = self._item.quantity
         if self._quantity_in_inventory < self.quantity:
             return self.finish(
@@ -87,7 +88,7 @@ class SellFromBagBehavior(AbstractMarketBehavior):
                 self.send_price_check()
             else:
                 self._logger.info("Selling complete - no more full batches available")
-                self.finish(0)
+                self.close_marketplace()
 
     def _handle_sell_mode_msg(self, msg) -> None:
         """Market opened - start price checks"""
@@ -126,4 +127,4 @@ class SellFromBagBehavior(AbstractMarketBehavior):
                 self.finish(self.ERROR_CODES["INSUFFICIENT_KAMAS"], "Insufficient kamas for listing tax")
         else:
             self._logger.warning(f"Market price {prices['min_price']} below minimum {min_acceptable}")
-            self.finish(0)
+            self.close_marketplace()

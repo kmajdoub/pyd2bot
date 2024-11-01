@@ -15,20 +15,9 @@ from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterMa
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 
 
-class BankRetrieveStates(Enum):
-    WAITING_FOR_MAP = -1
-    IDLE = 0
-    WALKING_TO_BANK = 1
-    BANK_OPENED = 7
-    BANK_OPEN_REQUESTED = 4
-    RETRIEVE_REQUEST_SENT = 6
-    LEAVE_BANK_REQUESTED = 5
-    RETURNING_TO_START_POINT = 8
-
 class RetrieveRecipeFromBank(AbstractBehavior):
-    BANK_CLOSE_TIMEDOUT = 89987
-    RETRIEVE_ITEMS_TIMEDOUT = 998877
-    STORAGE_OPEN_TIMEDOUT = 9874521
+    BANK_CLOSE_TIMED_OUT = 89987
+    RETRIEVE_ITEMS_TIMED_OUT = 998877
     
     def __init__(self):
         super().__init__()
@@ -45,8 +34,7 @@ class RetrieveRecipeFromBank(AbstractBehavior):
         self._startMapId = PlayedCharacterManager().currentMap.mapId
         self._startRpZone = PlayedCharacterManager().currentZoneRp
         self.recipesUi = Recipes()
-        self.state = BankRetrieveStates.WALKING_TO_BANK
-        OpenBank().start(self.infos, callback=self.onStorageOpen, parent=self)
+        self.openBank(self.infos, callback=self.onStorageOpen)
     
     def onBankContent(self, event, objects, kamas):
         self.recipesUi.load(storage=StorageState.BANK_MOD, uiName="storage")
@@ -58,7 +46,7 @@ class RetrieveRecipeFromBank(AbstractBehavior):
             timeout=15,
             retryNbr=5,
             retryAction=self.pullItems,
-            ontimeout=lambda: self.finish(self.RETRIEVE_ITEMS_TIMEDOUT, "Pull items from bank storage timeout"),
+            ontimeout=lambda: self.finish(self.RETRIEVE_ITEMS_TIMED_OUT, "Pull items from bank storage timeout"),
         )
         self.pullItems()
         Logger().info("Pull items request sent")
@@ -73,12 +61,11 @@ class RetrieveRecipeFromBank(AbstractBehavior):
 
     def onStorageClose(self, event, success):
         Logger().info("Bank storage closed")
-        self.state = BankRetrieveStates.IDLE
         if self.return_to_start:
             Logger().info(f"Returning to start point")
-            AutoTripUseZaap().start(self._startMapId, self._startRpZone, callback=self.finish, parent=self)
+            self.travelUsingZaap(self._startMapId, self._startRpZone, callback=self.finish)
         else:
-            self.finish(True, None)
+            self.finish(0)
 
     def onInventoryWeightUpdate(self, event, lastWeight, weight, max):
         Logger().info(f"Inventory weight percent changed to : {round(100 * weight / max, 1)}%")
@@ -86,12 +73,11 @@ class RetrieveRecipeFromBank(AbstractBehavior):
             event_id=KernelEvent.ExchangeClose, 
             callback=self.onStorageClose,
             timeout=10,
-            ontimeout=lambda: self.finish(self.BANK_CLOSE_TIMEDOUT, "Bank close timedout!"),
+            ontimeout=lambda: self.finish(self.BANK_CLOSE_TIMED_OUT, "Bank close timed out!"),
             retryNbr=5,
             retryAction=Kernel().commonExchangeManagementFrame.leaveShopStock,
         )
         Kernel().commonExchangeManagementFrame.leaveShopStock()
 
     def pullItems(self):
-        Kernel().exchangeManagementFrame.exchangeObjectTransfertListWithQuantityToInv(self.ids, self.qtys)
-        self.state = BankRetrieveStates.RETRIEVE_REQUEST_SENT
+        Kernel().exchangeManagementFrame.exchangeObjectTransferListWithQuantityToInv(self.ids, self.qtys)

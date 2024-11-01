@@ -141,10 +141,13 @@ class AutoTripUseZaap(AbstractBehavior):
         path_to_src_zaap = Localizer.findPathToClosestZaap(
             self.currMapId, self.maxCost, self.dstZaapMapId
         )
-        if not path_to_src_zaap:
+        if path_to_src_zaap is None:
             return None
-
-        src_zaap = path_to_src_zaap[-1].dst
+        
+        if len(path_to_src_zaap) == 0:
+            src_zaap = PlayedCharacterManager().currVertex
+        else:
+            src_zaap = path_to_src_zaap[-1].dst
 
         # Find path from destination zaap
         dst_vertex = WorldGraph().getVertex(self.dstMapId, self.dstZoneId or 1)

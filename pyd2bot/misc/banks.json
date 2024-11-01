@@ -1,29 +1,34 @@
 {
     "Astrub": {
+        "name": "Astrub_bank",
         "npcMapId": 192415750.0,
         "npcActionId": 3,
         "npcId": -20001,
         "openBankReplyId": 64361
     },
     "Bonta": {
+        "name": "Bonta_bank",
         "npcMapId": 217059328.0,
         "npcActionId": 3,
         "npcId": -20000,
         "openBankReplyId": 63535
     },
     "Suffokia": {
+        "name": "Suffokia_bank",
         "npcMapId": 91753985.0,            
         "npcActionId": 3,
         "npcId": -20000,
         "openBankReplyId": 64367
     },
     "Amakna": {
+        "name": "Amakna_bank",
         "npcMapId": 99095051.0,
         "npcActionId": 3,
         "npcId": -20000,
         "openBankReplyId": 64367
     },
     "Pandala": {
+        "name": "Pandala_bank",
         "npcMapId": 99095051.0,
         "npcActionId": 3,
         "npcId": -20000,

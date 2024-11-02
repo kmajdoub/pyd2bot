@@ -7,9 +7,11 @@ from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
 from pydofus2.com.ankamagames.dofus.kernel.net.ConnectionsHandler import ConnectionsHandler
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.InventoryManager import InventoryManager
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import PlayedCharacterManager
+from pydofus2.com.ankamagames.dofus.network.messages.common.basic.BasicPingMessage import BasicPingMessage
 from pydofus2.com.ankamagames.dofus.network.messages.game.context.roleplay.npc.NpcGenericActionRequestMessage import NpcGenericActionRequestMessage
 from pydofus2.com.ankamagames.dofus.network.messages.game.dialog.LeaveDialogRequestMessage import LeaveDialogRequestMessage
 from pydofus2.com.ankamagames.dofus.network.messages.game.inventory.exchanges.ExchangeBidHouseInListUpdatedMessage import ExchangeBidHouseInListUpdatedMessage
+from pydofus2.com.ankamagames.dofus.network.messages.game.inventory.exchanges.ExchangeBidHouseItemAddOkMessage import ExchangeBidHouseItemAddOkMessage
 from pydofus2.com.ankamagames.dofus.network.messages.game.inventory.exchanges.ExchangeBidHouseItemRemoveOkMessage import ExchangeBidHouseItemRemoveOkMessage
 from pydofus2.com.ankamagames.dofus.network.messages.game.inventory.exchanges.ExchangeBidHouseSearchMessage import ExchangeBidHouseSearchMessage
 from pydofus2.com.ankamagames.dofus.network.messages.game.inventory.exchanges.ExchangeBidHousePriceMessage import ExchangeBidHousePriceMessage
@@ -66,15 +68,10 @@ class AbstractMarketBehavior(AbstractBehavior):
         self.path_to_hdv = None
         self.item_category = None
         self.on(KernelEvent.MessageReceived, self._handle_message)
-        self.on(KernelEvent.ServerTextInfo, self._on_server_notif)
-
-    def _on_server_notif(self, event, msgId, msgType, textId, msgContent, params):
-        if textId == ServerNotificationEnum.CANT_SELL_ANYMORE_ITEMS:
-            self.finish(self.ERROR_CODES["NO_MORE_SELL_SLOTS"], "There is no more sell slot")
             
     def _validate_marketplace_access(self) -> bool:
         """
-        Validate marketplace accessibility and setup paths
+        Validate marketplace accessibility and setup paths 
         Returns: bool indicating if access is valid
         """
         # Get marketplace type for item category
@@ -148,9 +145,15 @@ class AbstractMarketBehavior(AbstractBehavior):
                 if msg.objectGID == self.object_gid:
                     changes = self._market.handle_market_update(msg)
                     if changes:
-                        for quantity, old_price, new_price in changes:
-                            if quantity == self.quantity:
+                        for gid, quantity, old_price, new_price in changes:
+                            if gid == self.object_gid and quantity == self.quantity:
                                 self._on_price_changed(old_price, new_price)
+
+            elif isinstance(msg, ExchangeBidHouseItemAddOkMessage):
+                listing = self._market.handle_listing_add(msg)
+                if listing:
+                    self._on_listing_added(listing)
+                    self._logger.info(f"Added listing {listing.uid} to market state")
 
             # Handle removals/sales
             if isinstance(msg, ExchangeBidHouseItemRemoveOkMessage):
@@ -161,7 +164,7 @@ class AbstractMarketBehavior(AbstractBehavior):
                     self._logger.info(f"Removed listing {listing.uid} from market state")
 
             # Let subclasses handle other messages
-            self._handle_behavior_specific(msg)
+            self._process_message(msg)
                 
         except Exception as e:
             self._logger.error(f"Message handling error: {str(e)}")
@@ -201,25 +204,6 @@ class AbstractMarketBehavior(AbstractBehavior):
         msg = NpcGenericActionRequestMessage()
         msg.init(-1, self.SELL_MODE_ACTION_ID, self.hdv_vertex.mapId)
         ConnectionsHandler().send(msg)
-
-    def _validate_listing(self, price: int) -> Tuple[bool, str]:
-        """
-        Validate listing parameters against market rules
-        Returns: (is_valid, error_message)
-        """
-        is_valid, error = self._market.validate_listing(
-            quantity=self.quantity,
-            price=price,
-            item_level=self._item.level
-        )
-        
-        if not is_valid:
-            return False, error
-            
-        if not self._can_afford_tax(price):
-            return False, "Insufficient kamas for listing tax"
-            
-        return True, ""
 
     def _can_afford_tax(self, price: int) -> bool:
         """Check if player can afford listing tax"""
@@ -267,11 +251,11 @@ class AbstractMarketBehavior(AbstractBehavior):
         msg.init(new_price, object_uid, self.quantity)
         ConnectionsHandler().send(msg)
         
-    def close_marketplace(self):
+    def close_marketplace(self, code=0, err=None):
         ConnectionsHandler().send(LeaveDialogRequestMessage())
         return self.on(
             KernelEvent.LeaveDialog,
-            lambda _: self.finish(0),
+            lambda _: self.finish(code, err),
         )
 
     # Callbacks
@@ -288,7 +272,7 @@ class AbstractMarketBehavior(AbstractBehavior):
         self._enter_sell_mode()
 
     # Abstract methods for subclasses
-    def _handle_behavior_specific(self, msg) -> None:
+    def _process_message(self, msg) -> None:
         """Handle behavior-specific messages"""
         pass
 
@@ -311,7 +295,11 @@ class AbstractMarketBehavior(AbstractBehavior):
     def _on_sale_completed(self, listing: MarketListing) -> None:
         """Handle completed sales"""
         pass
-
+    
+    def _on_listing_added(self, listing: MarketListing) -> None:
+        """Handle listing removals"""
+        pass
+    
     def _on_listing_removed(self, listing: MarketListing) -> None:
         """Handle listing removals"""
         pass

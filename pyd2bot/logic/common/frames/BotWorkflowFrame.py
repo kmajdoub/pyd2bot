@@ -56,10 +56,11 @@ class BotWorkflowFrame(Frame):
             return True
 
     def onServerNotif(self, event, msgId, msgType, textId, text, params):
-        if textId == ServerNotificationEnum.INACTIVITY_WARNING:
-            if not self.session.isSeller:
-                KernelEventsManager().send(KernelEvent.ClientRestart, "Bot stayed inactive for too long, must have a bug")
-            else:
-                pingMsg = BasicPingMessage()
-                pingMsg.init(True)
-                ConnectionsHandler().send(pingMsg)
+        # if textId == ServerNotificationEnum.INACTIVITY_WARNING:
+        #     if not self.session.isSeller:
+        #         KernelEventsManager().send(KernelEvent.ClientRestart, "Bot stayed inactive for too long, must have a bug")
+        #     else:
+        #         pingMsg = BasicPingMessage()
+        #         pingMsg.init(True)
+        #         ConnectionsHandler().send(pingMsg)
+        pass

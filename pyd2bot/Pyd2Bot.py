@@ -3,6 +3,7 @@ import random
 from pyd2bot.BotSettings import BotSettings
 from pyd2bot.data.enums import SessionTypeEnum
 from pyd2bot.logic.roleplay.behaviors.bank.RetrieveFromBank import RetrieveFromBank
+from pyd2bot.logic.roleplay.behaviors.bidhouse.MonitorMarketBehavior import MonitorMarketBehavior
 from pyd2bot.logic.roleplay.behaviors.bidhouse.RetrieveAndSell import RetrieveAndSell
 from pyd2bot.logic.roleplay.behaviors.bidhouse.SellFromBagBehavior import SellFromBagBehavior
 from pyd2bot.logic.roleplay.behaviors.bidhouse.UpdateBidsBehavior import UpdateBidsBehavior
@@ -86,9 +87,10 @@ class Pyd2Bot(DofusClient):
     def startSessionMainBehavior(self):
         Logger().info(f"Starting main behavior for {self.name}, sessionType : {self.session.type.name}")
         # self._main_behavior = RetrieveAndSell(312, 100)
-        # self._main_behavior = UpdateBidsBehavior(312, 100, ItemCategoryEnum.RESOURCES_CATEGORY, 0.05)
-        # self._main_behavior.start(callback=self.onMainBehaviorFinish)
-        # return
+
+        self._main_behavior = MonitorMarketBehavior(312, 100)
+        self._main_behavior.start(callback=self.onMainBehaviorFinish)
+        return
         
         BotEventsManager().on(
             BotEventsManager.TAKE_NAP, 

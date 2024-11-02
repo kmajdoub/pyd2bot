@@ -426,6 +426,37 @@ class BehaviorApi:
         behavior.start(callback=callback, parent=self)
         return behavior
 
+    def updateBids(
+        self, 
+        object_gid: int, 
+        quantity: int,
+        min_update_age_hours: float = 0.25,
+        max_updates: int = 10,
+        callback=None
+    ):
+        """
+        Update old market listings to stay competitive.
+        Will find and update up to max_updates listings that are older than min_age 
+        and priced above current market.
+        
+        Args:
+            object_gid: GID of item to update
+            quantity: Listing quantity to match (1, 10, or 100)
+            min_update_age_hours: Only update listings older than this (default 15min)
+            max_updates: Maximum listings to update per run (default 10)
+            callback: Completion callback function
+        """
+        from pyd2bot.logic.roleplay.behaviors.bidhouse.UpdateBidsBehavior import UpdateBidsBehavior
+        
+        behavior = UpdateBidsBehavior(
+            object_gid=object_gid,
+            quantity=quantity,
+            min_update_age_hours=min_update_age_hours,
+            max_updates=max_updates
+        )
+        behavior.start(callback=callback, parent=self)
+        return behavior
+
     def on(self, event_id, callback, timeout=None, ontimeout=None, retryNbr=None, retryAction=None, once=False):
         return KernelEventsManager().on(
             event_id=event_id,

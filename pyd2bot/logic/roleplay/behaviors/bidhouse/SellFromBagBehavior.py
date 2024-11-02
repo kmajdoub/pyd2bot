@@ -1,5 +1,6 @@
 from typing import Set
 
+from pyd2bot.data.enums import ServerNotificationEnum
 from pyd2bot.logic.roleplay.behaviors.bidhouse.AbstractMarketBehavior import AbstractMarketBehavior
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import PlayedCharacterManager
 from pydofus2.com.ankamagames.dofus.network.messages.game.inventory.KamasUpdateMessage import KamasUpdateMessage
@@ -57,7 +58,11 @@ class SellFromBagBehavior(AbstractMarketBehavior):
             
         return True
 
-    def _handle_behavior_specific(self, msg) -> None:
+    def _on_server_notif(self, event, msgId, msgType, textId, msgContent, params):
+        if textId == ServerNotificationEnum.CANT_SELL_ANYMORE_ITEMS:
+            self.finish(self.ERROR_CODES["NO_MORE_SELL_SLOTS"], "There is no more sell slots")
+            
+    def _process_message(self, msg) -> None:
         """Track complete server response sequence"""
         if self._state != "SELLING":
             return
@@ -75,7 +80,6 @@ class SellFromBagBehavior(AbstractMarketBehavior):
             
         elif isinstance(msg, ExchangeBidHouseItemAddOkMessage):
             self._received_sequence.add("add")
-            self._market.handle_listing_add(msg)
             
         elif isinstance(msg, InventoryWeightMessage):
             self._received_sequence.add("weight")
@@ -100,31 +104,17 @@ class SellFromBagBehavior(AbstractMarketBehavior):
         
     def _handle_price_msg(self, msg) -> None:
         """Got prices - attempt sale if profitable"""
-        self._try_sell()
-
-    def _try_sell(self) -> None:
-        """Attempt to sell at profitable price"""
-        prices = self._market.get_quantity_info(self.quantity)
-        if not prices["min_price"] or not prices["avg_price"]:
-            return self.finish(1, "Unable to get market prices")
-
-        min_acceptable = int(prices["avg_price"] * self.MIN_PRICE_RATIO)
+        target_price, error = self._market.get_sell_price(
+            self.object_gid, 
+            self.quantity,
+            self.MIN_PRICE_RATIO
+        )
         
-        # Check if the lowest price is our own listing
-        our_listings = self._market.get_listings(self.quantity)
-        if our_listings and our_listings[0].price == prices["min_price"]:
-            # If we have the lowest price, use that price instead of undercutting
-            target_price = prices["min_price"]
-            self._logger.debug(f"We have the lowest price already at {target_price}")
+        if error:
+            self._logger.warning(error)
+            return self.close_marketplace()
+            
+        if self._can_afford_tax(target_price):
+            self.send_new_listing(target_price)
         else:
-            # Otherwise undercut the current lowest price
-            target_price = max(min_acceptable, prices["min_price"] - 1)
-
-        if prices["min_price"] >= min_acceptable:
-            if self._can_afford_tax(target_price):
-                self.send_new_listing(target_price)
-            else:
-                self.finish(self.ERROR_CODES["INSUFFICIENT_KAMAS"], "Insufficient kamas for listing tax")
-        else:
-            self._logger.warning(f"Market price {prices['min_price']} below minimum {min_acceptable}")
-            self.close_marketplace()
+            self.close_marketplace(self.ERROR_CODES["INSUFFICIENT_KAMAS"], "Insufficient kamas for listing tax")

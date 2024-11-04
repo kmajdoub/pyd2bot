@@ -17,7 +17,7 @@ class UseTeleportItem(AbstractBehavior):
         super().__init__()
 
     def run(self, iw: ItemWrapper):
-        self.onceMapProcessed(
+        self.once_map_processed(
             lambda: self.finish(True, None), timeout=20, ontimeout=self.onTimeout
         )
         self.on(KernelEvent.ServerTextInfo, self.onServerInfo)

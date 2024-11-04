@@ -3,14 +3,19 @@ import os
 from typing import TYPE_CHECKING
 
 from pyd2bot.misc.Localizer import Localizer
+from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
 from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import \
     KernelEventsManager
 from pydofus2.com.ankamagames.dofus.datacenter.world.SubArea import SubArea
+from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
+from pydofus2.com.ankamagames.dofus.kernel.net.ConnectionsHandler import ConnectionsHandler
 from pydofus2.com.ankamagames.dofus.logic.common.managers.PlayerManager import PlayerManager
+from pydofus2.com.ankamagames.dofus.logic.game.common.managers.InactivityManager import InactivityManager
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.InventoryManager import \
     InventoryManager
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import \
     PlayedCharacterManager
+from pydofus2.com.ankamagames.dofus.network.messages.game.dialog.LeaveDialogRequestMessage import LeaveDialogRequestMessage
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 
 if TYPE_CHECKING:
@@ -49,7 +54,7 @@ class BehaviorApi:
         Logger().debug(f"Not a special destination : srcAreaId {srcAreaId}, dstAreaId {dstAreaId}")
         return None
 
-    def travelUsingZaap(self, dstMapId, dstZoneId=None, withSaveZaap=False, maxCost=None, excludeMaps=[], check_special_dest=True, callback=None):
+    def travel_using_zaap(self, dstMapId, dstZoneId=None, withSaveZaap=False, maxCost=None, excludeMaps=[], check_special_dest=True, callback=None):
         from pyd2bot.logic.roleplay.behaviors.movement.AutoTripUseZaap import \
             AutoTripUseZaap
             
@@ -78,7 +83,7 @@ class BehaviorApi:
             def onOutOfCelestialDim(code, err):
                 if err:
                     return callback(code, f"Could not get player out of celestial dimension : {err}")
-                self.travelUsingZaap(dstMapId, dstZoneId, withSaveZaap, maxCost, excludeMaps, callback=callback)
+                self.travel_using_zaap(dstMapId, dstZoneId, withSaveZaap, maxCost, excludeMaps, callback=callback)
 
             return self.autoTrip(154010883, 1, callback=onOutOfCelestialDim)
 
@@ -104,7 +109,7 @@ class BehaviorApi:
                     return self.saveZaap(onDstZaapSaved)
                 self.autoTrip(dstMapId, dstZoneId, callback=callback)
 
-            return self.travelUsingZaap(
+            return self.travel_using_zaap(
                 dstZaapVertex.mapId,
                 dstZaapVertex.zoneId,
                 excludeMaps=excludeMaps + [dstZaapVertex.mapId],
@@ -154,7 +159,7 @@ class BehaviorApi:
             if err:
                 return callback(code, f"Could not reach special destination {dstSubArea.name} ({dstMapId}) : {err}")
             if useZaap:
-                self.travelUsingZaap(dstMapId, dstZoneId, callback=callback)
+                self.travel_using_zaap(dstMapId, dstZoneId, callback=callback)
             else:
                 self.autoTrip(dstMapId, dstZoneId, callback=callback)
 
@@ -179,7 +184,7 @@ class BehaviorApi:
         def onNpcDialogEnd(code, err):
             if err:
                 return callback(code, err)
-            self.onceMapProcessed(
+            self.once_map_processed(
                 callback=lambda: callback(True, None),
                 mapId=infos["landingMapId"],
             )
@@ -326,7 +331,7 @@ class BehaviorApi:
             NpcDialog().start(npcMapId, npcId, npcOpenDialogId, npcQuestionsReplies, callback=callback, parent=self)
 
         if useZaap:
-            self.travelUsingZaap(npcMapId, callback=onNPCMapReached)
+            self.travel_using_zaap(npcMapId, callback=onNPCMapReached)
         else:
             self.autoTrip(npcMapId, check_special_dest=check_special_dest, callback=onNPCMapReached)
 
@@ -376,29 +381,65 @@ class BehaviorApi:
 
         OpenBank().start(bankInfos, callback=callback, parent=self)
 
-    def retrieveRecipeFromBank(self, recipe, return_to_start=True, bankInfos=None, callback=None):
+    def retrieve_recipe_from_bank(self, recipe, return_to_start=True, bankInfos=None, callback=None):
         from pyd2bot.logic.roleplay.behaviors.bank.RetrieveRecipeFromBank import \
             RetrieveRecipeFromBank
 
         RetrieveRecipeFromBank().start(recipe, return_to_start, bankInfos, callback=callback, parent=self)
 
-    def unloadInBank(self, return_to_start=True, bankInfos=None, callback=None):
+    def unload_in_bank(self, return_to_start=True, bankInfos=None, callback=None):
         from pyd2bot.logic.roleplay.behaviors.bank.UnloadInBank import \
             UnloadInBank
 
         UnloadInBank().start(return_to_start, bankInfos, callback=callback, parent=self)
-
-    def retrieveFromBank(self, items_gids: list[int], get_max_quantities: bool = True, return_to_start: bool = False, bank_infos=None, callback=None):
-        """
-        Retrieve items from bank by their GIDs.
+    
+    def update_bid(self, object_gid: int, quantity: int, listing_uid: int, new_price: int, callback=None):
+        from pyd2bot.logic.roleplay.behaviors.bidhouse.UpdateBid import UpdateBid
         
-        Args:
-            items_gids: List of item GIDs to retrieve
-            get_max_quantities: Whether to get all available quantities (True) or specific amounts (False)
-            return_to_start: Whether to return to starting position after retrieval
-            bank_infos: Optional bank location info, will find closest if not provided
-            callback: Completion callback function
-        """
+        b = UpdateBid(object_gid, quantity, listing_uid, new_price)
+        b.start(callback=callback, parent=self)
+        return b
+    
+    def place_bid(self, object_gid: int, quantity: int, price: int, callback=None):
+        from pyd2bot.logic.roleplay.behaviors.bidhouse.PutItemInSale import PutItemInSale
+
+        b = PutItemInSale(object_gid, quantity, price)
+        b.start(callback=callback, parent=self)
+        return b
+    
+    def open_market(self, from_gid=None, from_type=None, callback=None):
+        from pyd2bot.logic.roleplay.behaviors.bidhouse.OpenMarket import OpenMarket
+
+        b = OpenMarket(from_gid=from_gid, from_object_category=from_type)
+        b.start(callback=callback, parent=self)
+        return b
+
+    def close_market(self, callback):
+        def _on_market_close(code_, error_):
+            if error_:
+                return  callback(f"Market close failed with error [{code_}] {error_}")
+            Kernel().marketFrame.reset_state()
+            callback(0, None)
+        self.close_dialog(_on_market_close)
+
+    def close_dialog(self, callback):
+        ConnectionsHandler().send(LeaveDialogRequestMessage())
+        InactivityManager().activity()
+        return self.once(
+            KernelEvent.LeaveDialog,
+            lambda _: callback(0, None),
+            timeout=10,
+            ontimeout=callback(1, "close dialog timed out!")
+        )
+    
+    def goto_market(self, market_gfx_id, callback):
+        from pyd2bot.logic.roleplay.behaviors.bidhouse.GoToMarket import GoToMarket
+
+        b = GoToMarket(market_gfx_id)
+        b.start(callback=callback, parent=self)
+        return b
+
+    def retrieve_items_from_bank(self, items_gids: list[int], get_max_quantities: bool = True, return_to_start: bool = False, bank_infos=None, callback=None):
         from pyd2bot.logic.roleplay.behaviors.bank.RetrieveFromBank import RetrieveFromBank
         
         behavior = RetrieveFromBank()
@@ -407,8 +448,7 @@ class BehaviorApi:
 
     def sellFromBag(
         self, 
-        object_gid: int, 
-        quantity: int, 
+        items_to_sell: int, 
         callback=None
     ):
         """
@@ -416,13 +456,12 @@ class BehaviorApi:
         Automatically travels to marketplace and lists items at competitive prices.
         
         Args:
-            object_gid: GID of the item to sell
-            quantity: Quantity of items to sell in each listing
+            items_to_sell: List of tuples (object_gid, quantity)
             callback: Completion callback function
         """
-        from pyd2bot.logic.roleplay.behaviors.bidhouse.SellFromBagBehavior import SellFromBagBehavior
+        from pyd2bot.logic.roleplay.behaviors.bidhouse.SellItemsFromBag import SellItemsFromBag
         
-        behavior = SellFromBagBehavior(object_gid, quantity)
+        behavior = SellItemsFromBag(items_to_sell)
         behavior.start(callback=callback, parent=self)
         return behavior
 
@@ -446,7 +485,7 @@ class BehaviorApi:
             max_updates: Maximum listings to update per run (default 10)
             callback: Completion callback function
         """
-        from pyd2bot.logic.roleplay.behaviors.bidhouse.UpdateBidsBehavior import UpdateBidsBehavior
+        from pyd2bot.logic.roleplay.behaviors.bidhouse.UpdateBids import UpdateBidsBehavior
         
         behavior = UpdateBidsBehavior(
             object_gid=object_gid,
@@ -476,7 +515,7 @@ class BehaviorApi:
         for event_id, callback, kwargs in listeners:
             self.on(event_id, callback, **kwargs)
 
-    def onceMapProcessed(self, callback, args=[], mapId=None, timeout=None, ontimeout=None):
+    def once_map_processed(self, callback, args=[], mapId=None, timeout=None, ontimeout=None):
         return KernelEventsManager().onceMapProcessed(
             callback=callback, args=args, mapId=mapId, timeout=timeout, ontimeout=ontimeout, originator=self
         )

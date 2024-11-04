@@ -132,7 +132,7 @@ class AutoTrip(AbstractBehavior):
     def findPath(self, dstMapId, linkedZone, callback) -> None:
         src = PlayedCharacterManager().currVertex
         if src is None:
-            return self.onceMapProcessed(self.findPath, [dstMapId, linkedZone, callback])
+            return self.once_map_processed(self.findPath, [dstMapId, linkedZone, callback])
         Logger().info(f"Start searching path from {src} to destMapId {dstMapId}, linkedZone {linkedZone}")
         if linkedZone is None and PlayedCharacterManager().currentMap.mapId == dstMapId:
             return callback(0, None, [])

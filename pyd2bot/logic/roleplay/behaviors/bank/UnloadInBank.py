@@ -24,9 +24,9 @@ class BankUnloadStates(Enum):
     RETURNING_TO_START_POINT = 8
 
 class UnloadInBank(AbstractBehavior):
-    TRANSFER_ITEMS_TIMEDOUT = 111111
-    BANK_CLOSE_TIMEDOUT = 222222
-    STORAGE_OPEN_TIMEDOUT = 9874521
+    TRANSFER_ITEMS_TIMED_OUT = 111111
+    BANK_CLOSE_TIMED_OUT = 222222
+    STORAGE_OPEN_TIMED_OUT = 9874521
     LEVEL_TOO_LOW = 909799
     
     def __init__(self):
@@ -62,7 +62,7 @@ class UnloadInBank(AbstractBehavior):
             event_id=KernelEvent.ExchangeBankStartedWithStorage, 
             callback=self.onStorageOpen,
             timeout=30,
-            ontimeout=lambda: self.finish(self.STORAGE_OPEN_TIMEDOUT, "Dialog with Bank NPC ended correctly but storage didnt open on time!"),
+            ontimeout=lambda: self.finish(self.STORAGE_OPEN_TIMED_OUT, "Dialog with Bank NPC ended correctly but storage didnt open on time!"),
         )
         
     def onStorageOpen(self, event, exchangeType, pods):
@@ -73,10 +73,10 @@ class UnloadInBank(AbstractBehavior):
                 callback=self.onInventoryWeightUpdate, 
                 timeout=10,
                 retryNbr=5,
-                retryAction=Kernel().exchangeManagementFrame.exchangeObjectTransfertAllFromInv,
-                ontimeout=lambda: self.finish(self.TRANSFER_ITEMS_TIMEDOUT, "Transfer items to bank storage timeout."),
+                retryAction=Kernel().exchangeManagementFrame.exchangeObjectTransferAllFromInv,
+                ontimeout=lambda: self.finish(self.TRANSFER_ITEMS_TIMED_OUT, "Transfer items to bank storage timeout."),
             )
-            Kernel().exchangeManagementFrame.exchangeObjectTransfertAllFromInv()
+            Kernel().exchangeManagementFrame.exchangeObjectTransferAllFromInv()
             Logger().info("Unload items in bank request sent.")
         else:
             raise Exception(f"Expected BANK storage to open but another type of exchange '{ExchangeTypeEnum.BANK}'!")
@@ -86,7 +86,7 @@ class UnloadInBank(AbstractBehavior):
         self.state = BankUnloadStates.IDLE
         if self.return_to_start:
             Logger().info(f"Returning to start point")
-            self.travelUsingZaap(self._startMapId, dstZoneId=self._startRpZone, callback=self.finish)
+            self.travel_using_zaap(self._startMapId, dstZoneId=self._startRpZone, callback=self.finish)
         else:
             self.finish(True, None)
 
@@ -98,6 +98,6 @@ class UnloadInBank(AbstractBehavior):
             timeout=10,
             retryNbr=5,
             retryAction=Kernel().exchangeManagementFrame.laveDialogRequest,
-            ontimeout=lambda: self.finish(self.BANK_CLOSE_TIMEDOUT, "Bank close timedout!"),
+            ontimeout=lambda: self.finish(self.BANK_CLOSE_TIMED_OUT, "Bank close timed out!"),
         )
         Kernel().exchangeManagementFrame.laveDialogRequest()

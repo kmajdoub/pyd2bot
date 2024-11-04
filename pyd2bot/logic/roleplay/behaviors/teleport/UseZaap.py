@@ -129,7 +129,7 @@ class UseZaap(AbstractBehavior):
                         KernelEvent.LeaveDialog,
                         lambda e: self.finish(self.NOT_RICH_ENOUGH, err),
                     )
-                self.onceMapProcessed(self.onDestMapProcessed)
+                self.once_map_processed(self.onDestMapProcessed)
                 self.on(KernelEvent.ServerTextInfo, self.onServerInfo)
                 return Kernel().zaapFrame.teleportRequest(dst.cost, ttype, dst.destinationType, dst.mapId)
         else:

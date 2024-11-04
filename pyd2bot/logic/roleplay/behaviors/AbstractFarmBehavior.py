@@ -4,6 +4,7 @@ from time import perf_counter
 from typing import Any
 
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
+from pyd2bot.logic.roleplay.behaviors.bidhouse.SellItemsFromBag import SellItemsFromBag
 from pyd2bot.logic.roleplay.behaviors.movement.AutoTrip import AutoTrip
 from pyd2bot.logic.roleplay.behaviors.movement.ChangeMap import ChangeMap
 from pyd2bot.logic.roleplay.behaviors.skill.UseSkill import UseSkill
@@ -184,8 +185,8 @@ class AbstractFarmBehavior(AbstractBehavior):
         Logger().warning(f"Bot is out of farm path, searching path to last vertex...")
         if not PlayedCharacterManager().currVertex:
             Logger().warning("Bot vertex not loaded yet!, delaying return to path after Map is processed.")
-            return self.onceMapProcessed(callback=self.onBotOutOfFarmPath)
-        self.travelUsingZaap(
+            return self.once_map_processed(callback=self.onBotOutOfFarmPath)
+        self.travel_using_zaap(
             self.path.startVertex.mapId,
             self.path.startVertex.zoneId,
             withSaveZaap=False,
@@ -234,7 +235,7 @@ class AbstractFarmBehavior(AbstractBehavior):
             return self.finish(code, f"Error [{code}] while auto-reviving player: {error}")
         Logger().debug(f"Bot back on form, traveling to last memorized vertex {self.currentVertex}")
         if self.initialized:
-            self.travelUsingZaap(
+            self.travel_using_zaap(
                 self.currentVertex.mapId,
                 self.currentVertex.zoneId,
                 True,
@@ -264,8 +265,16 @@ class AbstractFarmBehavior(AbstractBehavior):
                 Logger().warning(f"Player is dead.")
                 return self.autoRevive(callback=self.onRevived)
             self.main()
-        self.onceMapProcessed(onRolePlayMapLoaded)
+        self.once_map_processed(onRolePlayMapLoaded)
 
+    def _on_items_sold(self, code, error):
+        if error:
+            if code == SellItemsFromBag.ERROR_CODES.NO_MORE_SELL_SLOTS:
+                return self.unload_in_bank(callback=self.onBotUnloaded)
+        if PlayedCharacterManager().isPodsFull(0.6):
+            return self.unload_in_bank(callback=self.onBotUnloaded)
+        self.onBotUnloaded(code, error)
+            
     def main(self, event=None, error=None):
         Logger().debug(f"Farmer main loop called")
 
@@ -279,7 +288,7 @@ class AbstractFarmBehavior(AbstractBehavior):
             return
 
         if PlayedCharacterManager().currentMap is None:
-            return self.onceMapProcessed(callback=self.main)
+            return self.once_map_processed(callback=self.main)
 
         if self.inFight:
             Logger().warning('Stopping farm loop because the farmer got in a fight!')
@@ -295,14 +304,17 @@ class AbstractFarmBehavior(AbstractBehavior):
 
         if PlayedCharacterManager().isPodsFull():
             Logger().warning(f"Inventory is almost full will trigger auto unload ...")
-            return self.unloadInBank(callback=self.onBotUnloaded)
-
+        #     return self.unloadInBank(callback=self.onBotUnloaded)
+            PIWI_FEATHER_GIDS = [6900, 6902, 6898, 6899, 6903, 6897]
+            items_gids = [(gid, 100) for gid in PIWI_FEATHER_GIDS]
+            return self.sellFromBag(items_gids, callback=self._on_items_sold)
+            
         if not self.initialized:
             Logger().debug(f"Initializing behavior...")
             self.initialized = True
             if self.currentVertex:
                 Logger().debug(f"Traveling to the memorized current vertex...")
-                return self.travelUsingZaap(
+                return self.travel_using_zaap(
                     self.currentVertex.mapId, self.currentVertex.zoneId, True, callback=self.onReturnToLastVertex
                 )
             else:

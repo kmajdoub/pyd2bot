@@ -29,7 +29,7 @@ class AutoUpgradeStats(AbstractBehavior):
 
     def onBotStats(self, event, stats):
         if not Kernel().roleplayEntitiesFrame or not Kernel().roleplayEntitiesFrame.mcidm_processed:
-            self.onceMapProcessed(lambda: self.onBotStats(event, stats))
+            self.once_map_processed(lambda: self.onBotStats(event, stats))
             return
         unusedStatPoints = PlayedCharacterManager().stats.getStatBaseValue(StatIds.STATS_POINTS)
         if unusedStatPoints > 0 and not self.waitingForStatsBoost.is_set():
@@ -99,7 +99,7 @@ class AutoUpgradeStats(AbstractBehavior):
         roleplay_frame = Kernel().roleplayEntitiesFrame
         if not roleplay_frame or not roleplay_frame.mcidm_processed:
             Logger().warning("Can't boost stats before map is fully loaded!")
-            return self.onceMapProcessed(self.boostCharacteristics, [boost, statId])
+            return self.once_map_processed(self.boostCharacteristics, [boost, statId])
         message = StatsUpgradeRequestMessage()
         message.init(False, statId, boost)
         ConnectionsHandler().send(message)

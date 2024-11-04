@@ -33,7 +33,7 @@ class GetOutOfAnkarnam(AbstractBehavior):
     def onGetOutOfIncarnamNpcEnd(self, code, error):
         if error:
             return self.finish(code, error)
-        self.onceMapProcessed(
+        self.once_map_processed(
             callback=self.onAstrubMapProcessed,
             mapId=self.astrubLandingMapId,
             timeout=20,

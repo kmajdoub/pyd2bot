@@ -293,7 +293,6 @@ class BotFightFrame(Frame):
         if self._reachableCells:
             self._reachableCells.clear()
         self._turnAction.clear()
-        KernelEventsManager().clearAllByOrigin(self)
         return True
 
     @property

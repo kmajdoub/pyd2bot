@@ -31,7 +31,6 @@ class BotWorkflowFrame(Frame):
         return True
 
     def pulled(self) -> bool:
-        KernelEventsManager().clearAllByOrigin(self)
         return True
 
     @property

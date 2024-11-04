@@ -109,7 +109,7 @@ class BotExchange(AbstractBehavior):
             self.state = ExchangeStateEnum.EXCHANGE_OPEN
             if self.direction == ExchangeDirectionEnum.GIVE:
                 if self.giveAll:
-                    Kernel().exchangeManagementFrame.exchangeObjectTransfertAllFromInv()
+                    Kernel().exchangeManagementFrame.exchangeObjectTransferAllFromInv()
                 else:
                     for elem in self.items:
                         Kernel().commonExchangeManagementFrame.exchangeObjectMove(elem["uid"], elem["quantity"])

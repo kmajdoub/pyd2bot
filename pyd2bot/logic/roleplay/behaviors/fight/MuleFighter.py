@@ -3,6 +3,7 @@ from typing import Optional
 from dataclasses import dataclass
 
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
+from pyd2bot.logic.roleplay.behaviors.bidhouse.SellItemsFromBag import SellItemsFromBag
 from pyd2bot.misc.BotEventsManager import BotEventsManager
 from pyd2bot.data.models import Character
 from pydofus2.com.ankamagames.berilia.managers.EventsHandler import Event, Listener
@@ -14,6 +15,7 @@ from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterMa
 from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Vertex import Vertex
 from pydofus2.com.ankamagames.dofus.network.messages.game.context.fight.GameFightJoinRequestMessage import GameFightJoinRequestMessage
 from pydofus2.com.ankamagames.dofus.network.types.game.context.fight.FightCommonInformations import FightCommonInformations
+from pydofus2.com.ankamagames.jerakine.benchmark.BenchmarkTimer import BenchmarkTimer
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 from pydofus2.com.ankamagames.jerakine.types.positions.MapPoint import MapPoint
 
@@ -54,8 +56,7 @@ class MuleFighter(AbstractBehavior):
         # Core event listeners
         self.on(KernelEvent.FightSwordShowed, self._on_fight_detected)
         self.on(KernelEvent.ServerTextInfo, self._on_server_notification)
-        self.on(KernelEvent.FightEnded, self._on_fight_ended)
-        self.on(KernelEvent.RoleplayStarted, lambda _: self._check_player_state())
+        self.on(KernelEvent.RoleplayStarted, lambda _: self._check_player_state)
         
         # Movement handling
         BotEventsManager().on(
@@ -68,33 +69,59 @@ class MuleFighter(AbstractBehavior):
         self._check_player_state()
         
     def _check_player_state(self):
+        if not PlayedCharacterManager().currVertex:
+            return self.once_map_processed(self._check_player_state)
         """Verify player state and handle revival if needed"""
         if PlayedCharacterManager().isDead():
             Logger().warning("Mule is dead, initiating revival sequence")
             self.autoRevive(callback=self._on_revival_complete)
+        if PlayedCharacterManager().isPodsFull():
+            Logger().warning(f"Inventory is almost full will trigger auto unload ...")
+            # return self.unloadInBank(callback=self._on_unload_in_bank)
+            PIWI_FEATHER_GIDS = [6900, 6902, 6898, 6899, 6903, 6897]
+            items_gids = [(gid, 100) for gid in PIWI_FEATHER_GIDS]
+            self.sellFromBag(items_gids, callback=self._on_items_sold)
+
+    def _on_items_sold(self, code, error):
+        Logger().info(f"Sell items terminated with : {code}, {error}")
+        if error:
+            if code == SellItemsFromBag.ERROR_CODES.NO_MORE_SELL_SLOTS:
+                return self.unload_in_bank(callback=self._on_unload_in_bank)
+            return self.finish(1, f"Failed to sell items: Error[{code}] - {error}")
+        Logger().info("Sell items terminated successfully, checking if we still have a lot of inventory full")
+        if PlayedCharacterManager().isPodsFull(0.6):
+            return self.unload_in_bank(callback=self._on_unload_in_bank)
+        Logger().info("Inventory not 60 pourcent full we can continue")
+        self._reset_state()
+
+    def _on_unload_in_bank(self, code, error):
+        """Handle revival completion"""
+        if error:
+            self.finish(1, f"Failed to unload character inventory in bank: Error[{code}] - {error}")
+            return
+            
+        Logger().info("Revival successful, resuming mule fighter operations")
+        self._reset_state()
 
     def _on_revival_complete(self, code, error):
         """Handle revival completion"""
         if error:
-            Logger().error(f"Revival failed with error {error}")
-            KernelEventsManager().send(
-                KernelEvent.ClientShutdown, 
-                f"Failed to revive character: Error[{code}] - {error}"
-            )
+            self.finish(1, f"Failed to revive character: Error[{code}] - {error}")
             return
-            
         Logger().info("Revival successful, resuming mule fighter operations")
         self._reset_state()
 
     def _on_bank_unload_complete(self, code, err):
         if err:
             return self.finish(code, f"Error while unloading: {err}")
+        Logger().info("Unload in bank successful, resuming mule fighter operations")
+        self._reset_state()
 
     def _check_inventory_status(self, *args):
         """Check inventory status and initiate unload if needed"""        
         if PlayedCharacterManager().isPodsFull():
             Logger().warning("Inventory is full, initiating bank unload sequence...")
-            return self.unloadInBank(callback=self._on_bank_unload_complete)
+            return self.unload_in_bank(callback=self._on_bank_unload_complete)
 
     def _on_fight_detected(self, event: Event, fight_info: FightCommonInformations):
         """Handle new fight detection with improved validation"""
@@ -163,6 +190,10 @@ class MuleFighter(AbstractBehavior):
             self.current_fight.is_joining = False
         if self.join_fight_listener:
             self.join_fight_listener.delete()
+        self.once(
+            KernelEvent.RoleplayStarted,
+            lambda _: self.once_map_processed(self._check_player_state)
+        )
 
     def _on_join_timeout(self, listener: Listener):
         """Handle fight join timeout"""
@@ -178,8 +209,15 @@ class MuleFighter(AbstractBehavior):
         if textId != 773221:  # Fight join delay notification
             return
 
+        # Reset listener
         if self.join_fight_listener:
             self.join_fight_listener.delete()
+            self.join_fight_listener = None
+
+        # Important: Reset joining state
+        if self.current_fight:
+            self.current_fight.is_joining = False
+            self.current_fight.last_attempt = perf_counter()  # Reset attempt timer
 
         delay = int(params[0])
         Logger().info(f"Server enforced wait time of {delay}s before joining fight")
@@ -221,19 +259,14 @@ class MuleFighter(AbstractBehavior):
 
     def _schedule_delayed_join(self, delay: float):
         """Schedule a delayed fight join attempt"""
-        remaining = max(0, delay - (perf_counter() - (self.current_fight.last_attempt if self.current_fight else 0)))
+        if not self.current_fight:
+            return
+            
+        remaining = max(0, delay - (perf_counter() - self.current_fight.last_attempt))
         if remaining > 0:
-            Kernel().worker.terminated.wait(remaining)
-        self._attempt_join_fight()
-
-    def _on_fight_ended(self, event):
-        """Handle fight end"""
-        Logger().debug("Fight ended, resetting state and checking status")
-        self._reset_state()
-        self.once(
-            KernelEvent.RoleplayStarted,
-            lambda e: self.onceMapProcessed(self._check_player_state)
-        )
+            BenchmarkTimer(remaining, self._attempt_join_fight).start()
+        else:
+            self._attempt_join_fight()
 
     def _on_move_to_vertex_request(self, event: Event, vertex: Vertex):
         """Handle movement requests with improved validation"""
@@ -259,7 +292,7 @@ class MuleFighter(AbstractBehavior):
 
         if not curr_vertex:
             Logger().error("Current vertex unknown, waiting for map processing")
-            self.onceMapProcessed(lambda: self._on_move_to_vertex_request(event, vertex))
+            self.once_map_processed(lambda: self._on_move_to_vertex_request(event, vertex))
             return
 
         if curr_vertex.UID == vertex.UID:
@@ -267,7 +300,7 @@ class MuleFighter(AbstractBehavior):
             self.is_moving = False
             return
 
-        self.travelUsingZaap(
+        self.travel_using_zaap(
             vertex.mapId,
             vertex.zoneId,
             callback=self._on_movement_complete

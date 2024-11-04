@@ -242,7 +242,7 @@ class Localizer:
                 if is_basic_account:
                     hint_subarea = SubArea.getSubAreaByMapId(hint.mapId)
                     if hint_subarea and not hint_subarea.basicAccountAllowed:
-                        Logger().debug(f"Skipping subscriber-only map {hint.mapId} (basic account)")
+                        # Logger().debug(f"Skipping subscriber-only map {hint.mapId} (basic account)")
                         continue
                     
                 if hint.gfx == gfx:
@@ -253,7 +253,7 @@ class Localizer:
                             (dst_map_pos.posX - current_map_pos.posX) ** 2 + 
                             (dst_map_pos.posY - current_map_pos.posY) ** 2
                         ))
-                        if min(PlayedCharacterManager().characteristics.kamas, maxCost):
+                        if min(PlayedCharacterManager().characteristics.kamas, maxCost) >= cost:
                             hint_vertices = WorldGraph().getVertices(hint.mapId).values()
                             # Filter vertices based on account type
                             for vertex in hint_vertices:

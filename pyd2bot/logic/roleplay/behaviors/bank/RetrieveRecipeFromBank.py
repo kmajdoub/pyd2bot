@@ -63,7 +63,7 @@ class RetrieveRecipeFromBank(AbstractBehavior):
         Logger().info("Bank storage closed")
         if self.return_to_start:
             Logger().info(f"Returning to start point")
-            self.travelUsingZaap(self._startMapId, self._startRpZone, callback=self.finish)
+            self.travel_using_zaap(self._startMapId, self._startRpZone, callback=self.finish)
         else:
             self.finish(0)
 

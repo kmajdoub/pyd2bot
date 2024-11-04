@@ -25,13 +25,13 @@ class AutoRevive(AbstractBehavior):
     def run(self) -> bool:
         self.phenixMapId = Kernel().playedCharacterUpdatesFrame._phenixMapId
         if not PlayedCharacterManager().currentMap:
-            return self.onceMapProcessed(self.start)
+            return self.once_map_processed(self.start)
         self.on(KernelEvent.PlayerStateChanged, self.onPlayerStateChange)
         if PlayerLifeStatusEnum(PlayedCharacterManager().state) == PlayerLifeStatusEnum.STATUS_PHANTOM:
             Logger().debug(f"Traveling to phenix map {self.phenixMapId}")
             self.autoTrip(dstMapId=self.phenixMapId, callback=self.onPhenixMapReached)
         elif PlayerLifeStatusEnum(PlayedCharacterManager().state) == PlayerLifeStatusEnum.STATUS_TOMBSTONE:
-            self.cemetaryMapLoadedListener = self.onceMapProcessed(self.onCemetaryMapLoaded)
+            self.cemetaryMapLoadedListener = self.once_map_processed(self.onCemetaryMapLoaded)
             self.releaseSoulRequest()
 
     def onPlayerStateChange(self, event, playerState: PlayerLifeStatusEnum, phenixMapId):

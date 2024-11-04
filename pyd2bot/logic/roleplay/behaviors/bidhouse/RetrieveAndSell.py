@@ -45,7 +45,7 @@ class RetrieveAndSell(AbstractBehavior):
         self._logger.info(f"Starting new retrieve cycle for item {self._item_gid}")
 
         # Retrieve maximum quantity of the item
-        self.retrieveFromBank(
+        self.retrieve_items_from_bank(
             items_gids=[self._item_gid],
             get_max_quantities=True,
             return_to_start=False,  # Don't return since we'll be selling
@@ -95,7 +95,7 @@ class RetrieveAndSell(AbstractBehavior):
         """Handle completion of the entire behavior"""
         if self._return_to_start:
             self._logger.info("Returning to start position")
-            self.travelUsingZaap(
+            self.travel_using_zaap(
                 self._start_map_id, self._start_zone, callback=lambda code, err: self.finish(code, err)
             )
         else:

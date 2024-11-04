@@ -284,7 +284,7 @@ class ChangeMap(AbstractBehavior):
             callback = lambda: self.finish(
                 self.LANDED_ON_WRONG_MAP, f"Landed on new map '{mapId}', different from dest '{self.dstMapId}'."
             )
-        self.onceMapProcessed(callback=callback, mapId=mapId, timeout=20, ontimeout=self.onDestMapProcessedTimeout)
+        self.once_map_processed(callback=callback, mapId=mapId, timeout=20, ontimeout=self.onDestMapProcessedTimeout)
 
     def setupMapChangeListener(self):
         if PlayedCharacterManager().isInFight:

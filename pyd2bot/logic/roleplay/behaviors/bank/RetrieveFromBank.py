@@ -1,5 +1,4 @@
 from typing import List
-from pyd2bot.apis.InventoryAPI import InventoryAPI
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
 from pyd2bot.misc.Localizer import Localizer
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
@@ -23,12 +22,13 @@ class RetrieveFromBank(AbstractBehavior):
         self._start_zone = None
         self._return_to_start = False
 
-    def run(self, item_gids: List[int], get_max_quantities: bool = True, return_to_start=False, bank_infos=None) -> bool:
+    def run(self, item_gids: List[int], get_max_quantities: bool = True, quantities=None, return_to_start=False, bank_infos=None) -> bool:
         self._item_gids = item_gids
         self.items = list["ItemWrapper"]()
 
         self._get_max = get_max_quantities
         self._return_to_start = return_to_start
+        self._quantities = quantities
         
         # Store starting position
         self._start_map_id = PlayedCharacterManager().currentMap.mapId
@@ -85,7 +85,7 @@ class RetrieveFromBank(AbstractBehavior):
         Logger().info("Bank storage closed")
         if self._return_to_start:
             Logger().info(f"Returning to start point")
-            self.travelUsingZaap(self._start_map_id, self._start_zone, callback=self.finish)
+            self.travel_using_zaap(self._start_map_id, self._start_zone, callback=self.finish)
         else:
             self.finish(0)
 

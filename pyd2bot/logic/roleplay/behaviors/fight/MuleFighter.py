@@ -80,7 +80,7 @@ class MuleFighter(AbstractBehavior):
             # return self.unloadInBank(callback=self._on_unload_in_bank)
             PIWI_FEATHER_GIDS = [6900, 6902, 6898, 6899, 6903, 6897]
             items_gids = [(gid, 100) for gid in PIWI_FEATHER_GIDS]
-            self.sellFromBag(items_gids, callback=self._on_items_sold)
+            self.sell_items(items_gids, callback=self._on_items_sold)
 
     def _on_items_sold(self, code, error):
         Logger().info(f"Sell items terminated with : {code}, {error}")

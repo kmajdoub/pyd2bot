@@ -307,7 +307,7 @@ class AbstractFarmBehavior(AbstractBehavior):
         #     return self.unloadInBank(callback=self.onBotUnloaded)
             PIWI_FEATHER_GIDS = [6900, 6902, 6898, 6899, 6903, 6897]
             items_gids = [(gid, 100) for gid in PIWI_FEATHER_GIDS]
-            return self.sellFromBag(items_gids, callback=self._on_items_sold)
+            return self.sell_items(items_gids, callback=self._on_items_sold)
             
         if not self.initialized:
             Logger().debug(f"Initializing behavior...")

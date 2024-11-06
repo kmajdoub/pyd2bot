@@ -34,7 +34,7 @@ class RetrieveRecipeFromBank(AbstractBehavior):
         self._startMapId = PlayedCharacterManager().currentMap.mapId
         self._startRpZone = PlayedCharacterManager().currentZoneRp
         self.recipesUi = Recipes()
-        self.openBank(self.infos, callback=self.onStorageOpen)
+        self.open_bank(self.infos, callback=self.onStorageOpen)
     
     def onBankContent(self, event, objects, kamas):
         self.recipesUi.load(storage=StorageState.BANK_MOD, uiName="storage")

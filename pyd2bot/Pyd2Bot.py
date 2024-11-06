@@ -86,12 +86,15 @@ class Pyd2Bot(DofusClient):
         
     def startSessionMainBehavior(self):
         Logger().info(f"Starting main behavior for {self.name}, sessionType : {self.session.type.name}")
-        self._main_behavior = RetrieveAndSell(312, 100)
         PIWI_FEATHER_GIDS = [6900, 6902, 6898, 6899, 6903, 6897]
+        quantities = [100, 100, 100, 100, 100, 100]
+        
+        self._main_behavior = RetrieveAndSell(PIWI_FEATHER_GIDS, quantities, True)
         # items_gids = [(gid, 100) for gid in PIWI_FEATHER_GIDS]        
         # self._main_behavior = SellFromBagBehavior(items_gids)
 
-        self._main_behavior = UpdateBidsBehavior(PIWI_FEATHER_GIDS, 100, 0, 0.25)
+        # self._main_behavior = UpdateBidsBehavior(PIWI_FEATHER_GIDS, 100, 0, 0.25)
+        # self._main_behavior = RetrieveFromBank(PIWI_FEATHER_GIDS, quantities)
         self._main_behavior.start(callback=self.onMainBehaviorFinish)
         return
         

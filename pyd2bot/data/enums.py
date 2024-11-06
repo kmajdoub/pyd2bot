@@ -11,6 +11,7 @@ class ServerNotificationEnum:
     KAMAS_LOST = 325865
     NOT_ENOUGH_KAMAS = 325825
     CANT_SELL_ANYMORE_ITEMS = 5150
+    WAIT_REQUIRED = 4852
 
 class SessionTypeEnum(str, Enum):
     SOLO_FIGHT = 'SOLO_FIGHT'

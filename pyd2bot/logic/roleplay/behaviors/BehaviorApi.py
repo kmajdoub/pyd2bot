@@ -189,7 +189,7 @@ class BehaviorApi:
                 mapId=infos["landingMapId"],
             )
 
-        self.npcDialog(
+        self.npc_dialog(
             infos["npcMapId"],
             infos["npcId"],
             infos["openDialogActionId"],
@@ -321,7 +321,7 @@ class BehaviorApi:
 
         WaitForMembersToShow().start(members, callback=callback, parent=self)
 
-    def npcDialog(self, npcMapId, npcId, npcOpenDialogId, npcQuestionsReplies, useZaap=True, check_special_dest=True, callback=None):
+    def npc_dialog(self, npcMapId, npcId, npcOpenDialogId, npcQuestionsReplies, useZaap=True, check_special_dest=True, callback=None):
         from pyd2bot.logic.roleplay.behaviors.npc.NpcDialog import NpcDialog
 
         def onNPCMapReached(code, err):
@@ -376,7 +376,7 @@ class BehaviorApi:
 
         BotExchange().start(direction, target, items, callback=callback, parent=self)
 
-    def openBank(self, bankInfos=None, callback=None):
+    def open_bank(self, bankInfos=None, callback=None):
         from pyd2bot.logic.roleplay.behaviors.bank.OpenBank import OpenBank
 
         OpenBank().start(bankInfos, callback=callback, parent=self)
@@ -387,11 +387,11 @@ class BehaviorApi:
 
         RetrieveRecipeFromBank().start(recipe, return_to_start, bankInfos, callback=callback, parent=self)
 
-    def unload_in_bank(self, return_to_start=True, bankInfos=None, callback=None):
+    def unload_in_bank(self, return_to_start=True, bankInfos=None, leave_bank_open=False, callback=None):
         from pyd2bot.logic.roleplay.behaviors.bank.UnloadInBank import \
             UnloadInBank
 
-        UnloadInBank().start(return_to_start, bankInfos, callback=callback, parent=self)
+        UnloadInBank().start(return_to_start, bankInfos, leave_bank_open, callback=callback, parent=self)
     
     def update_bid(self, object_gid: int, quantity: int, listing_uid: int, new_price: int, callback=None):
         from pyd2bot.logic.roleplay.behaviors.bidhouse.UpdateBid import UpdateBid
@@ -401,9 +401,9 @@ class BehaviorApi:
         return b
     
     def place_bid(self, object_gid: int, quantity: int, price: int, callback=None):
-        from pyd2bot.logic.roleplay.behaviors.bidhouse.PutItemInSale import PutItemInSale
+        from pyd2bot.logic.roleplay.behaviors.bidhouse.PlaceBid import PlaceBid
 
-        b = PutItemInSale(object_gid, quantity, price)
+        b = PlaceBid(object_gid, quantity, price)
         b.start(callback=callback, parent=self)
         return b
     
@@ -415,22 +415,25 @@ class BehaviorApi:
         return b
 
     def close_market(self, callback):
-        def _on_market_close(code_, error_):
-            if error_:
-                return  callback(f"Market close failed with error [{code_}] {error_}")
+        if Kernel().marketFrame._market_type_open is None:
+            return callback(0, None)
+        def _on_market_close(code, error):
+            if error:
+                return callback(code, f"Market close failed with error [{code}] {error}")
             Kernel().marketFrame.reset_state()
             callback(0, None)
         self.close_dialog(_on_market_close)
 
-    def close_dialog(self, callback):
+    def close_dialog(self, handler):
+        self.once(
+            event_id=KernelEvent.LeaveDialog,
+            callback=lambda _: handler(0, None),
+            timeout=10,
+            ontimeout=lambda _: handler(1, "close dialog timed out!")
+        )
         ConnectionsHandler().send(LeaveDialogRequestMessage())
         InactivityManager().activity()
-        return self.once(
-            KernelEvent.LeaveDialog,
-            lambda _: callback(0, None),
-            timeout=10,
-            ontimeout=callback(1, "close dialog timed out!")
-        )
+        
     
     def goto_market(self, market_gfx_id, callback):
         from pyd2bot.logic.roleplay.behaviors.bidhouse.GoToMarket import GoToMarket
@@ -439,16 +442,17 @@ class BehaviorApi:
         b.start(callback=callback, parent=self)
         return b
 
-    def retrieve_items_from_bank(self, items_gids: list[int], get_max_quantities: bool = True, return_to_start: bool = False, bank_infos=None, callback=None):
+    def retrieve_items_from_bank(self, items_gids: list[int], items_batch_sizes: list[int], return_to_start: bool = False, bank_infos=None, callback=None):
         from pyd2bot.logic.roleplay.behaviors.bank.RetrieveFromBank import RetrieveFromBank
         
-        behavior = RetrieveFromBank()
-        behavior.start(items_gids, get_max_quantities, return_to_start, bank_infos, callback=callback, parent=self)
-        return behavior
+        b = RetrieveFromBank(items_gids, items_batch_sizes, return_to_start, bank_infos)
+        b.start(callback=callback, parent=self)
+        return b
 
-    def sellFromBag(
+    def sell_items(
         self, 
-        items_to_sell: int, 
+        items_to_sell: list[int],
+        items_batch_sizes: list[int],
         callback=None
     ):
         """
@@ -461,7 +465,7 @@ class BehaviorApi:
         """
         from pyd2bot.logic.roleplay.behaviors.bidhouse.SellItemsFromBag import SellItemsFromBag
         
-        behavior = SellItemsFromBag(items_to_sell)
+        behavior = SellItemsFromBag(items_to_sell, items_batch_sizes)
         behavior.start(callback=callback, parent=self)
         return behavior
 

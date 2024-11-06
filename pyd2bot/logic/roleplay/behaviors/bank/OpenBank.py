@@ -31,7 +31,7 @@ class OpenBank(AbstractBehavior):
         self._startMapId = PlayedCharacterManager().currentMap.mapId
         self._startRpZone = PlayedCharacterManager().currentZoneRp
         self.on(KernelEvent.ServerTextInfo, self.onTextInformation)
-        self.npcDialog(
+        self.npc_dialog(
             self.infos.npcMapId, 
             self.infos.npcId, 
             self.infos.npcActionId, 

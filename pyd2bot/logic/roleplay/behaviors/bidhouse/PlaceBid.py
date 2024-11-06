@@ -9,7 +9,7 @@ from pydofus2.com.ankamagames.dofus.network.messages.game.inventory.items.Object
 from pydofus2.com.ankamagames.dofus.network.messages.game.inventory.items.ObjectQuantityMessage import ObjectQuantityMessage
 from pydofus2.com.ankamagames.dofus.network.messages.game.inventory.items.InventoryWeightMessage import InventoryWeightMessage
 
-class PutItemInSale(AbstractBehavior):
+class PlaceBid(AbstractBehavior):
     """Handles the async logic for selling a single item in the marketplace"""
     
     class ERROR_CODES:
@@ -23,8 +23,9 @@ class PutItemInSale(AbstractBehavior):
         "weight"    # Inventory weight update
     }
 
-    def __init__(self, object_gid: int, quantity: int, price: int):
-        self.object_gid = object_gid
+    def __init__(self, object_uid: int, quantity: int, price: int):
+        super().__init__()
+        self.object_uid = object_uid
         self.price = price
         self.quantity = quantity
         self._received_sequence: Set[str] = set()
@@ -34,9 +35,9 @@ class PutItemInSale(AbstractBehavior):
         if self.price <= 0:
             return self.finish(self.ERROR_CODES.INVALID_PRICE, "Invalid price")
         self.on(KernelEvent.MessageReceived, self._process_message)
-        Kernel().marketFrame.create_listing(self.object_gid, self.quantity, self.price)
+        Kernel().marketFrame.create_listing(self.object_uid, self.quantity, self.price)
 
-    def _process_message(self, msg) -> None:
+    def _process_message(self, event, msg) -> None:
         """Track complete server response sequence"""
         if isinstance(msg, (ObjectQuantityMessage, ObjectDeletedMessage)):
             self._received_sequence.add("quantity")

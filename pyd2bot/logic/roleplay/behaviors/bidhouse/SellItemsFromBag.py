@@ -1,233 +1,143 @@
 from enum import Enum
-from pyd2bot.data.enums import ServerNotificationEnum
-from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
+from typing import List, Optional
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
-
-from typing import Optional, Set, List, Tuple
-from collections import deque
-
+from pydofus2.com.ankamagames.dofus.datacenter.items.Item import Item
 from pydofus2.com.ankamagames.dofus.internalDatacenter.items.ItemWrapper import ItemWrapper
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.InventoryManager import InventoryManager
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import PlayedCharacterManager
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
+from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
+from pyd2bot.data.enums import ServerNotificationEnum
+
 
 class SellItemsFromBag(AbstractBehavior):
-    """Sells multiple items from inventory in batches at competitive prices"""    
-    MIN_PRICE_RATIO = 0.5 # Minimum acceptable price vs market average
+    MIN_PRICE_RATIO = 0.5  # Minimum acceptable price vs market average
     
-    # Server response sequence for a sale
-    REQUIRED_SEQUENCE = {
-        "quantity",  # Inventory quantity update
-        "kamas",     # Kamas update after tax
-        "add",       # Listing confirmation
-        "weight"     # Inventory weight update
-    }
-
     class ERROR_CODES(Enum):
         NO_MORE_SELL_SLOTS = 98754343
         INSUFFICIENT_KAMAS = 98754344
         INSUFFICIENT_QUANTITY = 98754345
-        
 
-    def __init__(self, items_to_sell: List[Tuple[int, int]]):
-        """
-        Initialize with list of items to sell
-        Args:
-            items_to_sell: List of tuples (object_gid, quantity)
-        """
-        self._sell_queue = deque(items_to_sell)
-        first_item = items_to_sell[0]
-        super().__init__(first_item[0], first_item[1])
-        self._quantity_in_inventory = 0
-        self._received_sequence: Set[str] = set()
-
-    def run(self) -> bool:
-        """Start selling process for first item"""
+    def __init__(self, items_to_sell: List[int], items_batch_sizes: List[int]):
+        super().__init__()
+        self._logger = Logger()
+        self._items_to_sell = items_to_sell
+        self._items_batch_sizes = items_batch_sizes
+        self._current_idx = 0
         self._market_frame = Kernel().marketFrame
+        self._items = list[tuple[ItemWrapper, int]]()
+        
+    def run(self) -> None:
+        if not self._check_inventory():
+            return
+        
         self.on(KernelEvent.ServerTextInfo, self._on_server_notif)
-        self._process_next_item()
+        self._process_current_item()
+    
+    def _check_inventory(self):
+        items_in_inventory = []
+        for gid, batch_size in zip(self._items_to_sell, self._items_batch_sizes):
+            item = self.get_item_from_inventory(gid)
+            if item and item.quantity >= batch_size:
+                items_in_inventory.append((item, batch_size))
+        if not items_in_inventory:
+            self.finish(1, "No item found in inventory from items to sell!")
+            return None
+        self._items = items_in_inventory
+        return items_in_inventory
 
-    @property
-    def bids_manager(self):
-        return self._market_frame._bids_manager
+    def _process_current_item(self) -> None:
+        if self._current_idx >= len(self._items):
+            return self._ensure_market_closed(lambda: self.finish(0))
+        
+        item, qty = self._items[self._current_idx]
+    
+        self._logger.info(f"Processing {item.name}({item.objectGID}) x{qty}")
 
-    def _process_next_item(self) -> bool:
-        """Prepare and start selling the next item in queue"""
-        if not self._sell_queue:
-            Logger().info("All items sold successfully")
-            return self.finish(0)
-
-        if not self._validate_next_item():
-            return self._process_next_item()
-
-        # Open market using the new abstracted method
-        Logger().info(f"Opening market for item {self.object_gid}")
+        if self._market_frame._market_type_open == item.category:
+            return self._on_market_open(0, None)
+        
         self.open_market(
-            from_gid=self.object_gid,
+            from_type=item.category,
             callback=self._on_market_open
         )
 
-    def _on_market_open(self, code: int, error: str) -> None:
-        """Handle marketplace interface opened"""
+    def _on_market_open(self, code: int, error: Optional[str]) -> None:
         if error:
-            return self.finish(code, error)
+            return self._handle_error(code, error)
+
+        if self._market_frame._current_mode == "sell":
+            return self._handle_sell_mode(None, None)
+
         self._market_frame.switch_mode("sell", self._handle_sell_mode)
+    
+    @property
+    def current_item(self) -> ItemWrapper:
+        return self._items[self._current_idx][0]
 
     def _handle_sell_mode(self, event, mode) -> None:
-        Logger().info("Market open - starting searching for item in bidhouse")
-        self._market_frame.search_item(self.object_gid, self._handle_search_msg)
-
-    def _handle_search_msg(self, event, msg) -> None:
-        """Get current prices"""
-        Logger().info("Received price search result")
-        self._market_frame.check_price(self.object_gid, self._on_price_info)
-
-    def _skip_current_item(self):
-        """Skip current item and process next if available"""
-        self._sell_queue.popleft()
-        if self._sell_queue:
-            self.object_gid, self.quantity = self._sell_queue[0]
-            self._market_frame.check_price(self.object_gid, self._on_price_info)
-        else:
-            self._on_idle()
-        
+        gid = self.current_item.objectGID
+        self._market_frame.search_item(gid, lambda *_: self._market_frame.check_price(gid, self._on_price_info))
+            
     def _on_price_info(self, event, msg) -> None:
-        """Got prices - attempt sale if profitable and valid"""
-        target_price, error = self.bids_manager.get_sell_price(
-            self.object_gid, 
-            self.quantity,
-            self.MIN_PRICE_RATIO
+        item, qty = self._items[self._current_idx]
+
+        # Get price with ratio validation
+        target_price, error = self._market_frame._bids_manager.get_sell_price(
+            item.objectGID, qty, self.MIN_PRICE_RATIO
         )
         
         if error:
-            Logger().warning(f"Price error for {self.object_gid}: {error}")
-            self._skip_current_item()
-            return
+            self._logger.warning(f"Error while calculating best price for item {item.objectGID}: {error}")
+            self._current_idx += 1
+            return self._process_current_item()
 
-        # Validate all conditions before selling
-        code, error = self._validate_sale_conditions(target_price)
-        if error:
-            Logger().warning(f"Sale validation failed with error [{code}]: {error}")
-            if code in [self.ERROR_CODES.INSUFFICIENT_KAMAS, self.ERROR_CODES.NO_MORE_SELL_SLOTS]:
-                self.finish(code, error)
-            else:
-                self._skip_current_item()
+        # Validate before selling
+        if not self._validate_sale(target_price):
             return
-                
-        # All validations passed - proceed with sale
-        Logger().info(f"Selling {self.quantity}x {self.object_gid} at {target_price}")
-        self.place_bid(self.object_gid, self.quantity, target_price, self._on_item_sold)
+            
+        self._logger.info(f"Listing {item.objectGID} x{qty} at {target_price}")
+        self.place_bid(item.objectUID, qty, target_price, self._on_bid_placed)
 
-    def _validate_sale_conditions(self, target_price: int) -> Tuple[bool, Optional[str]]:
-        """
-        Validate all conditions before attempting a sale
-        Args:
-            target_price: Price to list item at
-        Returns:
-            Tuple of (is_valid, error_message)
-        """
-        # Check remaining sell slots
-        if self.bids_manager.get_remaining_sell_slots() <= 0:
-            return self.ERROR_CODES.NO_MORE_SELL_SLOTS, "No more sell slots available"
+    def _validate_sale(self, price: int) -> bool:
+        if self._market_frame._bids_manager.get_remaining_sell_slots() <= 0:
+            self._handle_error(self.ERROR_CODES.NO_MORE_SELL_SLOTS, "No sell slots")
+            return False
             
-        # Recheck inventory quantity (could have changed)
-        self._item = self.get_item_from_inventory(self.object_gid)
-        if not self._item:
-            return self.ERROR_CODES.INSUFFICIENT_QUANTITY, f"Item {self.object_gid} no longer in inventory"
-            
-        if self._item.quantity < self.quantity:
-            return self.ERROR_CODES.INSUFFICIENT_QUANTITY, f"Insufficient quantity: need {self.quantity}, have {self._item.quantity}"
-            
-        # Check if we can afford tax
-        tax = self.bids_manager.calculate_tax(target_price)
+        tax = self._market_frame._bids_manager.calculate_tax(price)
         if PlayedCharacterManager().characteristics.kamas < tax:
-            return self.ERROR_CODES.INSUFFICIENT_KAMAS, f"Insufficient kamas to pay listing tax ({tax} required)"
-            
-        return True, None
-    
-    def get_item_from_inventory(self, object_gid: int) -> Optional[ItemWrapper]:
-        """Get item wrapper from inventory by GID"""
-        if object_gid in ItemWrapper._cacheGId:
-            return ItemWrapper._cacheGId[object_gid]
-
-        return InventoryManager().inventory.getFirstItemByGID(object_gid)
-
-    def _validate_next_item(self) -> bool:
-        """
-        Validate next item in queue and prepare it for selling
-        Returns: True if item is valid and ready to sell, False otherwise
-        """
-        if not self._sell_queue:
-            return False
-            
-        self.object_gid, self.quantity = self._sell_queue[0]
-        
-        # Get item and validate quantity
-        self._item = self.get_item_from_inventory(self.object_gid)
-        if not self._item:
-            Logger().warning(f"Item {self.object_gid} not found in inventory, skipping...")
-            self._sell_queue.popleft()
-            return False
-        
-        self.item_category = self._item.category
-        self._quantity_in_inventory = self._item.quantity
-        if self._quantity_in_inventory < self.quantity:
-            Logger().warning(
-                f"Need {self.quantity} of {self.object_gid}, only have {self._quantity_in_inventory}, skipping..."
-            )
-            self._sell_queue.popleft()
+            self._handle_error(self.ERROR_CODES.INSUFFICIENT_KAMAS, f"Need {tax} kamas for tax")
             return False
             
         return True
+        
+    def _on_bid_placed(self, code: Optional[int], error: Optional[str]) -> None:
+        if error:
+            return self._handle_error(code, error)
 
-    def _on_item_sold(self):
-        """Handle successful item sale and determine next action"""
-        current_gid = self.object_gid
+        # Check if we should continue selling same item
+        item, qty = self._items[self._current_idx]
+        item = self.get_item_from_inventory(item.objectGID)
         
-        self._item = self.get_item_from_inventory(self.object_gid)
-        self._quantity_in_inventory = self._item.quantity
+        if item and item.quantity >= qty and self._market_frame._bids_manager.get_remaining_sell_slots() > 0:
+            self._logger.info(f"Continuing to sell {item.objectGID} x{qty}")
+            return self._market_frame.check_price(item.objectGID, self._on_price_info)
         
-        if self._quantity_in_inventory >= self.quantity:
-            if self.bids_manager.get_remaining_sell_slots() > 0:           
-                # Continue selling current item
-                Logger().info(f"Continuing to sell {self.quantity}x {current_gid}")
-                self._market_frame.check_price()
-                return
-            else:
-                self.finish(self.ERROR_CODES.NO_MORE_SELL_SLOTS, "There is no more sell slots")
-                return
-        # Current item batch complete
-        Logger().info(f"Finished selling item {current_gid}")
-        self._sell_queue.popleft()
-        
-        while self._sell_queue and not self._validate_next_item():
-            # Keep trying until we find a valid item or run out of items
-            pass
-            
-        if self._sell_queue:
-            Logger().info(f"Moving to next item {self.object_gid}, {len(self._sell_queue)} items remaining")
-            self._market_frame.check_price(self.object_gid, self._on_price_info)
-        else:
-            Logger().info("All items sold successfully")
-            self._on_idle()
-
-    def _on_idle(self):
-        """Clean completion of selling process"""
-        self.finish(0)
+        self._logger.info(f"No more instances to sell, Moving to next item")
+        self._current_idx += 1
+        self._process_current_item()
 
     def _on_server_notif(self, event, msgId, msgType, textId, msgContent, params):
         if textId == ServerNotificationEnum.CANT_SELL_ANYMORE_ITEMS:
-            self.finish(self.ERROR_CODES.NO_MORE_SELL_SLOTS, "There is no more sell slots")
-    
-    def finish(self, code, error=None):
-        def _on_market_close(code_, error_):
-            if error_:
-                Logger().error(f"Market close failed with error [{code_}] {error_}")
-            super().finish(code, error)
-        self.close_market(_on_market_close)
-
-    def _can_afford_tax(self, price: int) -> bool:
-        """Check if player can afford listing tax"""
-        tax = self.bids_manager.calculate_tax(price)
-        return PlayedCharacterManager().characteristics.kamas >= tax
+            self._handle_error(self.ERROR_CODES.NO_MORE_SELL_SLOTS, "No sell slots")
+            
+    def _ensure_market_closed(self, callback) -> None:
+        self.close_market(lambda *_: callback())
+        
+    def _handle_error(self, code: Optional[int], error: Optional[str]) -> None:
+        self._logger.warning(f"Error encountered [{code}]: {error}")
+        self._ensure_market_closed(lambda: self.finish(code, error))
+        
+    def get_item_from_inventory(self, gid: int):
+        return InventoryManager().inventory.getFirstItemByGID(gid)

@@ -46,7 +46,7 @@ class GetOutOfAnkarnam(AbstractBehavior):
         if areaId != self.ankarnamAreaId:
             Logger().debug(f"GetOutOfAnkarnam: Current area is not Ankarnam! (areaId: {areaId})")
             return self.finish(True, None)
-        self.npcDialog(
+        self.npc_dialog(
             self.npcMapId,
             self.npcId,
             self.openGoToAstrubActionId,

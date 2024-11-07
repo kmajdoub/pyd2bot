@@ -60,7 +60,7 @@ class AutoRevive(AbstractBehavior):
                 Logger().info("Phenix revive skill used")
             self.useSkill(ie=reviveIE, callback=onPhenixSkillUsed)
         else:
-            self.onceFramePushed("RoleplayInteractivesFrame", self.onPhenixMapReached)
+            self.once_frame_pushed("RoleplayInteractivesFrame", self.onPhenixMapReached)
             
     def onCemetaryMapLoadedTimeout(self):
         Logger().error("Cemetary map loaded timeout.")

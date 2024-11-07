@@ -85,7 +85,7 @@ class MapMove(AbstractBehavior):
         rpmframe = Kernel().movementFrame
         
         if not rpmframe:
-            return self.onceFramePushed("RoleplayMovementFrame", self.move)
+            return self.once_frame_pushed("RoleplayMovementFrame", self.move)
         
         playerEntity = DofusEntities().getEntity(PlayedCharacterManager().id)
         

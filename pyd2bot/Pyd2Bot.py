@@ -4,7 +4,7 @@ from pyd2bot.BotSettings import BotSettings
 from pyd2bot.data.enums import SessionTypeEnum
 from pyd2bot.logic.roleplay.behaviors.bank.RetrieveFromBank import RetrieveFromBank
 from pyd2bot.logic.roleplay.behaviors.bidhouse.MonitorMarket import MonitorMarket
-from pyd2bot.logic.roleplay.behaviors.bidhouse.RetrieveAndSell import RetrieveAndSell
+from pyd2bot.logic.roleplay.behaviors.bidhouse.RetrieveSellUpdate import RetrieveSellUpdate
 from pyd2bot.logic.roleplay.behaviors.bidhouse.SellItemsFromBag import SellItemsFromBag
 from pyd2bot.logic.roleplay.behaviors.bidhouse.UpdateBids import UpdateBidsBehavior
 from pyd2bot.logic.roleplay.behaviors.updates.AutoUpgradeStats import AutoUpgradeStats
@@ -31,7 +31,7 @@ from pydofus2.com.ankamagames.dofus.types.enums.ItemCategoryEnum import ItemCate
 from pydofus2.com.ankamagames.jerakine.benchmark.BenchmarkTimer import BenchmarkTimer
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 from pydofus2.com.DofusClient import DofusClient
-
+import asyncio
 
 class Pyd2Bot(DofusClient):
 
@@ -87,9 +87,9 @@ class Pyd2Bot(DofusClient):
     def startSessionMainBehavior(self):
         Logger().info(f"Starting main behavior for {self.name}, sessionType : {self.session.type.name}")
         PIWI_FEATHER_GIDS = [6900, 6902, 6898, 6899, 6903, 6897]
-        quantities = [100, 100, 100, 100, 100, 100]
+        type_batch_size = {39: 100}
         
-        self._main_behavior = RetrieveAndSell(PIWI_FEATHER_GIDS, quantities, True)
+        self._main_behavior = RetrieveSellUpdate(type_batch_size=type_batch_size)
         # items_gids = [(gid, 100) for gid in PIWI_FEATHER_GIDS]        
         # self._main_behavior = SellFromBagBehavior(items_gids)
 

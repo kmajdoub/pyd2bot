@@ -33,7 +33,7 @@ class ToggleRideMount(AbstractBehavior):
 
     def useToggleRideMountShortcut(self):
         if not Kernel().mountFrame:
-            return self.onceFramePushed('MountFrame', self.useToggleRideMountShortcut)
+            return self.once_frame_pushed('MountFrame', self.useToggleRideMountShortcut)
         KernelEventsManager().once(KernelEvent.MountRiding, self.onMountRiding)
         HaapiEventsManager().registerShortcutUse("openMount")
         if not Kernel().worker.terminated.wait(0.3):

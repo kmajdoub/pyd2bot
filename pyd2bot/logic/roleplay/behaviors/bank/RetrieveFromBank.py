@@ -1,9 +1,9 @@
 from enum import Enum
-from typing import List, Optional, Callable, Tuple
+from typing import Dict, List, Optional, Tuple
 from pyd2bot.data.enums import ServerNotificationEnum
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
-from pyd2bot.logic.roleplay.behaviors.bank.CarryOptimizer import ItemInfo, optimize_carry
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
+from pydofus2.com.ankamagames.dofus.internalDatacenter.items.ItemWrapper import ItemWrapper
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.InventoryManager import InventoryManager
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import PlayedCharacterManager
@@ -24,17 +24,17 @@ class RetrieveFromBank(AbstractBehavior):
         TRAVEL_ERROR = 87656458
         WAIT_REQUIRED = 87656459
 
-    def __init__(self, items_gids: List[int], items_batch_sizes: List[int], return_to_start=False, bank_infos=None):
+    def __init__(self, type_batch_size: Dict[int, int]=None, gid_batch_size: Dict[int, int]=None, return_to_start=False, bank_infos=None):
         super().__init__()
         self._logger = Logger()
         self._start_map_id = None
         self._start_zone = None
         self._return_to_start = return_to_start
-        self._item_gids = items_gids
-        self.items_batch_sizes = items_batch_sizes
+        self.gid_batch_size = gid_batch_size
         self.bank_info = bank_infos
         self._items_uids = []
         self._quantities = []
+        self.type_batch_size = type_batch_size
         
     def _safe_finish(self, code: ERROR_CODES, error: Optional[Exception] = None) -> None:
         """Ensures bank is closed before finishing with error"""
@@ -62,7 +62,7 @@ class RetrieveFromBank(AbstractBehavior):
         self.unload_in_bank(
             bankInfos=self.bank_info, 
             return_to_start=False, 
-            leave_bank_open=True, 
+            leave_bank_open=True,
             callback=self._on_storage_open
         )
 
@@ -78,108 +78,80 @@ class RetrieveFromBank(AbstractBehavior):
                     wait_time,
                     self._retrieve_items
                 ).start()
-                
             except (IndexError, ValueError) as e:
                 self._logger.error(f"Error parsing wait time from params {params}: {e}")
                 self._safe_finish(self.ERROR_CODES.WAIT_REQUIRED, f"Invalid wait time parameters: {params}")
 
-    @classmethod
-    def get_existing_bank_items(cls, items_gids: List[int]) -> dict:
-        details = {}
-        try:
-            resourceItems = InventoryManager().bankInventory.getView("bank").content
-            for item in resourceItems:
-                if item.objectGID not in items_gids:
-                    continue
-                if not item.linked:
-                    if item.objectGID not in details:
-                        details[item.objectGID] = {
-                            "totalQuantity": item.quantity,
-                            "stackUidList": [item.objectUID],
-                            "stackQtyList": [item.quantity],
-                            "storageTotalQuantity": item.quantity,
-                            "weight": item.weight,
-                            "averagePrice": Kernel().averagePricesFrame.getItemAveragePrice(item.objectGID)
-                        }
-                    else:
-                        details[item.objectGID]["totalQuantity"] += item.quantity
-                        details[item.objectGID]["stackUidList"].append(item.objectUID)
-                        details[item.objectGID]["stackQtyList"].append(item.quantity)
-                        details[item.objectGID]["storageTotalQuantity"] += item.quantity
-        except Exception as e:
-            Logger().error(f"Error getting bank items: {e}")
-            raise
-        return details
+    def filter_item(self, item_stack: ItemWrapper):
+        if self.type_batch_size:
+            return item_stack.typeId in self.type_batch_size and item_stack.quantity >= self.type_batch_size[item_stack.typeId]
+        elif self.gid_batch_size:
+            return item_stack.objectGID in self.gid_batch_size and item_stack.quantity>= self.gid_batch_size[item_stack.objectGID]
+        else:
+            return True
 
+    def _find_items_to_retrieve(self) -> List[Tuple[int, int]]:
+        self._has_remaining = False
+        self.items_to_retrieve = list[tuple[int, int]]()
+        bank_item_stacks = InventoryManager().bankInventory.getView("bank").content
+        candidate_item_stacks = [item for item in bank_item_stacks if not item.linked and self.filter_item(item)]
+        # Sort by value density (price/weight) in descending order
+        candidate_item_stacks.sort(key=lambda item: Kernel().averagePricesFrame.getItemAveragePrice(item.objectGID) / item.weight, reverse=True)
+        
+        remaining_pods = self.characterApi.inventoryWeightMax() - self.characterApi.inventoryWeight()
+        
+        for item in candidate_item_stacks:
+            if remaining_pods <= 0:
+                break
+            
+            batch_size = self.type_batch_size.get(item.typeId, 100) if self.type_batch_size else self.gid_batch_size.get(item.objectGID, 100)
+            available_batches = (item.quantity // batch_size) * batch_size
+            
+            # Calculate how many complete batches we can carry
+            max_quantity = min(
+                item.quantity,  # Don't take more than what's available
+                remaining_pods // item.weight  # Don't exceed weight limit
+            )
+            # Round down to nearest complete batch
+            batches_can_carry = (max_quantity // batch_size) * batch_size
+            
+            if batches_can_carry > 0:
+                # If we couldn't carry all available batches, mark as having remainder
+                if max_quantity < available_batches:
+                   self._has_remaining = True
+    
+                # Add the item and quantity to our result
+                self.items_to_retrieve.append((item.objectUID, batches_can_carry))
+                # Update remaining weight capacity
+                remaining_pods -= max_quantity * item.weight
+                
     def _on_storage_open(self, code: int, err: Optional[Exception]) -> None:
         if err:
             return self._safe_finish(self.ERROR_CODES.STORAGE_OPEN_ERROR, err)
-        
-        try:
-            # Get bank resources and available pods
-            bank_resources = self.get_existing_bank_items(self._item_gids)
-            available_player_pods = self.characterApi.inventoryWeightMax() - self.characterApi.inventoryWeight()
-            
-            if not bank_resources:
-                self._logger.info("There are no items to retrieve from bank")
-                return self._safe_finish(self.ERROR_CODES.NO_ITEMS_TO_RETRIEVE)
 
-            # Convert bank resources to ItemInfo objects
-            items_info = {}
-            for gid, details in bank_resources.items():
-                items_info[gid] = ItemInfo(
-                    gid=gid,
-                    weight=details["weight"],
-                    market_value=details["averagePrice"],
-                    stack_uids=details["stackUidList"],
-                    stack_quantities=details["stackQtyList"],
-                    batch_size=self.items_batch_sizes[self._item_gids.index(gid)] if gid in self._item_gids else 1
-                )
-                
-            # Calculate optimal retrieval plan
-            self._items_uids, self._quantities = optimize_carry(items_info, available_player_pods)
-            
-            # Proceed with retrieval
-            self._retrieve_items()
-            
-        except Exception as e:
-            self._safe_finish(self.ERROR_CODES.RETRIEVAL_ERROR, e)
+        # Get bank resources and available pods
+        self._find_items_to_retrieve()
+        # Proceed with retrieval
+        self._retrieve_items()
     
     def _retrieve_items(self) -> None:
         """Send item retrieval request with error handling"""
-        try:
-            if not self._items_uids or not self._quantities:
-                self._logger.info("No items to retrieve within pod limits")
-                return self._safe_finish(self.ERROR_CODES.NO_ITEMS_TO_RETRIEVE)
+        if not self.items_to_retrieve:
+            self._logger.info("No items to retrieve within pod limits")
+            return self._safe_finish(self.ERROR_CODES.NO_ITEMS_TO_RETRIEVE)
 
-            self.once(
-                KernelEvent.InventoryWeightUpdate, 
-                self._on_inventory_weight_changed
-            )
-            
-            self._logger.debug(f"Retrieving items: UIDs={self._items_uids}, Quantities={self._quantities}")
-            Kernel().exchangeManagementFrame.exchangeObjectTransferListWithQuantityToInv(
-                self._items_uids,
-                self._quantities
-            )
-        except Exception as e:
-            self._safe_finish(self.ERROR_CODES.RETRIEVAL_ERROR, e)
-
-    def _on_inventory_weight_changed(self, event: KernelEvent, last_weight: int, new_weight: int, max_weight: int) -> None:
-        self._logger.info(f"Inventory weight percent changed to : {round(100 * new_weight / max_weight, 1)}%")
-        self.close_dialog(self._on_storage_closed)
+        items_uids, quantities = zip(*self.items_to_retrieve)
+        self.pull_bank_items(items_uids, quantities, lambda: self.close_dialog(self._on_storage_closed))
 
     def _on_storage_closed(self, code: int, error: Optional[Exception]) -> None:
         if error:
             return self._safe_finish(self.ERROR_CODES.BANK_CLOSE_ERROR, error)
-            
+        
+        callback = lambda *_: self.finish(0, None, self._has_remaining)
         self._logger.info("Bank storage closed")
         
         if self._return_to_start:
             self._logger.info(f"Returning to start point")
-            try:
-                self.travel_using_zaap(self._start_map_id, self._start_zone, callback=self.finish)
-            except Exception as e:
-                self.finish(self.ERROR_CODES.TRAVEL_ERROR, e)
+            self.travel_using_zaap(self._start_map_id, self._start_zone, callback=callback)
         else:
-            self.finish(0, None, self._items_uids, self._quantities)
+            callback()

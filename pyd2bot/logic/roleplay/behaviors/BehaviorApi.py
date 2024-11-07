@@ -1,6 +1,6 @@
 import json
 import os
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Dict, List
 
 from pyd2bot.misc.Localizer import Localizer
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
@@ -38,7 +38,7 @@ class BehaviorApi:
     NEW_VALONIA_AREAID = 93
     SPECIAL_AREA_INFOS_NOT_FOUND_ERROR = 89091
     PLAYER_IN_FIGHT_ERROR = 89090
-    CELECTIAL_SUBAREA_ID = 446
+    CELESTIAL_SUBAREA_ID = 446
 
     def __init__(self) -> None:
         pass
@@ -72,12 +72,12 @@ class BehaviorApi:
             maxCost = InventoryManager().inventory.kamas
             Logger().debug(f"Player max teleport cost is {maxCost}")
 
-        dstsubArea = SubArea.getSubAreaByMapId(dstMapId)
+        dst_sub_area = SubArea.getSubAreaByMapId(dstMapId)
         
-        if PlayerManager().isBasicAccount() and not dstsubArea.basicAccountAllowed:
+        if PlayerManager().isBasicAccount() and not dst_sub_area.basicAccountAllowed:
             return callback(1, "Destination map is not allowed for basic accounts!")
             
-        if PlayedCharacterManager().currentSubArea.id == self.CELECTIAL_SUBAREA_ID and dstsubArea.id != self.CELECTIAL_SUBAREA_ID:
+        if PlayedCharacterManager().currentSubArea.id == self.CELESTIAL_SUBAREA_ID and dst_sub_area.id != self.CELESTIAL_SUBAREA_ID:
             Logger().info(f"Player is in celestial dimension, and wants to get out of there.")
 
             def onOutOfCelestialDim(code, err):
@@ -93,7 +93,7 @@ class BehaviorApi:
             return self.autoTrip(dstMapId, dstZoneId, callback=callback)
         dstZaapVertex = path_to_dest_zaap[-1].dst
         
-        if not PlayedCharacterManager().isZaapKnown(dstZaapVertex.mapId):
+        def on_dst_zaap_unknown():
             Logger().debug(f"Dest zaap at vertex {dstZaapVertex} is not known ==> We need to travel to register it.")
 
             def onDstZaapTrip(code, err):
@@ -109,20 +109,32 @@ class BehaviorApi:
                     return self.saveZaap(onDstZaapSaved)
                 self.autoTrip(dstMapId, dstZoneId, callback=callback)
 
-            return self.travel_using_zaap(
+            self.travel_using_zaap(
                 dstZaapVertex.mapId,
                 dstZaapVertex.zoneId,
                 excludeMaps=excludeMaps + [dstZaapVertex.mapId],
                 callback=onDstZaapTrip,
             )
+            
+        if not PlayedCharacterManager().isZaapKnown(dstZaapVertex.mapId):
+            if PlayerManager().inHavenBag():
+                Logger().debug(f"Player is inside haven bag, we need to exit it before traveling!")
+                return self.toggle_haven_bag(False, lambda *_: on_dst_zaap_unknown())
+            return on_dst_zaap_unknown()
 
-        Logger().debug(f"Dst zaap at {dstZaapVertex} is found in known ZAAPS, Autotriping with zaaps to {dstMapId}, zoneId={dstZoneId}")
+        Logger().debug(f"Dst zaap at {dstZaapVertex} is found in known ZAAPS, traveling with zaaps to {dstMapId}, zoneId={dstZoneId}")
 
         def onAutoTripUseZaapEnd(code, err):
-            if err and code == AutoTripUseZaap.NO_PATH_TO_DEST:
-                Logger().error(err)
-                Logger().info("Trying to reach the destination with classic auto trip as last resort.")
-                return self.autoTrip(dstMapId, dstZoneId, callback=callback)
+            from pyd2bot.logic.roleplay.behaviors.teleport.UseZaap import UseZaap
+
+            if err:
+                if code == AutoTripUseZaap.NO_PATH_TO_DEST:
+                    Logger().error(err)
+                    Logger().info("Trying to reach the destination with classic auto trip as last resort.")
+                    return self.autoTrip(dstMapId, dstZoneId, callback=callback)
+                elif code == UseZaap.DST_ZAAP_NOT_KNOWN:
+                    return on_dst_zaap_unknown()
+
             return callback(code, err)
 
         AutoTripUseZaap().start(
@@ -204,11 +216,11 @@ class BehaviorApi:
 
         ChangeMap().start(transition, edge, dstMapId, callback=callback, parent=self)
 
-    def enterHavenBag(self, wanted_state=None, callback=None):
+    def toggle_haven_bag(self, wanted_state=None, callback=None):
         from pyd2bot.logic.roleplay.behaviors.teleport.EnterHavenBag import \
-            EnterHavenBag
+            ToggleHavenBag
 
-        EnterHavenBag().start(wanted_state=wanted_state, callback=callback, parent=self)
+        ToggleHavenBag().start(wanted_state=wanted_state, callback=callback, parent=self)
     
     def toggleRideMount(self, wanted_ride_state=None, callback=None):
         from pyd2bot.logic.roleplay.behaviors.mount.ToggleRideMount import ToggleRideMount
@@ -407,15 +419,16 @@ class BehaviorApi:
         b.start(callback=callback, parent=self)
         return b
     
-    def open_market(self, from_gid=None, from_type=None, callback=None):
+    def open_market(self, from_gid=None, from_type=None, exclude_market_at_maps=None, callback=None):
         from pyd2bot.logic.roleplay.behaviors.bidhouse.OpenMarket import OpenMarket
 
-        b = OpenMarket(from_gid=from_gid, from_object_category=from_type)
+        b = OpenMarket(from_gid=from_gid, from_object_category=from_type, exclude_market_at_maps=exclude_market_at_maps)
         b.start(callback=callback, parent=self)
         return b
 
     def close_market(self, callback):
         if Kernel().marketFrame._market_type_open is None:
+            Logger().warning("No market is open!")
             return callback(0, None)
         def _on_market_close(code, error):
             if error:
@@ -424,35 +437,53 @@ class BehaviorApi:
             callback(0, None)
         self.close_dialog(_on_market_close)
 
-    def close_dialog(self, handler):
+    def close_dialog(self, handler, timeout=10):
         self.once(
             event_id=KernelEvent.LeaveDialog,
             callback=lambda _: handler(0, None),
-            timeout=10,
+            timeout=timeout,
             ontimeout=lambda _: handler(1, "close dialog timed out!")
         )
         ConnectionsHandler().send(LeaveDialogRequestMessage())
         InactivityManager().activity()
         
     
-    def goto_market(self, market_gfx_id, callback):
+    def goto_market(self, market_gfx_id, exclude_market_at_maps=None, callback=None):
         from pyd2bot.logic.roleplay.behaviors.bidhouse.GoToMarket import GoToMarket
 
-        b = GoToMarket(market_gfx_id)
+        b = GoToMarket(market_gfx_id, exclude_market_at_maps)
         b.start(callback=callback, parent=self)
         return b
 
-    def retrieve_items_from_bank(self, items_gids: list[int], items_batch_sizes: list[int], return_to_start: bool = False, bank_infos=None, callback=None):
+    def retrieve_items_from_bank(self, type_batch_size: Dict[int, int], gid_batch_size: Dict[int, int], return_to_start: bool = False, bank_infos=None, callback=None):
         from pyd2bot.logic.roleplay.behaviors.bank.RetrieveFromBank import RetrieveFromBank
         
-        b = RetrieveFromBank(items_gids, items_batch_sizes, return_to_start, bank_infos)
+        b = RetrieveFromBank(type_batch_size, gid_batch_size, return_to_start, bank_infos)
+        b.start(callback=callback, parent=self)
+        return b
+
+    def pull_bank_items(self, items_uids, quantities, callback):
+        self.once(
+            KernelEvent.InventoryWeightUpdate, 
+            lambda *_: callback()
+        )
+        Logger().debug(f"Retrieving items: UIDs={items_uids}, Quantities={quantities}")
+        Kernel().exchangeManagementFrame.exchangeObjectTransferListWithQuantityToInv(
+            items_uids,
+            quantities
+        )
+
+    def retrieve_kamas_from_bank(self, callback=None):
+        from pyd2bot.logic.roleplay.behaviors.bank.RetrieveKamasFromBank import RetrieveKamasFromBank
+
+        b = RetrieveKamasFromBank()
         b.start(callback=callback, parent=self)
         return b
 
     def sell_items(
         self, 
-        items_to_sell: list[int],
-        items_batch_sizes: list[int],
+        gid_batch_size: Dict[int, int] = None, 
+        type_batch_size: Dict[int, int] = None,
         callback=None
     ):
         """
@@ -465,7 +496,7 @@ class BehaviorApi:
         """
         from pyd2bot.logic.roleplay.behaviors.bidhouse.SellItemsFromBag import SellItemsFromBag
         
-        behavior = SellItemsFromBag(items_to_sell, items_batch_sizes)
+        behavior = SellItemsFromBag(gid_batch_size, type_batch_size)
         behavior.start(callback=callback, parent=self)
         return behavior
 
@@ -515,7 +546,7 @@ class BehaviorApi:
     def once(self, event_id, callback, timeout=None, ontimeout=None, retryNbr=None, retryAction=None):
         return self.on(event_id, callback, timeout=timeout, ontimeout=ontimeout, retryNbr=retryNbr, retryAction=retryAction, once=True)
     
-    def onMultiple(self, listeners):
+    def on_multiple(self, listeners):
         for event_id, callback, kwargs in listeners:
             self.on(event_id, callback, **kwargs)
 
@@ -524,13 +555,13 @@ class BehaviorApi:
             callback=callback, args=args, mapId=mapId, timeout=timeout, ontimeout=ontimeout, originator=self
         )
 
-    def onceFramePushed(self, frameName, callback, args=[]):
+    def once_frame_pushed(self, frameName, callback, args=[]):
         return KernelEventsManager().onceFramePushed(frameName, callback, args=args, originator=self)
 
     def send(self, event_id, *args, **kwargs):
         return KernelEventsManager().send(event_id, *args, **kwargs)
 
-    def hasListener(self, event_id):
+    def has_listener(self, event_id):
         return KernelEventsManager().hasListener(event_id)
 
     def onEntityMoved(self, entityId, callback, timeout=None, ontimeout=None, once=False):

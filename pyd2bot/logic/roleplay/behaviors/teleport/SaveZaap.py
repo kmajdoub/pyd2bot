@@ -3,12 +3,8 @@ from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
 from pydofus2.com.ankamagames.dofus.internalDatacenter.taxi.TeleportDestinationWrapper import \
     TeleportDestinationWrapper
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
-from pydofus2.com.ankamagames.dofus.kernel.net.ConnectionsHandler import \
-    ConnectionsHandler
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import \
     PlayedCharacterManager
-from pydofus2.com.ankamagames.dofus.network.messages.game.dialog.LeaveDialogRequestMessage import \
-    LeaveDialogRequestMessage
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 
 
@@ -25,7 +21,7 @@ class SaveZaap(AbstractBehavior):
         if Kernel().interactiveFrame:
             self.openCurrMapZaapDialog()
         else:
-            self.onceFramePushed("RoleplayInteractivesFrame", self.openCurrMapZaapDialog)
+            self.once_frame_pushed("RoleplayInteractivesFrame", self.openCurrMapZaapDialog)
 
     def openCurrMapZaapDialog(self):
         self.zaapIe = Kernel().interactiveFrame.getZaapIe()
@@ -42,12 +38,8 @@ class SaveZaap(AbstractBehavior):
             return self.finish(code, err)
 
     def onZaapSaveResp(self, event_id, destinations: list[TeleportDestinationWrapper], ttype):
-        ConnectionsHandler().send(LeaveDialogRequestMessage())
-        return self.on(
-            KernelEvent.LeaveDialog,
-            lambda _: self.finish(True, None),
-        )
-        
+        self.close_dialog(lambda *_: self.finish(0))
+
     def onTeleportDestinationList(self, event_id, destinations: list[TeleportDestinationWrapper], ttype):
         Logger().debug(f"Zaap teleport destinations received.")
         Kernel().zaapFrame.zaapRespawnSaveRequest()

@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     pass
 
 
-class EnterHavenBag(AbstractBehavior):
+class ToggleHavenBag(AbstractBehavior):
     NEED_LVL_10 = 589049
     ONLY_SUBSCRIBED = 589048
     TIMEDOUT = 589047
@@ -39,16 +39,16 @@ class EnterHavenBag(AbstractBehavior):
 
     def useEnterHavenBagShortcut(self):
         if not Kernel().roleplayContextFrame:
-            return self.onceFramePushed('RoleplayContextFrame', self.useEnterHavenBagShortcut)
+            return self.once_frame_pushed('RoleplayContextFrame', self.useEnterHavenBagShortcut)
         HaapiEventsManager().registerShortcutUse("openHavenbag")
         Kernel().worker.terminated.wait(0.5)
         Kernel().roleplayContextFrame.havenbagEnter()
         
     def run(self, wanted_state=None) -> bool:
         if PlayedCharacterManager().infos.level < 10:
-            return self.finish(self.NEED_LVL_10, "Need to be level 10 to enter haven bag")
+            return self.finish(self.NEED_LVL_10, "Need to be level 10 to use haven bag")
         if PlayerManager().isBasicAccount():
-            return self.finish(self.ONLY_SUBSCRIBED, "Only subscribed accounts can enter haven bag")
+            return self.finish(self.ONLY_SUBSCRIBED, "Only subscribed accounts can use haven bag")
         if wanted_state is not None:
             if wanted_state and PlayerManager().isMapInHavenbag(PlayedCharacterManager().currentMap.mapId):
                 return self.finish(self.ALREADY_IN, "Already in haven bag")

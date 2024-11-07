@@ -133,7 +133,7 @@ class ChangeMap(AbstractBehavior):
 
     def getTransitionIe(self, transition: Transition, callback) -> "InteractiveElementData":
         if not self.rpiframe:
-            return self.onceFramePushed("RoleplayInteractivesFrame", self.getTransitionIe, [transition])
+            return self.once_frame_pushed("RoleplayInteractivesFrame", self.getTransitionIe, [transition])
         callback(self.rpiframe.getInteractiveElement(transition.id, transition.skillId))
 
     def followTransition(self):

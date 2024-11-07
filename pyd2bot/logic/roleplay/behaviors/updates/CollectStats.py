@@ -30,7 +30,7 @@ class CollectStats(AbstractBehavior):
         self.update_listeners = listeners
 
     def run(self) -> bool:
-        self.onMultiple(
+        self.on_multiple(
             [
                 (KernelEvent.PlayerLeveledUp, self.onPlayerLevelUp, {}), 
                 (KernelEvent.AchievementFinished, self.onAchievementFinished, {}),

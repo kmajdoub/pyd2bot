@@ -213,11 +213,14 @@ class Localizer:
             excludeMaps = []
 
         Logger().debug(f"Searching closest hint with GFX {gfx} from map {startMapId}")
-        
+        if excludeMaps:
+            Logger().debug(f"Excluding map ids : {excludeMaps}")
+
         if not startMapId:
             raise ValueError(f"Invalid mapId value {startMapId}")
 
         # Get destination map position if specified (for cost calculations)
+        dst_map_pos = None
         if dstMapId:
             dst_map_pos = MapPosition.getMapPositionById(dstMapId)
 
@@ -229,61 +232,62 @@ class Localizer:
 
         Logger().debug(f"Found {len(possible_start_vertices)} vertices for map {startMapId}")
 
+        # Collect all valid candidates first
         is_basic_account = PlayerManager().isBasicAccount()
-
-        for startVertex in possible_start_vertices:
-            candidates = []
-            for hint in Hint.getHints():
-                # Skip excluded maps
-                if hint.mapId in excludeMaps:
-                    continue
-                
-                # Check account restrictions for the hint map
-                if is_basic_account:
-                    hint_subarea = SubArea.getSubAreaByMapId(hint.mapId)
-                    if hint_subarea and not hint_subarea.basicAccountAllowed:
-                        # Logger().debug(f"Skipping subscriber-only map {hint.mapId} (basic account)")
-                        continue
-                    
-                if hint.gfx == gfx:
-                    # If we have a destination map, calculate cost based on manhattan distance
-                    if dstMapId:
-                        current_map_pos = MapPosition.getMapPositionById(hint.mapId)
-                        cost = 10 * int(math.sqrt(
-                            (dst_map_pos.posX - current_map_pos.posX) ** 2 + 
-                            (dst_map_pos.posY - current_map_pos.posY) ** 2
-                        ))
-                        if min(PlayedCharacterManager().characteristics.kamas, maxCost) >= cost:
-                            hint_vertices = WorldGraph().getVertices(hint.mapId).values()
-                            # Filter vertices based on account type
-                            for vertex in hint_vertices:
-                                if is_basic_account:
-                                    dst_subarea = SubArea.getSubAreaByMapId(vertex.mapId)
-                                    if dst_subarea and not dst_subarea.basicAccountAllowed:
-                                        continue
-                                candidates.append(vertex)
-                    else:
-                        hint_vertices = WorldGraph().getVertices(hint.mapId).values()
-                        # Filter vertices based on account type
-                        for vertex in hint_vertices:
-                            if is_basic_account:
-                                dst_subarea = SubArea.getSubAreaByMapId(vertex.mapId)
-                                if dst_subarea and not dst_subarea.basicAccountAllowed:
-                                    continue
-                            candidates.append(vertex)
-
-            if not candidates:
-                Logger().warning(f"Could not find any accessible candidate maps with GFX {gfx}")
+        candidates = []
+        
+        for hint in Hint.getHints():
+            # Skip excluded maps
+            if int(hint.mapId) in list(map(int, excludeMaps)):
+                Logger().debug(f"Skipping excluded hint mapId {hint.mapId}")
                 continue
-
-            Logger().debug(f"Found {len(candidates)} accessible candidate maps for hint GFX {gfx}")
             
-            # Find path to closest candidate ensuring path doesn't go through subscriber areas for basic accounts
-            path = cls.findPathToClosestVertexCandidate(startVertex, candidates)
-            if path is not None:
-                return path
+            # Skip hints with wrong GFX
+            if hint.gfx != gfx:
+                continue
+                
+            # Check account restrictions for the hint map
+            if is_basic_account:
+                hint_subarea = SubArea.getSubAreaByMapId(hint.mapId)
+                if hint_subarea and not hint_subarea.basicAccountAllowed:
+                    continue
+                    
+            # If we have a destination map, calculate cost based on manhattan distance
+            if dstMapId:
+                current_map_pos = MapPosition.getMapPositionById(hint.mapId)
+                cost = 10 * int(math.sqrt(
+                    (dst_map_pos.posX - current_map_pos.posX) ** 2 + 
+                    (dst_map_pos.posY - current_map_pos.posY) ** 2
+                ))
+                if cost > min(PlayedCharacterManager().characteristics.kamas, maxCost):
+                    continue
+                    
+            # Get and filter vertices based on account type
+            hint_vertices = WorldGraph().getVertices(hint.mapId).values()
+            for vertex in hint_vertices:
+                if is_basic_account:
+                    dst_subarea = SubArea.getSubAreaByMapId(vertex.mapId)
+                    if dst_subarea and not dst_subarea.basicAccountAllowed:
+                        continue
+                candidates.append(vertex)
 
-        return None
+        if not candidates:
+            Logger().warning(f"Could not find any accessible candidate maps with GFX {gfx}")
+            return None
+
+        Logger().debug(f"Found {len(candidates)} accessible candidate maps for hint GFX {gfx}")
+        
+        # Find shortest path from any start vertex
+        shortest_path = None
+        shortest_distance = float('inf')
+        
+        for startVertex in possible_start_vertices:
+            path = cls.findPathToClosestVertexCandidate(startVertex, candidates)
+            if path and (shortest_path is None or len(path) < shortest_distance):
+                shortest_path = path
+                shortest_distance = len(path)
+                
+        return shortest_path
 
     @classmethod
     def findPathToClosestZaap(
@@ -299,35 +303,52 @@ class Localizer:
         Logger().debug(f"Searching closest zaap from map {startMapId}")
         if not startMapId:
             raise ValueError(f"Invalid mapId value {startMapId}")
+            
         if dstZaapMapId:
             dmp = MapPosition.getMapPositionById(dstZaapMapId)
+            
         possible_start_vertices = WorldGraph().getVertices(startMapId).values()
         if not possible_start_vertices:
             Logger().warning(f"Could not find any vertex for map {startMapId}")
             return None
-        else:
-            Logger().debug(f"Found {possible_start_vertices} vertices for map {startMapId}")
-        for startVertex in possible_start_vertices:
-            candidates = []
-            for hint in Hint.getHints():
-                if hint.mapId in excludeMaps:
+        
+        Logger().debug(f"Found {possible_start_vertices} vertices for map {startMapId}")
+        
+        # Collect all valid zaap candidates first
+        candidates = []
+        for hint in Hint.getHints():
+            if hint.mapId in excludeMaps:
+                continue
+            if hint.gfx != cls.ZAAP_GFX:
+                continue
+            if onlyKnownZaap and not PlayedCharacterManager().isZaapKnown(hint.mapId):
+                continue
+                
+            if dstZaapMapId:
+                cmp = MapPosition.getMapPositionById(hint.mapId)
+                cost = 10 * int(math.sqrt((dmp.posX - cmp.posX) ** 2 + (dmp.posY - cmp.posY) ** 2))
+                if cost > min(PlayedCharacterManager().characteristics.kamas, maxCost):
                     continue
-                if hint.gfx == cls.ZAAP_GFX:
-                    if onlyKnownZaap and not PlayedCharacterManager().isZaapKnown(hint.mapId):
-                        continue
-                    if dstZaapMapId:
-                        cmp = MapPosition.getMapPositionById(hint.mapId)
-                        cost = 10 * int(math.sqrt((dmp.posX - cmp.posX) ** 2 + (dmp.posY - cmp.posY) ** 2))
-                        if cost <= min(PlayedCharacterManager().characteristics.kamas, maxCost):
-                            candidates.extend(WorldGraph().getVertices(hint.mapId).values())
-                    else:
-                        candidates.extend(WorldGraph().getVertices(hint.mapId).values())
-            if not candidates:
-                Logger().warning(f"Could not find a candidate zaap for map {startMapId}")
-                return None, None
-            Logger().debug(f"Found {len(candidates)} candidates maps for closest zaap to map {startMapId}")
-            return cls.findPathToClosestVertexCandidate(startVertex, candidates)
-        return None
+                    
+            candidates.extend(WorldGraph().getVertices(hint.mapId).values())
+        
+        if not candidates:
+            Logger().warning(f"Could not find a candidate zaap for map {startMapId}")
+            return None
+            
+        Logger().debug(f"Found {len(candidates)} candidates maps for closest zaap to map {startMapId}")
+        
+        # Find shortest path from any start vertex
+        shortest_path = None
+        shortest_distance = float('inf')
+        
+        for startVertex in possible_start_vertices:
+            path = cls.findPathToClosestVertexCandidate(startVertex, candidates)
+            if path and (shortest_path is None or len(path) < shortest_distance):
+                shortest_path = path
+                shortest_distance = len(path)
+                
+        return shortest_path
 
     @classmethod
     def findPathToClosestVertexCandidate(cls, vertex: Vertex, candidates: list[Vertex]) -> list["Edge"]:

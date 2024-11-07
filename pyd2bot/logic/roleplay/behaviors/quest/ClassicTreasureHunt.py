@@ -121,7 +121,7 @@ class ClassicTreasureHunt(AbstractBehavior):
         return None
 
     def run(self):
-        self.onMultiple([
+        self.on_multiple([
             (KernelEvent.TreasureHuntUpdate, self.onUpdate, {}),
             (KernelEvent.TreasureHuntFinished, self.onHuntFinished, {}),
             (KernelEvent.ObjectAdded, self.onObjectAdded, {}),
@@ -260,7 +260,7 @@ class ClassicTreasureHunt(AbstractBehavior):
 
     def onTreaSureHuntRequestAnswer(self, event, code, err):
         if code == TreasureHuntRequestEnum.TREASURE_HUNT_OK:
-            if not self.hasListener(KernelEvent.TreasureHuntUpdate):
+            if not self.has_listener(KernelEvent.TreasureHuntUpdate):
                 self.on(KernelEvent.TreasureHuntUpdate, self.onUpdate)
         else:
             self.finish(code, err)

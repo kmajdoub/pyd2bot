@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
 from pyd2bot.logic.roleplay.behaviors.movement.AutoTrip import AutoTrip
-from pyd2bot.logic.roleplay.behaviors.teleport.EnterHavenBag import EnterHavenBag
+from pyd2bot.logic.roleplay.behaviors.teleport.EnterHavenBag import ToggleHavenBag
 from pyd2bot.logic.roleplay.behaviors.skill.UseSkill import UseSkill
 from pyd2bot.logic.roleplay.behaviors.teleport.UseZaap import UseZaap
 from pyd2bot.misc.Localizer import Localizer
@@ -252,7 +252,7 @@ class AutoTripUseZaap(AbstractBehavior):
 
     def onInsideHavenbag(self, code, err):
         if err:
-            if code == EnterHavenBag.CANT_USE_IN_CURRENT_MAP:
+            if code == ToggleHavenBag.CANT_USE_IN_CURRENT_MAP:
                 Logger().warning("Cannot use havenbag from current map, trying alternative path")
                 if self.travel_plan.direct_path:
                     self.autoTrip(
@@ -277,7 +277,7 @@ class AutoTripUseZaap(AbstractBehavior):
             return self.finish(code, err)
 
         if self._wants_to_use_havenbag:
-            self.enterHavenBag(wanted_state=True, callback=self.onInsideHavenbag)
+            self.toggle_haven_bag(wanted_state=True, callback=self.onInsideHavenbag)
             return
 
         zaapIe = Kernel().interactiveFrame.getZaapIe()
@@ -294,7 +294,7 @@ class AutoTripUseZaap(AbstractBehavior):
 
     def onDstZaapReached(self, code=0, err=None):
         if err:
-            if code == UseZaap.NOT_RICH_ENOUGH:
+            if code == UseZaap.INSUFFICIENT_KAMAS:
                 Logger().warning("Not enough kamas for zaap, trying alternative path")
                 if self.travel_plan.direct_path:
                     self.autoTrip(

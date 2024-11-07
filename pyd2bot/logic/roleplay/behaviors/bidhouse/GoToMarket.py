@@ -9,7 +9,7 @@ class GoToMarket(AbstractBehavior):
     
     ERROR_HDV_NOT_FOUND = 7676999
     
-    def __init__(self, marketplace_gfx_id: int):
+    def __init__(self, marketplace_gfx_id: int, exclude_market_at_maps: list[int]=None):
         """
         Initialize market travel behavior
         Args:
@@ -20,16 +20,18 @@ class GoToMarket(AbstractBehavior):
         self.marketplace_gfx_id = marketplace_gfx_id
         self.hdv_vertex = None
         self.path_to_hdv = None
+        self.exclude_market_at_maps = exclude_market_at_maps
 
     def run(self) -> bool:
         """Start travel to marketplace"""
         if not self._validate_marketplace_access():
             return False
             
-        if self.hdv_vertex != PlayedCharacterManager().currVertex:
+        if self.hdv_vertex != PlayedCharacterManager().currVertex or PlayedCharacterManager().currVertex.mapId in self.exclude_market_at_maps:
             self.travel_using_zaap(
                 self.hdv_vertex.mapId,
                 self.hdv_vertex.zoneId,
+                excludeMaps=self.exclude_market_at_maps,
                 callback=self._on_market_map_reached
             )
         else:
@@ -45,14 +47,15 @@ class GoToMarket(AbstractBehavior):
         if not current_map:
             return self.finish(1, "Couldn't determine player current map!")
 
-        self.path_to_hdv = Localizer.findClosestHintMapByGfx(current_map, self.marketplace_gfx_id)
+        self.path_to_hdv = Localizer.findClosestHintMapByGfx(current_map, self.marketplace_gfx_id, excludeMaps=self.exclude_market_at_maps)
         
         if self.path_to_hdv is None:
             return self.finish(
                 self.ERROR_HDV_NOT_FOUND,
                 "No accessible marketplace found"
             )
-            
+        
+        Logger().debug(f"Found market {len(self.path_to_hdv)} maps away")
         if len(self.path_to_hdv) == 0:
             self.hdv_vertex = PlayedCharacterManager().currVertex
         else:
@@ -61,5 +64,6 @@ class GoToMarket(AbstractBehavior):
         return True
 
     def _on_market_map_reached(self, code: int, error: str) -> None:
-        Kernel().marketFrame._market_mapId = PlayedCharacterManager().currVertex.mapId
+        if not error:
+            Kernel().marketFrame._market_mapId = PlayedCharacterManager().currVertex.mapId
         self.finish(code, error)

@@ -208,7 +208,7 @@ class UseSkill(AbstractBehavior):
     def getInteractiveElement(self, elementId, skilluid, callback) -> InteractiveElementData:
         if Kernel().interactiveFrame is None:
             Logger().warning("No roleplay interactive frame found, waiting for it to get pushed")
-            return self.onceFramePushed(
+            return self.once_frame_pushed(
                 "RoleplayInteractivesFrame",
                 self.getInteractiveElement,
                 [elementId, skilluid, callback],

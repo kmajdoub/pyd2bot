@@ -117,7 +117,7 @@ class GiveItems(AbstractBehavior):
             else:
                 KernelEventsManager().onceActorShowed(self.seller.id, self.waitForGuestToComme, originator=self)
         else:
-            self.onceFramePushed("RoleplayEntitiesFrame", self.waitForGuestToComme)
+            self.once_frame_pushed("RoleplayEntitiesFrame", self.waitForGuestToComme)
 
     def onExchangeConcluded(self, errorId, error) -> bool:
         if error:            

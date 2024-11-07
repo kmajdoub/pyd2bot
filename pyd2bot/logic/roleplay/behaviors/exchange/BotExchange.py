@@ -1,10 +1,9 @@
 from enum import Enum
 
+from pyd2bot.data.enums import ServerNotificationEnum
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
 from pyd2bot.data.models import Character
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
-from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import \
-    KernelEventsManager
 from pydofus2.com.ankamagames.berilia.managers.Listener import Listener
 from pydofus2.com.ankamagames.dofus.internalDatacenter.items.ItemWrapper import \
     ItemWrapper
@@ -60,14 +59,13 @@ class BotExchange(AbstractBehavior):
         self.state = ExchangeStateEnum.NOT_STARTED
         self.giveAll = items is None
         self.state = ExchangeStateEnum.IDLE
-        KernelEventsManager().onMultiple(
+        self.on_multiple(
             (KernelEvent.ExchangeRequestToMe, self.onExchangeRequestReceived),
             (KernelEvent.ExchangeRequestFromMe, self.onExchangeSent),
             (KernelEvent.ExchangeObjectListAdded, self.onExchangeObjectsAdded),
             (KernelEvent.ExchangeKamaModified, self.onKamasModified),
             (KernelEvent.ExchangeObjectAdded, self.onExchangeObjectAdded),
             (KernelEvent.ExchangeIsReady, self.onExchangeIsReady),
-            originator=self
         )
         if self.direction == ExchangeDirectionEnum.GIVE:
             self.sendExchangeRequest()
@@ -116,7 +114,7 @@ class BotExchange(AbstractBehavior):
                         self.wantsToMoveItemToExchange.add(elem["uid"])
                 Logger().debug("Moved items to exchange.")
         else:
-            Logger().error(f"Excpecting trade with player, received {exchangeType}")
+            Logger().error(f"Expecting trade with player, received {exchangeType}")
             Kernel().commonExchangeManagementFrame.leaveShopStock()
 
     def onExchangeObjectsAdded(self, event, itemAddedArray: list[ItemWrapper], remote):
@@ -137,14 +135,13 @@ class BotExchange(AbstractBehavior):
         return True
 
     def sendExchangeRequest(self):
-        self.openExchangeListener = KernelEventsManager().once(
+        self.openExchangeListener = self.once(
             event_id=KernelEvent.ExchangeStartedType, 
             callback=self.onExchangeOpen, 
             timeout=self.EXCHANGE_REQ_TIMEOUT,
             retryNbr=5,
             retryAction=lambda: Kernel().exchangeManagementFrame.exchangePlayerRequest(ExchangeTypeEnum.PLAYER_TRADE, self.target.id),
             ontimeout=lambda: self.finish(self.EXCHANGE_REQ_TIMEOUT, "send exchange timedout"), 
-            originator=self
         )
         Kernel().exchangeManagementFrame.exchangePlayerRequest(ExchangeTypeEnum.PLAYER_TRADE, self.target.id)
         Logger().debug("Exchange open request sent")
@@ -154,13 +151,12 @@ class BotExchange(AbstractBehavior):
         if textId == 516493: # inventory full
             if self.acceptExchangeListener:
                 self.acceptExchangeListener.cancelTimer()
-            KernelEventsManager().once(
+            self.once(
                 event_id=KernelEvent.ExchangeClose, 
                 callback=lambda: self.finish(self.CANT_TAKE_ALL_SOURCE_ITEMS, "Space not enough to take guest items!"), 
-                originator=self
             )
             Kernel().commonExchangeManagementFrame.leaveShopStock() 
-        elif textId == 5023: # the second player can't take all the load            
+        elif textId == ServerNotificationEnum.CANT_TAKE_ALL_OBJECTS: # the second player can't take all the load            
             timer = BenchmarkTimer(6, Kernel().commonExchangeManagementFrame.leaveShopStock)
             if self.acceptExchangeListener:
                 self.acceptExchangeListener.cancelTimer()
@@ -168,7 +164,7 @@ class BotExchange(AbstractBehavior):
                 if timer:
                     timer.cancel()
                 self.finish(self.TARGET_CANT_TAKE_ALL_ITEMS, "Space in target inventory not enough!")
-            KernelEventsManager().once(KernelEvent.ExchangeClose, onExchangeClose, originator=self)
+            self.once(KernelEvent.ExchangeClose, onExchangeClose)
             timer.start()
 
     def onExchangeLeave(self, event, success):
@@ -184,15 +180,14 @@ class BotExchange(AbstractBehavior):
             self.finish(self.EXCHANGE_FAILED, "Exchange failed")
 
     def sendExchangeReady(self):
-        self.serverNotifListener = KernelEventsManager().on(KernelEvent.ServerTextInfo, self.onServerNotif, originator=self)
-        self.exchangeLeaveListener = KernelEventsManager().once(
+        self.serverNotifListener = self.once(KernelEvent.ServerTextInfo, self.onServerNotif)
+        self.exchangeLeaveListener = self.once(
             event_id=KernelEvent.ExchangeClose, 
             callback=self.onExchangeLeave, 
             timeout=5,
             retryNbr=5,
             retryAction=lambda: Kernel().commonExchangeManagementFrame.exchangeReady(True),
-            ontimeout=lambda: self.finish(self.EXCHANGE_READY_TIMEOUT, "Exchange ready tiemout."), 
-            originator=self
+            ontimeout=lambda: self.finish(self.EXCHANGE_READY_TIMEOUT, "Exchange ready timeout."), 
         )
         Kernel().commonExchangeManagementFrame.exchangeReady(True)
         Logger().debug("Exchange ready request sent.")

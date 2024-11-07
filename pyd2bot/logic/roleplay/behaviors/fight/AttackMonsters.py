@@ -73,7 +73,7 @@ class AttackMonsters(AbstractBehavior):
 
     def _start(self):
         if not Kernel().roleplayEntitiesFrame:
-            return self.onceFramePushed("RoleplayEntitiesFrame", self._start)
+            return self.once_frame_pushed("RoleplayEntitiesFrame", self._start)
         cellId = self.getEntityCellId()
         if not cellId:
             return self.finish(self.ENTITY_VANISHED, "Fight with entity taken by another player!")

@@ -30,7 +30,7 @@ class OpenMarket(AbstractBehavior):
         MAP_ERROR = 7676991
         ITEM_NOT_FOUND = 77777778
 
-    def __init__(self, from_gid: Optional[int] = None, from_object_category: Optional[int] = None):
+    def __init__(self, from_gid: Optional[int] = None, from_object_category: Optional[int] = None, exclude_market_at_maps: list[int] = None):
         """
         Initialize market opener with either item GID or direct category type
         """
@@ -41,7 +41,8 @@ class OpenMarket(AbstractBehavior):
         self.from_gid = from_gid
         self.from_type = from_object_category
         self._market_type = None
-
+        self.exclude_market_at_maps = exclude_market_at_maps
+        
     def run(self) -> bool:
         """Start the marketplace opening process"""
         self._market_type = self._determine_market_type()
@@ -64,7 +65,7 @@ class OpenMarket(AbstractBehavior):
 
         # Get marketplace GFX ID and start travel
         market_gfx_id = self.MARKETPLACE_TYPES[self._market_type][1]
-        self.goto_market(market_gfx_id, callback=self._on_market_map_reached)
+        self.goto_market(market_gfx_id, exclude_market_at_maps=self.exclude_market_at_maps, callback=self._on_market_map_reached)
 
     def _determine_market_type(self) -> Optional[int]:
         """

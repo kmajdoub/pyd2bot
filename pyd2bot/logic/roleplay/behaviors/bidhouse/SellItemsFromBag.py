@@ -1,7 +1,7 @@
+from collections import defaultdict
 from enum import Enum
-from typing import List, Optional
+from typing import Dict, List, Optional
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
-from pydofus2.com.ankamagames.dofus.datacenter.items.Item import Item
 from pydofus2.com.ankamagames.dofus.internalDatacenter.items.ItemWrapper import ItemWrapper
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.InventoryManager import InventoryManager
@@ -15,57 +15,85 @@ class SellItemsFromBag(AbstractBehavior):
     MIN_PRICE_RATIO = 0.5  # Minimum acceptable price vs market average
     
     class ERROR_CODES(Enum):
+        MISSING_INPUTS = 98754342
         NO_MORE_SELL_SLOTS = 98754343
         INSUFFICIENT_KAMAS = 98754344
         INSUFFICIENT_QUANTITY = 98754345
+        ITEMS_NOT_FOUND = 98754346
 
-    def __init__(self, items_to_sell: List[int], items_batch_sizes: List[int]):
+    def __init__(self, gid_batch_size: Dict[int, int] = None, type_batch_size: Dict[int, int] = None):
         super().__init__()
         self._logger = Logger()
-        self._items_to_sell = items_to_sell
-        self._items_batch_sizes = items_batch_sizes
+        self.items_uids = list[int]()
+        self.gid_batch_size = gid_batch_size
+        self.type_batch_size = type_batch_size
         self._current_idx = 0
         self._market_frame = Kernel().marketFrame
-        self._items = list[tuple[ItemWrapper, int]]()
+        self.markets_excluded_for_items = defaultdict(list)
         
     def run(self) -> None:
+        if not self.gid_batch_size and not self.type_batch_size:
+            return self._handle_error(self.ERROR_CODES.MISSING_INPUTS, "You need to provide either by type or gid the batch sizes")
+
         if not self._check_inventory():
             return
         
         self.on(KernelEvent.ServerTextInfo, self._on_server_notif)
         self._process_current_item()
     
+    def get_item_batch_size(self, item: ItemWrapper):
+        if self.gid_batch_size:
+            return self.gid_batch_size[item.objectGID]
+        elif self.type_batch_size:
+            return self.type_batch_size[item.typeId]
+        return 100
+
     def _check_inventory(self):
-        items_in_inventory = []
-        for gid, batch_size in zip(self._items_to_sell, self._items_batch_sizes):
-            item = self.get_item_from_inventory(gid)
-            if item and item.quantity >= batch_size:
-                items_in_inventory.append((item, batch_size))
-        if not items_in_inventory:
-            self.finish(1, "No item found in inventory from items to sell!")
-            return None
-        self._items = items_in_inventory
-        return items_in_inventory
+        self.items_uids = list[int]()
+        inventory_items = InventoryManager().inventory.getView("storage").content
+        for item in inventory_items:
+            if (self.type_batch_size and item.typeId in self.type_batch_size) or \
+                (self.gid_batch_size and item.objectGID in self.gid_batch_size):
+                    self.items_uids.append(item.objectUID)
+        
+        if not self.items_uids:
+            self.finish(self.ERROR_CODES.ITEMS_NOT_FOUND, "No item found in inventory to sell!")
+            return False
+
+        Logger().debug(f"Found items : {self.items_uids}")
+        return True
 
     def _process_current_item(self) -> None:
-        if self._current_idx >= len(self._items):
+        if self._current_idx >= len(self.items_uids):
             return self._ensure_market_closed(lambda: self.finish(0))
         
-        item, qty = self._items[self._current_idx]
+        item = self.current_item
     
-        self._logger.info(f"Processing {item.name}({item.objectGID}) x{qty}")
+        Logger().info(f"Processing {item.name} (gid={item.objectGID}, uid={item.objectUID}) x{item.quantity}")
 
         if self._market_frame._market_type_open == item.category:
-            return self._on_market_open(0, None)
+            if self._market_frame._bids_manager.max_item_level <= self.current_item.level:
+                return self._on_market_open(0, None)
+            Logger().warning("Item has higher level than current market max lvl, trying to find another one ...")
+            self.markets_excluded_for_items[self.current_item.objectGID].append(PlayedCharacterManager().currVertex.mapId)
+            self.close_market(lambda *_: self._process_current_item())
+            return
         
         self.open_market(
             from_type=item.category,
+            exclude_market_at_maps=self.markets_excluded_for_items[item.objectGID],
             callback=self._on_market_open
         )
 
     def _on_market_open(self, code: int, error: Optional[str]) -> None:
         if error:
             return self._handle_error(code, error)
+
+        if self._market_frame._bids_manager.max_item_level > self.current_item.level:
+            self.markets_excluded_for_items[self.current_item.objectGID].append(PlayedCharacterManager().currVertex.mapId)
+            Logger().warning("Item has higher level than current market max lvl, trying to find another one ...")
+            self._process_current_item()
+            return
 
         if self._market_frame._current_mode == "sell":
             return self._handle_sell_mode(None, None)
@@ -74,14 +102,23 @@ class SellItemsFromBag(AbstractBehavior):
     
     @property
     def current_item(self) -> ItemWrapper:
-        return self._items[self._current_idx][0]
+        itemSet = InventoryManager().inventory.getItem(self.items_uids[self._current_idx])
+        if itemSet:
+            return itemSet.item
+        return None
 
     def _handle_sell_mode(self, event, mode) -> None:
-        gid = self.current_item.objectGID
-        self._market_frame.search_item(gid, lambda *_: self._market_frame.check_price(gid, self._on_price_info))
-            
+        self._market_frame.search_item(self.current_item.objectGID, self._on_search_result)
+
+    def _on_search_result(self, code, error):
+        if error:
+            return self.finish(code, error)
+        
+        self._market_frame.check_price(self.current_item.objectGID, self._on_price_info)
+        
     def _on_price_info(self, event, msg) -> None:
-        item, qty = self._items[self._current_idx]
+        item = self.current_item
+        qty = self.get_item_batch_size(item)
 
         # Get price with ratio validation
         target_price, error = self._market_frame._bids_manager.get_sell_price(
@@ -93,7 +130,7 @@ class SellItemsFromBag(AbstractBehavior):
             self._current_idx += 1
             return self._process_current_item()
 
-        # Validate before selling
+        # Validate before selling, dont depend on the item
         if not self._validate_sale(target_price):
             return
             
@@ -114,16 +151,21 @@ class SellItemsFromBag(AbstractBehavior):
         
     def _on_bid_placed(self, code: Optional[int], error: Optional[str]) -> None:
         if error:
-            return self._handle_error(code, error)
+            Logger().error(f"Couldn't open a market for item : {self.current_item.name} (gid={self.current_item.objectGID}, level={self.current_item.level}")
+            self._current_idx += 1
+            return self._process_current_item()
 
-        # Check if we should continue selling same item
-        item, qty = self._items[self._current_idx]
-        item = self.get_item_from_inventory(item.objectGID)
-        
-        if item and item.quantity >= qty and self._market_frame._bids_manager.get_remaining_sell_slots() > 0:
-            self._logger.info(f"Continuing to sell {item.objectGID} x{qty}")
-            return self._market_frame.check_price(item.objectGID, self._on_price_info)
-        
+        if self._market_frame._bids_manager.get_remaining_sell_slots() <= 0:
+            self._handle_error(self.ERROR_CODES.NO_MORE_SELL_SLOTS, "No sell slots")
+            return False
+
+        item = self.current_item
+        if item:
+            qty = self.get_item_batch_size(item)
+            if item.quantity >= qty:
+                self._logger.info(f"Continuing to sell {item.objectGID} x{qty}")
+                return self._market_frame.check_price(item.objectGID, self._on_price_info)
+    
         self._logger.info(f"No more instances to sell, Moving to next item")
         self._current_idx += 1
         self._process_current_item()
@@ -138,6 +180,3 @@ class SellItemsFromBag(AbstractBehavior):
     def _handle_error(self, code: Optional[int], error: Optional[str]) -> None:
         self._logger.warning(f"Error encountered [{code}]: {error}")
         self._ensure_market_closed(lambda: self.finish(code, error))
-        
-    def get_item_from_inventory(self, gid: int):
-        return InventoryManager().inventory.getFirstItemByGID(gid)

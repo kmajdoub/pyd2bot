@@ -8,6 +8,7 @@ from pydofus2.com.ankamagames.dofus.network.messages.game.inventory.exchanges.Ex
 from pydofus2.com.ankamagames.dofus.network.messages.game.inventory.items.ObjectDeletedMessage import ObjectDeletedMessage
 from pydofus2.com.ankamagames.dofus.network.messages.game.inventory.items.ObjectQuantityMessage import ObjectQuantityMessage
 from pydofus2.com.ankamagames.dofus.network.messages.game.inventory.items.InventoryWeightMessage import InventoryWeightMessage
+from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 
 class PlaceBid(AbstractBehavior):
     """Handles the async logic for selling a single item in the marketplace"""
@@ -34,10 +35,10 @@ class PlaceBid(AbstractBehavior):
         """Start the sell operation"""
         if self.price <= 0:
             return self.finish(self.ERROR_CODES.INVALID_PRICE, "Invalid price")
-        self.on(KernelEvent.MessageReceived, self._process_message)
+        self.on(KernelEvent.MessageReceived, lambda _, m: self._process_message(m))
         Kernel().marketFrame.create_listing(self.object_uid, self.quantity, self.price)
 
-    def _process_message(self, event, msg) -> None:
+    def _process_message(self, msg) -> None:
         """Track complete server response sequence"""
         if isinstance(msg, (ObjectQuantityMessage, ObjectDeletedMessage)):
             self._received_sequence.add("quantity")
@@ -54,4 +55,5 @@ class PlaceBid(AbstractBehavior):
         # Check if sequence is complete
         if self._received_sequence >= self.REQUIRED_SEQUENCE:
             Kernel().marketFrame._state = "IDLE"
+            Logger().info("Bid placed successfully")
             self.finish(0)

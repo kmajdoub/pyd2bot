@@ -54,13 +54,18 @@ class ToggleHavenBag(AbstractBehavior):
                 return self.finish(self.ALREADY_IN, "Already in haven bag")
             elif not wanted_state and not PlayerManager().isMapInHavenbag(PlayedCharacterManager().currentMap.mapId):
                 return self.finish(self.ALREADY_IN, "Not in haven bag already")
-        self.havenBagListener = self.once(
-            KernelEvent.InHavenBag,
-            self.finish,
-            timeout=self.TIMEOUT,
-            retryNbr=self.MAX_RETRIES,
-            retryAction=self.onHeavenBagEnterTimeout,
-            ontimeout=lambda _: self.finish(self.TIMEDOUT, "Haven bag enter timedout too many times"),
-        )
+        if wanted_state is not None:
+            if wanted_state:
+                # wants to open the haven bag
+                self.havenBagListener = self.once(
+                    KernelEvent.InHavenBag,
+                    self.finish,
+                    timeout=self.TIMEOUT,
+                    retryNbr=self.MAX_RETRIES,
+                    retryAction=self.onHeavenBagEnterTimeout,
+                    ontimeout=lambda _: self.finish(self.TIMEDOUT, "Haven bag enter timedout too many times"),
+                )
+            else:
+                self.once_map_processed(lambda *_: self.finish(0))
         self.on(KernelEvent.ServerTextInfo, self.onServerTextInfo)
         self.useEnterHavenBagShortcut()

@@ -1,7 +1,9 @@
-from typing import Dict
+from typing import Dict, Optional
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
 from pyd2bot.logic.roleplay.behaviors.bank.RetrieveFromBank import RetrieveFromBank
+from pyd2bot.logic.roleplay.behaviors.bidhouse.SellItemsFromBag import SellItemsFromBag
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import PlayedCharacterManager
+from pydofus2.com.ankamagames.dofus.types.enums.ItemCategoryEnum import ItemCategoryEnum
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 
 
@@ -18,11 +20,11 @@ class RetrieveSellUpdate(AbstractBehavior):
     def __init__(self, gid_batch_size: Dict[int, int] = None, type_batch_size: Dict[int, int] = None):
         super().__init__()
         self._logger = Logger()
-        self._start_map_id = None
-        self._start_zone = None
         self.gid_batch_size = gid_batch_size
         self.type_batch_size = type_batch_size
         self.has_remaining = False
+        self._finish_code: Optional[int] = None
+        self._finish_error: Optional[str] = None
 
     def run(self) -> bool:
         # Store starting position
@@ -50,9 +52,8 @@ class RetrieveSellUpdate(AbstractBehavior):
 
         if code == RetrieveFromBank.ERROR_CODES.NO_ITEMS_TO_RETRIEVE:
             # No more items in bank - we're done
-            self._logger.info("No more items in bank - completing behavior")
-            self._on_idle()
-            return
+            self._logger.info("No more items in bank - updating market bids")
+            return self.update_market_bids(ItemCategoryEnum.RESOURCES_CATEGORY, self._handle_finish)
 
         self.has_remaining = has_remaining
 
@@ -63,20 +64,41 @@ class RetrieveSellUpdate(AbstractBehavior):
             callback=self._on_items_sold,
         )
 
-    def _on_items_sold(self, code, err):
+    def _on_items_sold(self, code, error):
         """Handle completion of market sale"""
-        if err:
-            self.finish(code, f"Error selling items: {err}")
+        if error:
+            if code == SellItemsFromBag.ERROR_CODES.NO_MORE_SELL_SLOTS:
+                return self.update_market_bids(ItemCategoryEnum.RESOURCES_CATEGORY, self._handle_finish)
+            self._handle_finish(code, error)
             return
 
         # Check if we still have items in inventory
         if not self.has_remaining:
-            self._logger.info("No more items in bank - completing behavior")
-            self._on_idle()
-            return
+            self._logger.info("No more items in bank - updating market bids")
+            return self.update_market_bids(ItemCategoryEnum.RESOURCES_CATEGORY, self._handle_finish)
 
         self._start_retrieve_cycle()
 
-    def _on_idle(self):
-        """Handle completion of the entire behavior"""
-        self.finish(0)
+    def _handle_finish(self, code: Optional[int] = None, error: Optional[str] = None):
+        """Store finish parameters and unload bank before completing"""
+        self._finish_code = code
+        self._finish_error = error
+        
+        # Unload in bank before finishing
+        self.unload_in_bank(
+            return_to_start=False,
+            callback=self._on_storage_open
+        )
+
+    def _on_storage_open(self, code: int, error: Optional[str]) -> None:
+        """Final callback after unloading bank"""
+        if error:
+            self._logger.warning(f"Error unloading bank: {error}")
+        
+        # Return to start point before finishing
+        self._logger.info(f"Returning to start point")
+        self.travel_using_zaap(
+            self._start_map_id, 
+            dstZoneId=self._start_zone, 
+            callback=lambda *_: self.finish(self._finish_code, self._finish_error)
+        )

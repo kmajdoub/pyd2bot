@@ -4,12 +4,12 @@ from pydofus2.com.ankamagames.dofus.kernel.net.ConnectionsHandler import Connect
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.InactivityManager import InactivityManager
 from pydofus2.com.ankamagames.dofus.network.messages.common.basic.BasicPingMessage import BasicPingMessage
 
-from pyd2bot.logic.roleplay.behaviors.bidhouse.UpdateBids import UpdateBidsBehavior
+from pyd2bot.logic.roleplay.behaviors.bidhouse.UpdateMarketBids import UpdateMarketBids
 import threading
 
 from pydofus2.com.ankamagames.jerakine.benchmark.BenchmarkTimer import BenchmarkTimer
 
-class MonitorMarket(UpdateBidsBehavior):
+class MonitorMarket(UpdateMarketBids):
     """Market monitor that maintains target number of listings at market price through reactive updates"""
     
     DEFAULT_MAX_TOP_BIDS = 3  # Maximum number of listings to maintain at/below market price
@@ -18,7 +18,7 @@ class MonitorMarket(UpdateBidsBehavior):
     def __init__(self, 
                  object_gid: int, 
                  quantity: int,
-                 min_update_age_hours: float = UpdateBidsBehavior.MIN_UPDATE_AGE_HOURS,
+                 min_update_age_hours: float = UpdateMarketBids.MIN_UPDATE_AGE_HOURS,
                  max_top_bids: int = DEFAULT_MAX_TOP_BIDS):
         super().__init__(object_gid, quantity, min_update_age_hours)
         self.max_top_bids = max_top_bids

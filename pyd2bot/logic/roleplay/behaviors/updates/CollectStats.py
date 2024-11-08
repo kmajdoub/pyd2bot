@@ -34,7 +34,6 @@ class CollectStats(AbstractBehavior):
             [
                 (KernelEvent.PlayerLeveledUp, self.onPlayerLevelUp, {}), 
                 (KernelEvent.AchievementFinished, self.onAchievementFinished, {}),
-                (KernelEvent.ObtainedItem, self.onItemObtained, {}),
                 (KernelEvent.ObjectAdded, self.onObjectAdded, {}),
                 (KernelEvent.MapDataProcessed, self.onMapDataProcessed, {}),
                 (KernelEvent.JobLevelUp, self.onJobLevelUp, {}),
@@ -100,29 +99,17 @@ class CollectStats(AbstractBehavior):
         self.playerStats.earnedLevels += newLevel - previousLevel
         self.playerStats.currentLevel = newLevel
         self.onPlayerUpdate(event)
-                                        
-    def onItemObtained(self, event, iw: ItemWrapper, qty):
+
+    def onObjectAdded(self, event, iw: ItemWrapper, qty: int):
         HaapiEventsManager().sendRandomEvent()
         if iw.objectGID not in ClassicTreasureHunt.CHESTS_GUID:
             averageKamasWon = (
                 Kernel().averagePricesFrame.getItemAveragePrice(iw.objectGID) * qty
             )
-            Logger().debug(f"Average kamas won from item obtained {iw.name}: {averageKamasWon}")
+            Logger().debug(f"Average kamas won from object {iw.name} x{qty} : {averageKamasWon}")
             self.playerStats.estimatedKamasWon += averageKamasWon
         self.playerStats.add_item_gained(iw.objectGID, qty)
         self.onPlayerUpdate(event)
-
-    def onObjectAdded(self, event, iw: ItemWrapper):
-        # HaapiEventsManager().sendRandomEvent()
-        # if iw.objectGID not in ClassicTreasureHunt.CHESTS_GUID:
-        #     averageKamasWon = (
-        #         Kernel().averagePricesFrame.getItemAveragePrice(iw.objectGID) * iw.quantity
-        #     )
-        #     Logger().debug(f"Average kamas won from object added {iw.name}: {averageKamasWon}")
-        #     self.playerStats.estimatedKamasWon += averageKamasWon
-        # self.playerStats.add_item_gained(iw.objectGID, iw.quantity)
-        # self.onPlayerUpdate(event)
-        pass
 
     def onJobExperience(self, event, oldJobXp, jobExp: JobExperience):
         Logger().info(f"Job {jobExp.jobId} has gained {jobExp.jobXP} xp")

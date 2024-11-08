@@ -6,7 +6,8 @@ from pyd2bot.logic.roleplay.behaviors.bank.RetrieveFromBank import RetrieveFromB
 from pyd2bot.logic.roleplay.behaviors.bidhouse.MonitorMarket import MonitorMarket
 from pyd2bot.logic.roleplay.behaviors.bidhouse.RetrieveSellUpdate import RetrieveSellUpdate
 from pyd2bot.logic.roleplay.behaviors.bidhouse.SellItemsFromBag import SellItemsFromBag
-from pyd2bot.logic.roleplay.behaviors.bidhouse.UpdateBids import UpdateBidsBehavior
+from pyd2bot.logic.roleplay.behaviors.bidhouse.UpdateMarketBids import UpdateMarketBids
+from pyd2bot.logic.roleplay.behaviors.quest.UseItemsByType import UseItemsByType
 from pyd2bot.logic.roleplay.behaviors.updates.AutoUpgradeStats import AutoUpgradeStats
 from pyd2bot.logic.roleplay.behaviors.updates.CollectStats import CollectStats
 from pyd2bot.logic.common.frames.BotRPCFrame import BotRPCFrame
@@ -49,6 +50,9 @@ class Pyd2Bot(DofusClient):
         self._main_behavior = None
         self._stats_auto_upgrade = None
 
+    def shutdown(self, message="", reason=None):
+        return super().shutdown(message, reason)
+    
     def checkBreed(self, session: Session):
         if session.character.breedId not in BotSettings.defaultBreedConfig:
             supported_breeds = [BreedEnum.get_name(breedId) for breedId in BotSettings.defaultBreedConfig]
@@ -85,16 +89,18 @@ class Pyd2Bot(DofusClient):
         self._statusChangedListeners.append(callback)
         
     def startSessionMainBehavior(self):
-        Logger().info(f"Starting main behavior for {self.name}, sessionType : {self.session.type.name}")
-        PIWI_FEATHER_GIDS = [6900, 6902, 6898, 6899, 6903, 6897]
-        type_batch_size = {39: 100}
+        # Logger().info(f"Starting main behavior for {self.name}, sessionType : {self.session.type.name}")
+        # PIWI_FEATHER_GIDS = [6900, 6902, 6898, 6899, 6903, 6897]
+        # type_batch_size = {39: 100}
         
-        self._main_behavior = RetrieveSellUpdate(type_batch_size=type_batch_size)
+        # self._main_behavior = RetrieveSellUpdate(type_batch_size=type_batch_size)
         # items_gids = [(gid, 100) for gid in PIWI_FEATHER_GIDS]        
         # self._main_behavior = SellFromBagBehavior(items_gids)
 
         # self._main_behavior = UpdateBidsBehavior(PIWI_FEATHER_GIDS, 100, 0, 0.25)
         # self._main_behavior = RetrieveFromBank(PIWI_FEATHER_GIDS, quantities)
+        
+        self._main_behavior = UseItemsByType(100)
         self._main_behavior.start(callback=self.onMainBehaviorFinish)
         return
         

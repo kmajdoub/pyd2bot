@@ -1,4 +1,5 @@
 import math
+import random
 from typing import List
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
 from pyd2bot.logic.roleplay.behaviors.farm.ResourceFarm import ResourceFarm
@@ -30,8 +31,7 @@ class MultiplePathsResourceFarm(AbstractBehavior):
             self._current_running_behavior.stop()
         
     def run(self) -> bool:
-        self.iterPathsList = iter(self.pathsList)
-        Logger().info(f"Starting multiple paths resource farm with {len(self.pathsList)} paths.")
+        Logger().info(f"Starting multiple paths resource farm with {len(self.pathsList)} paths in random mode.")
         self.startNextPath(None, None)
 
     def coverTimeEstimate(self, path: AbstractFarmPath):
@@ -47,14 +47,15 @@ class MultiplePathsResourceFarm(AbstractBehavior):
             self.forbidden_paths.append(self.currentPath)
 
         Logger().info(f"Starting next path")
-        try:
-            self.currentPath = next(self.iterPathsList)
-        except StopIteration:
-            non_forbidden_paths = [p for p in self.pathsList if p not in self.forbidden_paths]
-            if not non_forbidden_paths:
-                return self.finish(1, "All paths are forbidden")
-            self.iterPathsList = iter(non_forbidden_paths)
-            self.currentPath = next(self.iterPathsList)
+        
+        # Get available paths (not forbidden)
+        available_paths = [p for p in self.pathsList if p not in self.forbidden_paths]
+        if not available_paths:
+            return self.finish(1, "All paths are forbidden")
+            
+        # Randomly select next path
+        self.currentPath = random.choice(available_paths)
+        
         timeout = self.num_of_covers * self.coverTimeEstimate(self.currentPath)
         self._current_running_behavior = ResourceFarm(self.currentPath, self.jobFilters, timeout)
         self._current_running_behavior.start(callback=self.startNextPath)

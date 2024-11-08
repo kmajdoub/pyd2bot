@@ -3,6 +3,7 @@ from typing import Set
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
+from pydofus2.com.ankamagames.dofus.logic.game.common.managers.InventoryManager import InventoryManager
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import PlayedCharacterManager
 from pydofus2.com.ankamagames.dofus.network.messages.game.inventory.KamasUpdateMessage import KamasUpdateMessage
 from pydofus2.com.ankamagames.dofus.network.messages.game.inventory.exchanges.ExchangeBidHouseItemAddOkMessage import ExchangeBidHouseItemAddOkMessage
@@ -24,10 +25,11 @@ class RetrieveKamasFromBank(AbstractBehavior):
         
     def run(self) -> bool:
         """Start the sell operation"""
-        if PlayedCharacterManager().characteristics.kamas <= 0:
+        bank_kamas = InventoryManager().bankInventory.kamas
+        if bank_kamas <= 0:
             return self.finish(0)
         self.once(KernelEvent.MessageReceived, self._process_message)
-        Kernel().exchangeManagementFrame.exchangeObjectMoveKama(PlayedCharacterManager().characteristics.kamas)
+        Kernel().exchangeManagementFrame.exchangeObjectMoveKama(bank_kamas)
 
     def _process_message(self, event, msg) -> None:
         """Track complete server response sequence"""

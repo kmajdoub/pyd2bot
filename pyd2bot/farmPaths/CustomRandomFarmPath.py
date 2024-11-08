@@ -21,7 +21,8 @@ class CustomRandomFarmPath(AbstractFarmPath):
         super().__init__()
         self.name = name
         self._mapIds = mapIds
-        self.startVertex = WorldGraph().getVertex(self._mapIds[0], 1)
+        random_start_map = random.choice(self._mapIds)
+        self.startVertex = WorldGraph().getVertex(random_start_map, 1)
 
     @property
     def mapIds(self) -> list[int]:

@@ -9,6 +9,7 @@ from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import \
 from pydofus2.com.ankamagames.dofus.datacenter.world.SubArea import SubArea
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
 from pydofus2.com.ankamagames.dofus.kernel.net.ConnectionsHandler import ConnectionsHandler
+from pydofus2.com.ankamagames.dofus.logic.common.managers.MarketBid import MarketBid
 from pydofus2.com.ankamagames.dofus.logic.common.managers.PlayerManager import PlayerManager
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.InactivityManager import InactivityManager
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.InventoryManager import \
@@ -23,6 +24,8 @@ if TYPE_CHECKING:
         Edge
     from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Transition import \
         Transition
+    from pydofus2.com.ankamagames.dofus.internalDatacenter.items.ItemWrapper import ItemWrapper
+
 
 __dir__ = os.path.dirname(os.path.abspath(__file__))
 SPECIAL_DESTINATIONS_PATH = os.path.join(__dir__, "special_destinations.json")
@@ -117,9 +120,6 @@ class BehaviorApi:
             )
             
         if not PlayedCharacterManager().isZaapKnown(dstZaapVertex.mapId):
-            if PlayerManager().inHavenBag():
-                Logger().debug(f"Player is inside haven bag, we need to exit it before traveling!")
-                return self.toggle_haven_bag(False, lambda *_: on_dst_zaap_unknown())
             return on_dst_zaap_unknown()
 
         Logger().debug(f"Dst zaap at {dstZaapVertex} is found in known ZAAPS, traveling with zaaps to {dstMapId}, zoneId={dstZoneId}")
@@ -133,6 +133,9 @@ class BehaviorApi:
                     Logger().info("Trying to reach the destination with classic auto trip as last resort.")
                     return self.autoTrip(dstMapId, dstZoneId, callback=callback)
                 elif code == UseZaap.DST_ZAAP_NOT_KNOWN:
+                    if PlayerManager().inHavenBag():
+                        Logger().debug(f"Player is inside haven bag, we need to exit it before traveling!")
+                        return self.toggle_haven_bag(False, lambda *_: on_dst_zaap_unknown())
                     return on_dst_zaap_unknown()
 
             return callback(code, err)
@@ -222,7 +225,7 @@ class BehaviorApi:
 
         ToggleHavenBag().start(wanted_state=wanted_state, callback=callback, parent=self)
     
-    def toggleRideMount(self, wanted_ride_state=None, callback=None):
+    def toggle_ride_mount(self, wanted_ride_state=None, callback=None):
         from pyd2bot.logic.roleplay.behaviors.mount.ToggleRideMount import ToggleRideMount
 
         ToggleRideMount().start(wanted_ride_state=wanted_ride_state, callback=callback, parent=self)
@@ -248,6 +251,20 @@ class BehaviorApi:
             parent=self,
         )
 
+    def use_items_of_type(self, type_id, callback=None):
+        from pyd2bot.logic.roleplay.behaviors.quest.UseItemsByType import UseItemsByType
+
+        b = UseItemsByType(type_id)
+        b.start(callback=callback)
+        return b
+        
+    def use_item(self, item: "ItemWrapper", qty: int, callback=None):
+        from pyd2bot.logic.roleplay.behaviors.misc.UseItem import UseItem
+
+        b = UseItem(item, qty)
+        b.start(callback=callback, parent=self)
+        return b
+        
     def requestMapData(self, mapId=None, callback=None):
         from pyd2bot.logic.roleplay.behaviors.movement.RequestMapData import \
             RequestMapData
@@ -257,7 +274,9 @@ class BehaviorApi:
     def autoRevive(self, callback=None):
         from pyd2bot.logic.roleplay.behaviors.misc.AutoRevive import AutoRevive
 
-        AutoRevive().start(callback=callback, parent=self)
+        b = AutoRevive()
+        b.start(callback=callback, parent=self)
+        return b
 
     def attackMonsters(self, entityId, callback=None):
         from pyd2bot.logic.roleplay.behaviors.fight.AttackMonsters import \
@@ -405,10 +424,17 @@ class BehaviorApi:
 
         UnloadInBank().start(return_to_start, bankInfos, leave_bank_open, callback=callback, parent=self)
     
-    def update_bid(self, object_gid: int, quantity: int, listing_uid: int, new_price: int, callback=None):
-        from pyd2bot.logic.roleplay.behaviors.bidhouse.UpdateBid import UpdateBid
+    def retrieve_sell(self, type_batch_size, callback=None):
+        from pyd2bot.logic.roleplay.behaviors.bidhouse.RetrieveSellUpdate import RetrieveSellUpdate
+
+        b = RetrieveSellUpdate(type_batch_size=type_batch_size)
+        b.start(callback=callback, parent=self)
+        return b
+
+    def edit_bid_price(self, bid: MarketBid, new_price: int, callback=None):
+        from pyd2bot.logic.roleplay.behaviors.bidhouse.EditBidPrice import EditBidPrice
         
-        b = UpdateBid(object_gid, quantity, listing_uid, new_price)
+        b = EditBidPrice(bid, new_price)
         b.start(callback=callback, parent=self)
         return b
     
@@ -419,10 +445,10 @@ class BehaviorApi:
         b.start(callback=callback, parent=self)
         return b
     
-    def open_market(self, from_gid=None, from_type=None, exclude_market_at_maps=None, callback=None):
+    def open_market(self, from_gid=None, from_type=None, exclude_market_at_maps=None, mode="sell", callback=None):
         from pyd2bot.logic.roleplay.behaviors.bidhouse.OpenMarket import OpenMarket
 
-        b = OpenMarket(from_gid=from_gid, from_object_category=from_type, exclude_market_at_maps=exclude_market_at_maps)
+        b = OpenMarket(from_gid=from_gid, from_object_category=from_type, mode=mode, exclude_market_at_maps=exclude_market_at_maps)
         b.start(callback=callback, parent=self)
         return b
 
@@ -500,36 +526,16 @@ class BehaviorApi:
         behavior.start(callback=callback, parent=self)
         return behavior
 
-    def updateBids(
-        self, 
-        object_gid: int, 
-        quantity: int,
-        min_update_age_hours: float = 0.25,
-        max_updates: int = 10,
+    def update_market_bids(
+        self,
+        resource_type, 
         callback=None
     ):
-        """
-        Update old market listings to stay competitive.
-        Will find and update up to max_updates listings that are older than min_age 
-        and priced above current market.
+        from pyd2bot.logic.roleplay.behaviors.bidhouse.UpdateMarketBids import UpdateMarketBids
         
-        Args:
-            object_gid: GID of item to update
-            quantity: Listing quantity to match (1, 10, or 100)
-            min_update_age_hours: Only update listings older than this (default 15min)
-            max_updates: Maximum listings to update per run (default 10)
-            callback: Completion callback function
-        """
-        from pyd2bot.logic.roleplay.behaviors.bidhouse.UpdateBids import UpdateBidsBehavior
-        
-        behavior = UpdateBidsBehavior(
-            object_gid=object_gid,
-            quantity=quantity,
-            min_update_age_hours=min_update_age_hours,
-            max_updates=max_updates
-        )
-        behavior.start(callback=callback, parent=self)
-        return behavior
+        b = UpdateMarketBids(market_type=resource_type)
+        b.start(callback=callback, parent=self)
+        return b
 
     def on(self, event_id, callback, timeout=None, ontimeout=None, retryNbr=None, retryAction=None, once=False):
         return KernelEventsManager().on(

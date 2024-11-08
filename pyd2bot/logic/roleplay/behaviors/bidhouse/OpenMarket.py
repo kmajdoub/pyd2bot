@@ -30,21 +30,18 @@ class OpenMarket(AbstractBehavior):
         MAP_ERROR = 7676991
         ITEM_NOT_FOUND = 77777778
 
-    def __init__(self, from_gid: Optional[int] = None, from_object_category: Optional[int] = None, exclude_market_at_maps: list[int] = None):
-        """
-        Initialize market opener with either item GID or direct category type
-        """
+    def __init__(self, from_gid: Optional[int] = None, from_object_category: Optional[int] = None, exclude_market_at_maps: list[int] = None, mode="sell"):
         super().__init__()
         if not from_gid and not from_object_category:
             return self.finish(1, "Must specify either from_gid or from_type")
-        
+        self.mode = mode
         self.from_gid = from_gid
         self.from_type = from_object_category
         self._market_type = None
+        self._market_frame = Kernel().marketFrame
         self.exclude_market_at_maps = exclude_market_at_maps
         
     def run(self) -> bool:
-        """Start the marketplace opening process"""
         self._market_type = self._determine_market_type()
         if not self._market_type or self._market_type not in self.MARKETPLACE_TYPES:
             return self.finish(
@@ -56,22 +53,36 @@ class OpenMarket(AbstractBehavior):
         if current_market is not None:
             if current_market == self._market_type:
                 Logger().warning(f"Market type {self._market_type} is already open, skipping open process")
-                return self.finish(0)
+                return self._on_market_open(0, None)
             else:
                 # Different market is open, need to close it first
                 Logger().warning(f"Another market type {current_market} is open, closing before opening {self._market_type}")
-                self.close_dialog(self._on_other_market_closed)
+                self.close_market(self._on_other_market_closed)
                 return True
 
         # Get marketplace GFX ID and start travel
         market_gfx_id = self.MARKETPLACE_TYPES[self._market_type][1]
-        self.goto_market(market_gfx_id, exclude_market_at_maps=self.exclude_market_at_maps, callback=self._on_market_map_reached)
+        self.goto_market(
+            market_gfx_id, 
+            exclude_market_at_maps=self.exclude_market_at_maps, 
+            callback=self._on_market_map_reached
+        )
 
+    def _on_market_open(self, code, error):
+        if error:
+            return self.finish(code, error)
+        self._market_frame._market_type_open = self._market_type
+        if self._market_frame._current_mode is None:
+            self._market_frame._current_mode = "buy"
+        self._ensure_mode()
+
+    def _ensure_mode(self):
+        if self._market_frame._current_mode == self.mode:
+            return self.finish(0)
+
+        self._market_frame.switch_mode(self.mode, lambda *_: self.finish(0))
+        
     def _determine_market_type(self) -> Optional[int]:
-        """
-        Determine marketplace type from GID or direct type specification
-        Returns: Market category or None if invalid
-        """
         if self.from_type is not None:
             return self.from_type
             
@@ -86,7 +97,6 @@ class OpenMarket(AbstractBehavior):
         return None
 
     def _open_marketplace(self) -> None:
-        """Open the marketplace interface"""
         Logger().debug("Opening marketplace...")
         
         element = Kernel().interactiveFrame.getIeByTypeId(self.MARKETPLACE_TYPES[self._market_type][0])
@@ -104,21 +114,11 @@ class OpenMarket(AbstractBehavior):
         )
 
     def _on_market_map_reached(self, code: int, error: str) -> None:
-        """Handle marketplace map reached"""
         if error:
             return self.finish(self.ERROR_CODES.MAP_ERROR, error)
         self._open_marketplace()
-    
-    def _on_market_open(self, code: int, error: str) -> None:
-        """Handle marketplace interface opened"""
-        if error:
-            return self.finish(code, error)
-        Kernel().marketFrame._market_type_open = self._market_type
-        self.finish(0)
 
     def _on_other_market_closed(self, code: int, error: str) -> None:
-        """Handle market close closed callback"""
         if error:
             return self.finish(code, f"Close market failed with error [{code}] {error}")
-        Kernel().marketFrame._market_type_open = None
         self.goto_market(self.MARKETPLACE_TYPES[self._market_type][1], callback=self._on_market_map_reached)

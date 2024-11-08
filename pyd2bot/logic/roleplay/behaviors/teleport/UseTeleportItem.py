@@ -18,11 +18,11 @@ class UseTeleportItem(AbstractBehavior):
 
     def run(self, iw: ItemWrapper):
         self.once_map_processed(
-            lambda: self.finish(True, None), timeout=20, ontimeout=self.onTimeout
+            lambda: self.finish(0), timeout=20, ontimeout=self.onTimeout
         )
         self.on(KernelEvent.ServerTextInfo, self.onServerInfo)
         Kernel().inventoryManagementFrame.useItem(iw)
-        self.onNewMap(True, None)
+        self.onNewMap(0)
         
     def onServerInfo(self, event, msgId, msgType, textId, msgContent, params):
         if textId == 4641:

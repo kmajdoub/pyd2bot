@@ -71,35 +71,47 @@ class SellItemsFromBag(AbstractBehavior):
     
         Logger().info(f"Processing {item.name} (gid={item.objectGID}, uid={item.objectUID}) x{item.quantity}")
 
-        if self._market_frame._market_type_open == item.category:
-            if self._market_frame._bids_manager.max_item_level <= self.current_item.level:
-                return self._on_market_open(0, None)
-            Logger().warning("Item has higher level than current market max lvl, trying to find another one ...")
-            self.markets_excluded_for_items[self.current_item.objectGID].append(PlayedCharacterManager().currVertex.mapId)
-            self.close_market(lambda *_: self._process_current_item())
+        if not self._check_market_level():
             return
+
+        self._ensure_market_open()
+
+    def _ensure_market_open(self):
+        item = self.current_item
         
+        if self._market_frame._market_type_open == item.category:
+            return self._on_market_open(0, None)
+            
         self.open_market(
             from_type=item.category,
             exclude_market_at_maps=self.markets_excluded_for_items[item.objectGID],
             callback=self._on_market_open
         )
+    
+    def _check_market_level(self):        
+        market_max_lvl = self._market_frame._bids_manager.max_item_level
+        if market_max_lvl is None: # Market is not open yet
+            return True
+        if market_max_lvl < self.current_item.level:
+            self.markets_excluded_for_items[self.current_item.objectGID].append(PlayedCharacterManager().currVertex.mapId)
+            Logger().warning(f"Item has higher level {self.current_item.level}, than market max lvl {market_max_lvl}, trying to find another market ...")
+            self.close_market(lambda *_: self._process_current_item())
+            return False
+        return True
 
+    def _ensure_sell_mode(self):
+        if self._market_frame._current_mode == "sell":
+            return self._on_sell_mode(None, None)
+
+        self._market_frame.switch_mode("sell", self._on_sell_mode)
+    
     def _on_market_open(self, code: int, error: Optional[str]) -> None:
         if error:
             return self._handle_error(code, error)
+        
+        Logger().debug("Market is open now")
+        self._ensure_sell_mode()
 
-        if self._market_frame._bids_manager.max_item_level > self.current_item.level:
-            self.markets_excluded_for_items[self.current_item.objectGID].append(PlayedCharacterManager().currVertex.mapId)
-            Logger().warning("Item has higher level than current market max lvl, trying to find another one ...")
-            self._process_current_item()
-            return
-
-        if self._market_frame._current_mode == "sell":
-            return self._handle_sell_mode(None, None)
-
-        self._market_frame.switch_mode("sell", self._handle_sell_mode)
-    
     @property
     def current_item(self) -> ItemWrapper:
         itemSet = InventoryManager().inventory.getItem(self.items_uids[self._current_idx])
@@ -107,7 +119,10 @@ class SellItemsFromBag(AbstractBehavior):
             return itemSet.item
         return None
 
-    def _handle_sell_mode(self, event, mode) -> None:
+    def _on_sell_mode(self, event, mode) -> None:
+        if not self._check_market_level():
+            return
+        
         self._market_frame.search_item(self.current_item.objectGID, self._on_search_result)
 
     def _on_search_result(self, code, error):
@@ -130,11 +145,12 @@ class SellItemsFromBag(AbstractBehavior):
             self._current_idx += 1
             return self._process_current_item()
 
-        # Validate before selling, dont depend on the item
+        # Validate before selling, dont depend on the item but on the tax and the available slots
         if not self._validate_sale(target_price):
             return
             
-        self._logger.info(f"Listing {item.objectGID} x{qty} at {target_price}")
+        self._logger.info(f"Placing the bid {item.objectGID} x{qty} at {target_price}")
+
         self.place_bid(item.objectUID, qty, target_price, self._on_bid_placed)
 
     def _validate_sale(self, price: int) -> bool:

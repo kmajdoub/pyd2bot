@@ -1,10 +1,11 @@
-from typing import List
+from typing import List, TYPE_CHECKING
 from prettytable import PrettyTable
 
-from pyd2bot.logic.roleplay.behaviors.AbstractFarmBehavior import \
+from pyd2bot.logic.roleplay.behaviors.farm.AbstractFarmBehavior import \
     AbstractFarmBehavior
 from pyd2bot.logic.roleplay.behaviors.farm.CollectableResource import \
     CollectableResource
+from pyd2bot.logic.roleplay.behaviors.farm.ResourcesTracker import ResourceTracker
 from pyd2bot.logic.roleplay.behaviors.skill.UseSkill import UseSkill
 from pyd2bot.farmPaths.AbstractFarmPath import AbstractFarmPath
 from pyd2bot.data.models import JobFilter
@@ -14,6 +15,7 @@ from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import \
 from pydofus2.com.ankamagames.dofus.internalDatacenter.items.ItemWrapper import \
     ItemWrapper
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
+from pydofus2.com.ankamagames.dofus.logic.game.common.managers.InventoryManager import InventoryManager
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import \
     PlayedCharacterManager
 from pydofus2.com.ankamagames.dofus.logic.game.roleplay.types.MovementFailError import \
@@ -26,18 +28,23 @@ from pydofus2.com.ankamagames.jerakine.benchmark.BenchmarkTimer import \
     BenchmarkTimer
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 
-
+if TYPE_CHECKING:
+    from pydofus2.com.ankamagames.dofus.logic.game.common.misc.inventoryView.StorageGenericView import StorageGenericView
 class ResourceFarm(AbstractFarmBehavior):
+    RESOURCE_BAGS_TYPE_ID = 100
     
     def __init__(self, path: AbstractFarmPath, jobFilters: List[JobFilter], timeout=None):
         super().__init__(timeout)
         self.jobFilters = jobFilters
         self.path = path
         self.deadEnds = set()
+        self.resource_tracker = ResourceTracker(expiration_days=30)
 
     def init(self):
         self.path.init()
         self.currentTarget: CollectableResource = None
+        self.current_session_id = self.resource_tracker.start_farm_session(self.path.name)
+        self.session_resources = {}
         KernelEventsManager().on(KernelEvent.PlayerStatusUpdate, self.onPlayerStatusUpdate)
         Kernel().socialFrame.updateStatus(PlayerStatusEnum.PLAYER_STATUS_SOLO)
 
@@ -45,7 +52,7 @@ class ResourceFarm(AbstractFarmBehavior):
         if playerId == PlayedCharacterManager().id:
             if statusId == PlayerStatusEnum.PLAYER_STATUS_SOLO:
                 Logger().info("Player is now in mode solo and can't be bothered by other players")
-                
+
     def onPartyInvited(self, event, partyId, partyType, fromId, fromName):
         Logger().warning(f"Player invited to party {partyId} by {fromName}")
         Kernel().partyFrame.sendPartyInviteCancel(fromId)
@@ -53,7 +60,44 @@ class ResourceFarm(AbstractFarmBehavior):
     def onGuildInvited(self, event, guildInfo: GuildInformations, recruterName):
         Logger().warning(f"Player invited to guild {guildInfo.guildName} by {recruterName}")
         Kernel().guildDialogFrame.guildInvitationAnswer(False)
+
+    def _specific_checks(self):
+        if self._check_has_resources_bags():
+            return True
+        return False
+    
+    def _check_has_resources_bags(self):
+        consumables_view: "StorageGenericView" = InventoryManager().inventory.getView("storageConsumables")
+        if consumables_view.hasItemType(self.RESOURCE_BAGS_TYPE_ID):
+            self.use_items_of_type(self.RESOURCE_BAGS_TYPE_ID, lambda *_: self.main())
+            return True
+        return False
         
+    def _on_full_pods(self):
+        # Pause session timing during inventory management
+        if self.current_session_id is not None:
+            self.resource_tracker.pause_session(self.current_session_id)
+
+        self.retrieve_sell({39: 100}, callback=self._on_selling_over)
+    
+    def _on_selling_over(self, code, error):
+        # Resume session timing after inventory management
+        if self.current_session_id is not None:
+            self.resource_tracker.resume_session(self.current_session_id)
+            
+        if error:
+            self.finish(code, error)
+        self.main()  # Continue farming
+        
+    def finish(self):
+        # after shutdown save how much collected during the session
+        if self.current_session_id is not None:
+            self.resource_tracker.end_farm_session(
+                self.current_session_id,
+                self.session_resources
+            )
+        super().finish()
+
     def makeAction(self):
         '''
         This function is called when the bot is ready to make an action. 
@@ -64,14 +108,14 @@ class ResourceFarm(AbstractFarmBehavior):
         if len(available_resources) == 0 and len(possibleOutgoingEdges) == 1:
             Logger().warning("Farmer found dead end")
             self.deadEnds.add(self._currEdge)
-            self.moveToNextStep()
+            self._move_to_next_step()
             return
         farmable_resources = [r for r in available_resources if r.canFarm(self.jobFilters)]
         nonForbiddenResources = [r for r in farmable_resources if r.uid not in self.forbiddenActions]
         nonForbiddenResources.sort(key=lambda r: r.distance)
         if len(nonForbiddenResources) == 0:
             Logger().warning("No farmable resource found!")
-            self.moveToNextStep()
+            self._move_to_next_step()
         else:
             self.logResourcesTable(nonForbiddenResources)
             self.currentTarget = nonForbiddenResources[0]
@@ -82,7 +126,9 @@ class ResourceFarm(AbstractFarmBehavior):
                 callback=self.onResourceCollectEnd
             )
         
-    def onObtainedItem(self, event, iw: ItemWrapper, qty):
+    def onObjectAdded(self, event, iw: ItemWrapper, qty: int):
+        resource_id = str(iw.objectGID)
+        self.session_resources[resource_id] = self.session_resources.get(resource_id, 0) + qty
         averageKamasWon = (
             Kernel().averagePricesFrame.getItemAveragePrice(iw.objectGID) * qty
         )
@@ -102,7 +148,7 @@ class ResourceFarm(AbstractFarmBehavior):
                 UseSkill.ELEM_UPDATE_TIMEOUT,
                 MovementFailError.MOVE_REQUEST_REJECTED,
             ]:
-                Logger().warning(f"Error while collecting resource: {error}, will forbid the resource.")
+                Logger().warning(f"Error while collecting resource: {error}, will exclude the resource.")
                 self.forbiddenActions.add(self.currentTarget.uid)
                 return self.main()
             return self.send(KernelEvent.ClientShutdown, error)
@@ -113,6 +159,11 @@ class ResourceFarm(AbstractFarmBehavior):
             Logger().error("No interactive frame found")
             return None
         collectables = Kernel().interactiveFrame.collectables.values()
+
+         # Track resources for current vertex
+        resources_ids = [it.skill.gatheredRessource.id for it in collectables]
+        self.resource_tracker.update_vertex_resources(PlayedCharacterManager().currVertex, resources_ids)
+        
         collectableResources = [CollectableResource(it) for it in collectables]
         return collectableResources
 

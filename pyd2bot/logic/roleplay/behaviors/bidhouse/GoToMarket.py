@@ -20,6 +20,8 @@ class GoToMarket(AbstractBehavior):
         self.marketplace_gfx_id = marketplace_gfx_id
         self.hdv_vertex = None
         self.path_to_hdv = None
+        if exclude_market_at_maps is None:
+            exclude_market_at_maps = []
         self.exclude_market_at_maps = exclude_market_at_maps
 
     def run(self) -> bool:

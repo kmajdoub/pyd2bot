@@ -4,10 +4,11 @@ from typing import Set, Optional
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
+from pydofus2.com.ankamagames.dofus.logic.common.managers.MarketBid import MarketBid
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import PlayedCharacterManager
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 
-class UpdateBid(AbstractBehavior):
+class EditBidPrice(AbstractBehavior):
     """Handles updating a single market listing price"""
     
     REQUIRED_SEQUENCE = {
@@ -20,12 +21,10 @@ class UpdateBid(AbstractBehavior):
         INSUFFICIENT_KAMAS = 999999902
         PRICE_ERROR = 999999903
     
-    def __init__(self, object_gid: int, quantity: int, listing_uid: int, new_price: int):
+    def __init__(self, bid: MarketBid, new_price: int):
         super().__init__()
-        self.object_gid = object_gid
-        self.quantity = quantity
-        self.listing_uid = listing_uid
-        self.target_price = new_price
+        self.bid = bid
+        self.new_price = new_price
         self._received_sequence: Set[str] = set()
         self._logger = Logger()
 
@@ -36,35 +35,14 @@ class UpdateBid(AbstractBehavior):
     def run(self) -> bool:
         """Start the bid update process"""
         self._market_frame = Kernel().marketFrame
-        self.on(KernelEvent.MessageReceived, self._on_server_message)
-        self.open_market(
-            from_gid=self.object_gid,
-            callback=self._on_market_open
-        )
-        return True
-
-    def _on_market_open(self, code: int, error: str) -> None:
-        """Handle market opened"""
-        if error:
-            return self.finish(code, error)
-        
+        if self._market_frame._market_type_open is None:
+            return self.finish(1, "Market is not open")
         if self._market_frame._current_mode != "sell":
-            self._market_frame.switch_mode("sell", self._on_sell_mode)
-            return True
-        else:
-            Logger().info("Market already in sell mode, skipping mode switch")
-            self._on_sell_mode(None, None)
-
-    def _on_sell_mode(self, event, mode) -> None:
-        """Handle sell mode activated"""
-        self._logger.info("Getting current market prices")
-        self._market_frame.check_price(self.object_gid, self._on_price_info)
-
-    def _on_price_info(self, event, msg) -> None:
-        """Process price update"""
-        if self._can_afford_tax(self.target_price):
-            self._logger.info(f"Updating listing {self.listing_uid} to price {self.target_price}")
-            self._market_frame.send_update_listing(self.listing_uid, self.quantity, self.target_price)
+            return self.finish(1, "Market is not is sell mode")
+        self.on(KernelEvent.MessageReceived, self._on_server_message)
+        if self._can_afford_tax(self.new_price):
+            self._logger.info(f"Updating listing {self.bid.uid} to price {self.new_price}")
+            self._market_frame.send_update_listing(self.bid.uid, self.bid.quantity, self.new_price)
         else:
             self.finish(self.ERROR_CODES.INSUFFICIENT_KAMAS, "Insufficient kamas for tax")
 
@@ -74,12 +52,11 @@ class UpdateBid(AbstractBehavior):
         
         if msg_type in self.REQUIRED_SEQUENCE:
             self._received_sequence.add(msg_type)
-            remaining = self.REQUIRED_SEQUENCE - self._received_sequence
-            
-            self._logger.debug(
-                f"Received {msg_type} ({len(self._received_sequence)}/{len(self.REQUIRED_SEQUENCE)})"
-                + (f", waiting for: {', '.join(remaining)}" if remaining else "")
-            )
+            # remaining = self.REQUIRED_SEQUENCE - self._received_sequence
+            # self._logger.debug(
+            #     f"Received {msg_type} ({len(self._received_sequence)}/{len(self.REQUIRED_SEQUENCE)})"
+            #     + (f", waiting for: {', '.join(remaining)}" if remaining else "")
+            # )
             
             # Log specific message details
             if msg_type == "KamasUpdateMessage":

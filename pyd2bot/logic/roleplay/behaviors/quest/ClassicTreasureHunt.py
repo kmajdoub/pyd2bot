@@ -69,6 +69,7 @@ class ClassicTreasureHunt(AbstractBehavior):
     ZAAP_HUNT_MAP = 142087694
     STEP_DIDNT_CHANGE = 47555822
     Rose_of_the_Sands_GUID = 15263
+    CHEST_TYPE_ID = 172
 
     with open(HINTS_FILE, "r") as fp:
         hint_db = json.load(fp)
@@ -208,16 +209,14 @@ class ClassicTreasureHunt(AbstractBehavior):
             self.TAKE_QUEST_MAPID, withSaveZaap=True, maxCost=self.maxCost, callback=self.onTakeQuestMapReached
         )
 
-    def onObjectAdded(self, event, iw: ItemWrapper):
-        Logger().info(f"{iw.name}, gid {iw.objectGID}, uid {iw.objectUID}, {iw.description} added to inventory")
-        if iw.objectGID == self.Rose_of_the_Sands_GUID:
+    def onObjectAdded(self, event, iw: ItemWrapper, qty: int):
+        Logger().info(f"{iw.name}, gid {iw.objectGID}, uid {iw.objectUID}, {iw.description} x{qty} added to inventory")
+        if iw.typeId != self.CHEST_TYPE_ID:
             averageKamasWon = (
-                Kernel().averagePricesFrame.getItemAveragePrice(iw.objectGID) * iw.quantity
+                Kernel().averagePricesFrame.getItemAveragePrice(iw.objectGID) * qty
             )
             Logger().debug(f"Average kamas won: {averageKamasWon}")
             self._gained_kamas += averageKamasWon
-        if iw.objectGID in self.CHESTS_GUID:
-            self._chests_to_open.append(iw)
 
     def onHuntFinished(self, event, questType):
         Logger().debug(f"Treasure hunt finished")
@@ -231,6 +230,7 @@ class ClassicTreasureHunt(AbstractBehavior):
                 self.memorizeHint(answerMapId, poiId)
             self.guessedAnswers.clear()
             self.guessMode = False
+        
         if self._chests_to_open:
             iw = self._chests_to_open.pop(0)
             HaapiEventsManager().sendInventoryOpenEvent()
@@ -364,7 +364,7 @@ class ClassicTreasureHunt(AbstractBehavior):
             return self.autoRevive(callback=lambda code, err: self.onRevived(code, err, ignoreSame))
         if not self._deactivate_riding and PlayedCharacterApi.canRideMount():
             Logger().info(f"Mounting {PlayedCharacterManager().mount.name} ...")
-            return self.toggleRideMount(wanted_ride_state=True, callback=lambda e, r: self.onPlayerRidingMount(e, r, ignoreSame))
+            return self.toggle_ride_mount(wanted_ride_state=True, callback=lambda e, r: self.onPlayerRidingMount(e, r, ignoreSame))
         lastStep = self.currentStep
         idx = self.getCurrentStepIndex()
         if idx is None:

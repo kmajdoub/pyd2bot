@@ -35,8 +35,8 @@ class GroupLeaderFarmFights(SoloFarmFights):
         self.leader = leader
         self.followers = followers
 
-    def moveToNextStep(self):
-        super().moveToNextStep()
+    def _move_to_next_step(self):
+        super()._move_to_next_step()
         self.askFollowersMoveToVertex(self._currEdge.dst)
 
     def makeAction(self):

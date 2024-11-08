@@ -5,7 +5,7 @@ import time
 from prettytable import PrettyTable
 
 from pyd2bot.data.models import Character
-from pyd2bot.logic.roleplay.behaviors.AbstractFarmBehavior import \
+from pyd2bot.logic.roleplay.behaviors.farm.AbstractFarmBehavior import \
     AbstractFarmBehavior
 from pyd2bot.logic.roleplay.behaviors.fight.AttackMonsters import \
     AttackMonsters
@@ -40,7 +40,7 @@ class SoloFarmFights(AbstractFarmBehavior):
         all_monster_groups = self.getAvailableResources()
         if not all_monster_groups:
             Logger().debug("No monster group found!")
-            self.moveToNextStep()
+            self._move_to_next_step()
             return
         
         # Calculate wait time using Poisson distribution
@@ -59,7 +59,7 @@ class SoloFarmFights(AbstractFarmBehavior):
         all_monster_groups = self.getAvailableResources()
         if not all_monster_groups:
             Logger().debug("No monster group found!")
-            self.moveToNextStep()
+            self._move_to_next_step()
             return
         monster_group = all_monster_groups[0]
         self.attackMonsters(monster_group["id"], self.onFightStarted)

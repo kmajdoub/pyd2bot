@@ -13,7 +13,7 @@ from pydofus2.com.ankamagames.jerakine.pathfinding.Pathfinding import \
     PathFinding
 
 if TYPE_CHECKING:
-    from pyd2bot.logic.roleplay.behaviors.AbstractFarmBehavior import \
+    from pyd2bot.logic.roleplay.behaviors.farm.AbstractFarmBehavior import \
         AbstractFarmBehavior
 
 class CollectableResource:

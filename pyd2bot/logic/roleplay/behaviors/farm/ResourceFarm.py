@@ -12,12 +12,10 @@ from pyd2bot.farmPaths.AbstractFarmPath import AbstractFarmPath
 from pyd2bot.data.models import JobFilter
 from pyd2bot.logic.roleplay.behaviors.updates.CollectStats import CollectStats
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
-from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import \
-    KernelEventsManager
+
 from pydofus2.com.ankamagames.dofus.internalDatacenter.items.ItemWrapper import \
     ItemWrapper
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
-from pydofus2.com.ankamagames.dofus.logic.game.common.managers.InventoryManager import InventoryManager
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import \
     PlayedCharacterManager
 from pydofus2.com.ankamagames.dofus.logic.game.roleplay.types.MovementFailError import \
@@ -46,15 +44,8 @@ class ResourceFarm(AbstractFarmBehavior):
         self.currentTarget: CollectableResource = None
         self.current_session_id = self.resource_tracker.start_farm_session(self.path.name)
         self.session_resources = {}
-        KernelEventsManager().on(KernelEvent.PlayerStatusUpdate, self.onPlayerStatusUpdate)
-        Kernel().socialFrame.updateStatus(PlayerStatusEnum.PLAYER_STATUS_SOLO)
         CollectStats().playerStats.currentPathName = self.path.name
-        CollectStats().onPlayerUpdate("PATH_SELECT")
-
-    def onPlayerStatusUpdate(self, event, accountId, playerId, statusId, message):
-        if playerId == PlayedCharacterManager().id:
-            if statusId == PlayerStatusEnum.PLAYER_STATUS_SOLO:
-                Logger().info("Player is now in mode solo and can't be bothered by other players")
+        CollectStats().onPlayerUpdate(KernelEvent.FarmPathStart)
 
     def onPartyInvited(self, event, partyId, partyType, fromId, fromName):
         Logger().warning(f"Player invited to party {partyId} by {fromName}")
@@ -67,8 +58,16 @@ class ResourceFarm(AbstractFarmBehavior):
     def _specific_checks(self):
         if self._check_has_resources_bags():
             return True
+        if self._check_solo_mod():
+            return True
         return False
     
+    def _check_solo_mod(self):
+        if Kernel().socialFrame._current_mod != PlayerStatusEnum.PLAYER_STATUS_SOLO:
+            Kernel().socialFrame.updateStatus(PlayerStatusEnum.PLAYER_STATUS_SOLO, self._on_player_solo_mod)
+            return True
+        return False
+
     def _check_has_resources_bags(self):
         if UseItemsByType.has_items(self.RESOURCE_BAGS_TYPE_ID):
             self.use_items_of_type(self.RESOURCE_BAGS_TYPE_ID, lambda *_: self.main())
@@ -92,7 +91,12 @@ class ResourceFarm(AbstractFarmBehavior):
         if error:
             return self.finish(code, error)
         self.main()  # Continue farming
-        
+    
+    def _on_player_solo_mod(self, code, error):
+        if error:
+            return self.finish(code, error)
+        self.main()  # Continue farming
+    
     def finish(self, code, error):
         # after shutdown save how much collected during the session
         if self.current_session_id is not None:

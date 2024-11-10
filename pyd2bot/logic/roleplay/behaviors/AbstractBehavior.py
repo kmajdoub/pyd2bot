@@ -6,7 +6,7 @@ from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
 from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import \
     KernelEventsManager
 from pydofus2.com.ankamagames.berilia.managers.Listener import Listener
-from pydofus2.com.ankamagames.jerakine.benchmark.DifferQueue import DeferQueue
+from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 from pydofus2.com.ankamagames.jerakine.metaclass.Singleton import Singleton
 
@@ -16,13 +16,13 @@ class AbstractBehaviorState(Enum):
     UNKNOWN = 0
     RUNNING = 1
     IDLE = 2
-    
+
 class AbstractBehavior(BehaviorApi, metaclass=Singleton):
     IS_BACKGROUND_TASK = False
     ALREADY_RUNNING = 666
     STOPPED = 988273
     _onEmptyCallbacks = dict[str, list[callable]]()
-    
+
     def __init__(self) -> None:
         self.running = threading.Event()
         self.callback = None
@@ -77,21 +77,21 @@ class AbstractBehavior(BehaviorApi, metaclass=Singleton):
         else:
             KernelEventsManager().send(KernelEvent.ClientStatusUpdate, f"FINISHED_{type(self).__name__.upper()}")
         if callback is not None:
-            DeferQueue.defer(lambda: callback(code, error, *args, **kwargs))
+            Kernel().defer(lambda: callback(code, error, *args, **kwargs))
         else:
             Logger().error(f"Callback of the behavior is None, error: {error}, code: {code}")
         while self.endListeners:
             callback = self.endListeners.pop()
-            DeferQueue.defer(lambda: callback(code, error, *args, **kwargs))
+            callback(code, error, *args, **kwargs)
         with RLOCK:
             thname = threading.current_thread().name
             if not AbstractBehavior.hasRunning(thname):
                 if thname in AbstractBehavior._onEmptyCallbacks:
                     while AbstractBehavior._onEmptyCallbacks[thname]:
                         callback = AbstractBehavior._onEmptyCallbacks[thname].pop()
-                        DeferQueue.defer(lambda: callback(code, error, *args, **kwargs))
+                        callback(code, error, *args, **kwargs)
                     del AbstractBehavior._onEmptyCallbacks[thname]
-            
+
     @property
     def listeners(self) -> list[Listener]:
         from pyd2bot.misc.BotEventsManager import BotEventsManager
@@ -108,7 +108,7 @@ class AbstractBehavior(BehaviorApi, metaclass=Singleton):
         for behavior in AbstractBehavior.getSubs(name):
             if behavior.isRunning():
                 return True
-    
+
     @classmethod
     def getRunning(cls) -> list['AbstractBehavior']:
         result = []
@@ -131,7 +131,7 @@ class AbstractBehavior(BehaviorApi, metaclass=Singleton):
         if thname not in AbstractBehavior._onEmptyCallbacks:
             AbstractBehavior._onEmptyCallbacks[thname] = []
         AbstractBehavior._onEmptyCallbacks[thname].append(callback)
-    
+
     def getTreeStr(self, level=0):
         indent = '  ' * level
         result = ""
@@ -140,7 +140,7 @@ class AbstractBehavior(BehaviorApi, metaclass=Singleton):
         for child in self.children:
             result += child.getTreeStr(level + 1)
         return result
-    
+
     def __str__(self) -> str:
         listeners = [str(listener) for listener in self.listeners]
         result = f"{type(self).__name__} ({self.getState()})"
@@ -149,13 +149,13 @@ class AbstractBehavior(BehaviorApi, metaclass=Singleton):
         if self.children:
             result += f", Children: {self.getTreeStr()}"
         return result
-    
+
     def stop(self, clear_callback=False):
         if clear_callback:
             self.callback = lambda code, error: Logger().debug("Callback cleared")
         self.stopChildren(clear_callback)
         self.finish(True, None)
-    
+
     def stopChildren(self, clear_callbacks=False):
         while self.children:
             child = self.children.pop()

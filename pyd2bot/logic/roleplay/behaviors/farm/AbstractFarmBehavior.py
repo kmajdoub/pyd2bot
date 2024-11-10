@@ -12,7 +12,6 @@ from pyd2bot.farmPaths.RandomAreaFarmPath import NoTransitionFound
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
 from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import KernelEventsManager
 from pydofus2.com.ankamagames.dofus.internalDatacenter.items.ItemWrapper import ItemWrapper
-from pydofus2.com.ankamagames.dofus.logic.game.common.managers.InventoryManager import InventoryManager
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import PlayedCharacterManager
 from pydofus2.com.ankamagames.dofus.logic.game.roleplay.types.MovementFailError import MovementFailError
 from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Vertex import Vertex
@@ -183,6 +182,7 @@ class AbstractFarmBehavior(AbstractBehavior):
         if not PlayedCharacterManager().currVertex:
             Logger().warning("Bot vertex not loaded yet!, delaying return to path after Map is processed...")
             return self.once_map_processed(callback=self._on_out_of_path)
+
         self.travel_using_zaap(
             self.path.startVertex.mapId,
             self.path.startVertex.zoneId,

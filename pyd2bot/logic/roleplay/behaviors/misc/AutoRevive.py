@@ -27,19 +27,21 @@ class AutoRevive(AbstractBehavior):
         if not PlayedCharacterManager().currentMap:
             return self.once_map_processed(self.start)
         self.on(KernelEvent.PlayerStateChanged, self.onPlayerStateChange)
-        if PlayerLifeStatusEnum(PlayedCharacterManager().state) == PlayerLifeStatusEnum.STATUS_PHANTOM:
+        if PlayedCharacterManager().player_life_status == PlayerLifeStatusEnum.STATUS_PHANTOM:
             Logger().debug(f"Traveling to phenix map {self.phenixMapId}")
             self.autoTrip(dstMapId=self.phenixMapId, callback=self.onPhenixMapReached)
-        elif PlayerLifeStatusEnum(PlayedCharacterManager().state) == PlayerLifeStatusEnum.STATUS_TOMBSTONE:
+        elif PlayedCharacterManager().player_life_status == PlayerLifeStatusEnum.STATUS_TOMBSTONE:
             self.cemetaryMapLoadedListener = self.once_map_processed(self.onCemetaryMapLoaded)
             self.releaseSoulRequest()
+        else:
+            self.finish(1, f"Unknown user state {PlayedCharacterManager().player_life_status}!!")
 
     def onPlayerStateChange(self, event, playerState: PlayerLifeStatusEnum, phenixMapId):
         self.phenixMapId = phenixMapId
         Logger().debug(f"Phoenix mapId : {phenixMapId}")
         if playerState == PlayerLifeStatusEnum.STATUS_PHANTOM:
             Logger().info(f"Player soul released waiting for cemetery map to load.")
-        elif playerState == PlayerLifeStatusEnum.STATUS_ALIVE_AND_KICKING:
+        elif playerState == PlayerLifeStatusEnum.STATUS_ALIVE:
             Logger().info("Player is alive and kicking.")
             self.finish(True, None)
 

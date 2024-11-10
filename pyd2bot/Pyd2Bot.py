@@ -19,9 +19,9 @@ from pyd2bot.logic.roleplay.behaviors.quest.ClassicTreasureHunt import ClassicTr
 from pyd2bot.data.models import Session
 from pyd2bot.logic.roleplay.messages.TakeNapMessage import TakeNapMessage
 from pyd2bot.misc.BotEventsManager import BotEventsManager
+from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
 from pydofus2.com.ankamagames.dofus.kernel.net.DisconnectionReasonEnum import DisconnectionReasonEnum
-from pydofus2.com.ankamagames.dofus.network.enums.BreedEnum import BreedEnum
 from pydofus2.com.ankamagames.jerakine.benchmark.BenchmarkTimer import BenchmarkTimer
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 from pydofus2.com.DofusClient import DofusClient
@@ -170,7 +170,7 @@ class Pyd2Bot(DofusClient):
             self._saved_player_stats = self._stats_collector.playerStats # save player stats before taking a nap
             self._stats_collector.playerStats.timeSpentSleeping += self._nap_duration
             self._stats_collector.playerStats.isSleeping = True
-            self._stats_collector.onPlayerUpdate("TAKING_NAP")
+            self._stats_collector.onPlayerUpdate(KernelEvent.Paused)
             self.onReconnect(
                 None,
                 f"Taking a nap for {int(self._nap_duration)} minutes",

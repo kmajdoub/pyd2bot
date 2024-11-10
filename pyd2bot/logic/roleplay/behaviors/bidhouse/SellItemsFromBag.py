@@ -1,12 +1,11 @@
 from collections import defaultdict
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
 from pydofus2.com.ankamagames.dofus.internalDatacenter.items.ItemWrapper import ItemWrapper
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.InventoryManager import InventoryManager
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import PlayedCharacterManager
-from pydofus2.com.ankamagames.jerakine.benchmark.BenchmarkTimer import BenchmarkTimer
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
 from pyd2bot.data.enums import ServerNotificationEnum
@@ -31,6 +30,7 @@ class SellItemsFromBag(AbstractBehavior):
         self._market_frame = Kernel().marketFrame
         self.markets_excluded_for_items = defaultdict(list)
         self._tried_reopen_market = False
+        self._search_item_listener = None
         
     def run(self) -> None:
         self._current_idx = 0
@@ -121,11 +121,13 @@ class SellItemsFromBag(AbstractBehavior):
         if not self._check_market_level():
             return
         
-        self._market_frame.search_item(self.current_item.objectGID, self._on_search_result)
+        self._search_item_listener = self._market_frame.search_item(self.current_item.objectGID, self._on_search_result)
 
     def _on_search_result(self, code, error):
         if error:
             Logger().error(f"Error searching for item [{code}] : {error}")
+            if self._search_item_listener:
+                self._search_item_listener.cancel()
             if code == 2222 and not self._tried_reopen_market: # timeout and didnt try solution of reopen the market
                 self._tried_reopen_market = True
                 self.close_market(lambda *_: self._process_current_item())
@@ -149,7 +151,10 @@ class SellItemsFromBag(AbstractBehavior):
         return None
 
 
-    def _on_price_info(self, event, msg) -> None:
+    def _on_price_info(self, code, error, infos) -> None:
+        if error:
+            return self._handle_error(code, error)
+
         item = self.current_item
         qty = self.get_item_batch_size(item)
 

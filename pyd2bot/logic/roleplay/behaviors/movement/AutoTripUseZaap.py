@@ -2,12 +2,10 @@ from typing import Tuple, Optional, List
 from dataclasses import dataclass
 
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
-from pyd2bot.logic.roleplay.behaviors.movement.AutoTrip import AutoTrip
 from pyd2bot.logic.roleplay.behaviors.teleport.ToggleHavenBag import ToggleHavenBag
 from pyd2bot.logic.roleplay.behaviors.skill.UseSkill import UseSkill
 from pyd2bot.logic.roleplay.behaviors.teleport.UseZaap import UseZaap
 from pyd2bot.misc.Localizer import Localizer
-from pydofus2.com.ankamagames.atouin.managers.MapDisplayManager import MapDisplayManager
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
 from pydofus2.com.ankamagames.dofus.datacenter.world.MapPosition import MapPosition
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
@@ -18,9 +16,7 @@ from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Edge import 
 from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Vertex import Vertex
 from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.WorldGraph import WorldGraph
 from pydofus2.com.ankamagames.dofus.uiApi.PlayedCharacterApi import PlayedCharacterApi
-from pydofus2.com.ankamagames.jerakine.benchmark.BenchmarkTimer import BenchmarkTimer
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
-from pydofus2.com.ankamagames.jerakine.types.positions.MapPoint import MapPoint
 from pydofus2.mapTools import MapTools
 
 @dataclass
@@ -78,7 +74,7 @@ class AutoTripUseZaap(AbstractBehavior):
 
         # Find best travel plan
         self.travel_plan = self.findBestTravelPlan()
-        if not self.travel_plan:
+        if self.travel_plan is None:
             return self.finish(
                 self.NO_PATH_TO_DEST,
                 f"No valid path found to destination {self.dstMapId}!"

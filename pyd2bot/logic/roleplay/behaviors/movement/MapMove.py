@@ -102,7 +102,7 @@ class MapMove(AbstractBehavior):
             Logger().info(f"Destination cell {self.dstCell.cellId} is the same as the current player cell")
             return self.finish(self.ALREADY_ONCELL, None, self.dstCell)
         
-        if PlayerLifeStatusEnum(PlayedCharacterManager().state) == PlayerLifeStatusEnum.STATUS_TOMBSTONE:
+        if PlayedCharacterManager().player_life_status == PlayerLifeStatusEnum.STATUS_TOMBSTONE:
             return self.fail(MovementFailError.PLAYER_IS_DEAD)
         
         self.movePath = PathFinding().findPath(playerEntity.position, self.dstCell, cellsBlacklist=self.cellsblacklist)
@@ -173,8 +173,8 @@ class MapMove(AbstractBehavior):
         self.move_request_accepted = True
         Logger().info(f"Move request accepted : len={len(clientMovePath)}")
         self._landingCell = clientMovePath.end
-        if clientMovePath.end.cellId != self.dstCell.cellId:
-            Logger().warning(f"Heading to cell {clientMovePath.end.cellId} not the wanted destination {self.dstCell.cellId}!")
+        # if clientMovePath.end.cellId != self.dstCell.cellId:
+        #     Logger().warning(f"Heading to cell {clientMovePath.end.cellId} not the wanted destination {self.dstCell.cellId}!")
         if self.delayed_stop:
             self.delayed_stop = False
             Logger().warning("Scheduled player stop movement, will stop now.")
@@ -186,7 +186,7 @@ class MapMove(AbstractBehavior):
             return
 
         if success:
-            # Logger().info("Player completed movement")
+            Logger().info("Player completed movement")
             self.finish(success, None, self._landingCell)
         else:
             self.finish(self.PLAYER_STOPPED, "Player movement was stopped", self._landingCell)

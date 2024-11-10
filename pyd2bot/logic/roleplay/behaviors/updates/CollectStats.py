@@ -1,11 +1,8 @@
 from pyd2bot.data.models import PlayerStats
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
-from pyd2bot.logic.roleplay.behaviors.quest.ClassicTreasureHunt import ClassicTreasureHunt
-from pyd2bot.misc.BotEventsManager import BotEventsManager
 from pydofus2.com.ankamagames.atouin.HaapiEventsManager import \
     HaapiEventsManager
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
-from pydofus2.com.ankamagames.dofus.internalDatacenter.items.ItemWrapper import ItemWrapper
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
 from pydofus2.com.ankamagames.dofus.kernel.net.ConnectionsHandler import \
     ConnectionsHandler
@@ -14,7 +11,7 @@ from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterMa
 from pydofus2.com.ankamagames.dofus.network.messages.game.achievement.AchievementRewardRequestMessage import \
     AchievementRewardRequestMessage
 from pydofus2.com.ankamagames.dofus.network.types.game.context.roleplay.job.JobExperience import JobExperience
-from pydofus2.com.ankamagames.jerakine.benchmark.BenchmarkTimer import BenchmarkTimer
+from pydofus2.com.ankamagames.jerakine.benchmark.DifferQueue import DeferQueue
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 
 
@@ -171,4 +168,4 @@ class CollectStats(AbstractBehavior):
         self._oldStats = serialized_stats
         if self.update_listeners:
             for listener in self.update_listeners:
-                BenchmarkTimer(0.1, lambda: listener(event, data_to_send)).start()
+                DeferQueue.defer(lambda: listener(event, data_to_send))

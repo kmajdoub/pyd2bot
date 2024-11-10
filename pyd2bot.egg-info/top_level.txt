@@ -1,3 +1,2 @@
-app
 pyd2bot
 scripts

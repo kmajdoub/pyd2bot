@@ -186,7 +186,7 @@ class MapMove(AbstractBehavior):
             return
 
         if success:
-            Logger().info("Player completed movement")
+            # Logger().info("Player completed movement")
             self.finish(success, None, self._landingCell)
         else:
             self.finish(self.PLAYER_STOPPED, "Player movement was stopped", self._landingCell)

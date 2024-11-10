@@ -1,378 +1,508 @@
-from sqlalchemy import create_engine, Column, Integer, String, JSON, UniqueConstraint, DateTime, Float
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+import json
+import psycopg2
+import psycopg2.pool
+import psycopg2.extras
 from contextlib import contextmanager
 from typing import Dict, List, Optional
 import threading
-import logging
-from pathlib import Path
 from datetime import datetime, timedelta, timezone
 
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
+from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Vertex import Vertex
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
+from pydofus2.com.ankamagames.jerakine.metaclass.ThreadSharedSingleton import ThreadSharedSingleton
 
-Base = declarative_base()
-
-class MapVertex(Base):
-    __tablename__ = 'map_vertices'
-    
-    id = Column(Integer, primary_key=True)
-    map_id = Column(Integer, nullable=False)
-    zone_id = Column(Integer, nullable=False)
-    vertex_uid = Column(String, nullable=False, unique=True)
-    resource_counts = Column(JSON, nullable=False)  # Stores {resource_id: count}
-    created_at = Column(DateTime(timezone=True), nullable=False)
-    updated_at = Column(DateTime(timezone=True), nullable=False)
-    
-    __table_args__ = (
-        UniqueConstraint('map_id', 'zone_id', name='unique_map_zone'),
-    )
-
-class FarmSession(Base):
-    __tablename__ = 'farm_sessions'
-    
-    id = Column(Integer, primary_key=True)
-    path_id = Column(String, nullable=False, index=True)  # Identifier for the farm path
-    start_time = Column(DateTime(timezone=True), nullable=False)
-    end_time = Column(DateTime(timezone=True), nullable=False)
-    duration_seconds = Column(Float, nullable=False)
-    resources_collected = Column(JSON, nullable=False)  # {resource_id: quantity}
-    paused_at = Column(DateTime(timezone=True), nullable=True)  # Track when session was last paused
-
-class ResourceTracker:
-    _instance = None
+class ResourceTracker(metaclass=ThreadSharedSingleton):
     _lock = threading.Lock()
     
-    def __new__(cls):
-        if cls._instance is None:
-            with cls._lock:
-                if cls._instance is None:
-                    cls._instance = super(ResourceTracker, cls).__new__(cls)
-        return cls._instance
+    def __init__(self, 
+                 host: str = "localhost",
+                 port: int = 5432,
+                 database: str = "pyd2bot",
+                 user: str = "pyd2bot",
+                 password: str = "rMrTXHA4*",
+                 expiration_days: int = 30,
+                 min_connections: int = 5,
+                 max_connections: int = 15):
+        
+        self.logger = Logger()
+        self.expiration_days = expiration_days
+        self.active_sessions = {}
+        
+        # Create connection pool
+        self.pool = psycopg2.pool.ThreadedConnectionPool(
+            minconn=min_connections,
+            maxconn=max_connections,
+            host=host,
+            port=port,
+            database=database,
+            user=user,
+            password=password
+        )
+        
+        # Initialize database schema
+        self._init_db()
     
-    def __init__(self, expiration_days: int = 30):
-        if not hasattr(self, 'initialized'):
-            db_path = Path('data/map_resources.db')
-            db_path.parent.mkdir(parents=True, exist_ok=True)
-            
-            self.engine = create_engine(f'sqlite:///{db_path}')
-            Base.metadata.create_all(self.engine)
-            self.Session = sessionmaker(bind=self.engine)
-            self.expiration_days = expiration_days
-            self.initialized = True
-            self.logger = Logger()
-            self.active_sessions = {}  # Track session states
+    def _init_db(self):
+        """Initialize database tables and indexes"""
+        with self.get_connection() as conn:
+            with conn.cursor() as cur:
+                # Create map_vertices table
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS map_vertices (
+                        id SERIAL PRIMARY KEY,
+                        map_id INTEGER NOT NULL,
+                        zone_id INTEGER NOT NULL,
+                        vertex_uid TEXT NOT NULL UNIQUE,
+                        resource_counts JSONB NOT NULL DEFAULT '{}'::jsonb,
+                        created_at TIMESTAMPTZ NOT NULL,
+                        updated_at TIMESTAMPTZ NOT NULL
+                    );
+                    
+                    CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_map_zone 
+                        ON map_vertices (map_id, zone_id);
+                        
+                    CREATE INDEX IF NOT EXISTS idx_vertex_uid 
+                        ON map_vertices (vertex_uid);
+                        
+                    CREATE INDEX IF NOT EXISTS idx_updated_at 
+                        ON map_vertices (updated_at);
+                        
+                    CREATE INDEX IF NOT EXISTS idx_resource_counts 
+                        ON map_vertices USING GIN (resource_counts);
+                """)
+                
+                # Create farm_sessions table
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS farm_sessions (
+                        id SERIAL PRIMARY KEY,
+                        path_id TEXT NOT NULL,
+                        start_time TIMESTAMPTZ NOT NULL,
+                        end_time TIMESTAMPTZ,
+                        active_duration_seconds FLOAT NOT NULL DEFAULT 0,
+                        resources_collected JSONB NOT NULL DEFAULT '{}'::jsonb,
+                        paused_at TIMESTAMPTZ,
+                        total_duration_seconds FLOAT NOT NULL DEFAULT 0,
+                        last_update TIMESTAMPTZ
+                    );
+                    
+                    CREATE INDEX IF NOT EXISTS idx_path_id 
+                        ON farm_sessions (path_id);
+                        
+                    CREATE INDEX IF NOT EXISTS idx_path_end_time 
+                        ON farm_sessions (path_id, end_time);
+                        
+                    CREATE INDEX IF NOT EXISTS idx_resources_collected 
+                        ON farm_sessions USING GIN (resources_collected);
+                """)
+                
+                conn.commit()
 
-    def get_current_time(self) -> datetime:
-        """Get current UTC time with timezone information."""
-        return datetime.now(timezone.utc)
-    
     @contextmanager
-    def session_scope(self):
-        """Provide a transactional scope around a series of operations."""
-        session = self.Session()
+    def get_connection(self):
+        """Get a connection from the pool with automatic return"""
+        conn = self.pool.getconn()
         try:
-            yield session
-            session.commit()
-        except Exception as e:
-            self.logger.error(f"Database error: {e}")
-            session.rollback()
-            raise
+            yield conn
         finally:
-            session.close()
+            self.pool.putconn(conn)
     
-    def get_vertex_value(self, vertex_uid: str) -> Optional[int]:
-        """
-        Calculate the total economic value of resources in a vertex based on
-        current average market prices.
-        
-        Args:
-            vertex_uid: Unique identifier of the vertex
-            
-        Returns:
-            int: Total value in kamas of all resources in the vertex
-                 None if vertex not found or data expired
-        """
-        # Get resource counts using existing method
-        resource_counts = self.get_vertex_resources(vertex_uid)
-        if not resource_counts:
-            return None
-            
-        total_value = 0
-        price_frame = Kernel().averagePricesFrame
-        
-        # Calculate total value of all resources
-        for resource_id_str, count in resource_counts.items():
-            try:
-                resource_id = int(resource_id_str)
-                avg_price = price_frame.getItemAveragePrice(resource_id)
-                if avg_price:  # Check if price exists
-                    total_value += avg_price * count
-            except (ValueError, TypeError) as e:
-                self.logger.warning(f"Error calculating value for resource {resource_id_str}: {e}")
-                continue
-                
-        return total_value
-    
-    def update_vertex_resources(self, vertex, resource_ids: List[int]) -> bool:
-        """
-        Update or create a vertex entry with its resource counts.
-        Optimized to minimize operations - only updates if entry doesn't exist
-        or is expired.
-        
-        Args:
-            vertex: Vertex object with mapId and zoneId attributes
-            resource_ids: List of resource IDs found in the map
-            
-        Returns:
-            bool: True if update was performed, False if skipped
-        """
-        with self._lock:
-            with self.session_scope() as session:
-                # First check if vertex exists and is not expired
-                vertex_entry = session.query(MapVertex).filter_by(
-                    vertex_uid=vertex.UID
-                ).first()
-                
-                current_time = self.get_current_time()
-                
-                # If entry exists and is not expired, skip update
-                if vertex_entry and not self.is_expired(vertex_entry):
-                    self.logger.debug(f"Skipping update for non-expired vertex {vertex.UID}")
-                    return False
-                
-                # Only count resources if we need to update
-                resource_counts = {}
-                for res_id in resource_ids:
-                    resource_counts[str(res_id)] = resource_counts.get(str(res_id), 0) + 1
-                
-                if vertex_entry is None:
-                    # Create new entry
-                    vertex_entry = MapVertex(
-                        map_id=vertex.mapId,
-                        zone_id=vertex.zoneId,
-                        vertex_uid=vertex.UID,
-                        resource_counts=resource_counts,
-                        created_at=current_time,
-                        updated_at=current_time
-                    )
-                    session.add(vertex_entry)
-                    self.logger.info(f"Added new vertex: {vertex.UID}")
-                else:
-                    # Update expired entry
-                    vertex_entry.resource_counts = resource_counts
-                    vertex_entry.updated_at = current_time
-                    self.logger.debug(f"Updated expired vertex {vertex.UID}")
-                
-                return True
-    
-    def get_vertex_resources(self, vertex_uid: str, ignore_expiration: bool = False) -> Optional[Dict[str, int]]:
-        """
-        Get resource counts for a specific vertex.
-        
-        Args:
-            vertex_uid: Unique identifier of the vertex
-            ignore_expiration: If True, return data even if expired
-            
-        Returns:
-            Dictionary of resource_id: count or None if vertex not found or data expired
-        """
-        with self.session_scope() as session:
-            vertex_entry = session.query(MapVertex).filter_by(
-                vertex_uid=vertex_uid
-            ).first()
-            
-            if vertex_entry:
-                if ignore_expiration or not self.is_expired(vertex_entry):
-                    return vertex_entry.resource_counts
-                self.logger.debug(f"Vertex {vertex_uid} data is expired")
-                return None
-            return None
-    
-    def is_expired(self, vertex_entry: MapVertex) -> bool:
-        """Check if the vertex data is expired based on expiration_days setting."""
-        expiration_date = self.get_current_time() - timedelta(days=self.expiration_days)
-        return vertex_entry.updated_at < expiration_date
-    
-    def clean_expired_data(self):
-        """Remove all expired vertex entries from the database."""
-        with self._lock:
-            with self.session_scope() as session:
-                expiration_date = self.get_current_time() - timedelta(days=self.expiration_days)
-                expired_count = session.query(MapVertex).filter(
-                    MapVertex.updated_at < expiration_date
-                ).delete()
-                self.logger.info(f"Cleaned {expired_count} expired vertex entries")
-    
-    def get_recent_vertices(self, days: int = None) -> List[MapVertex]:
-        """
-        Get vertices updated within the specified number of days.
-        
-        Args:
-            days: Number of days to look back (defaults to expiration_days if None)
-        
-        Returns:
-            List of MapVertex objects
-        """
-        if days is None:
-            days = self.expiration_days
-            
-        with self.session_scope() as session:
-            cutoff_date = self.get_current_time() - timedelta(days=days)
-            return session.query(MapVertex).filter(
-                MapVertex.updated_at >= cutoff_date
-            ).all()
+    def get_current_time(self) -> datetime:
+        """Get current UTC time with timezone information"""
+        return datetime.now(timezone.utc)
 
-    def start_farm_session(self, path_id: str) -> int:
-        """Start tracking a new farming session."""
+    def update_vertex_resources(self, vertex: Vertex, resource_ids: List[int]) -> bool:
+        """Update or create vertex entry with resource counts"""
         with self._lock:
-            with self.session_scope() as session:
-                current_time = self.get_current_time()
-                farm_session = FarmSession(
-                    path_id=path_id,
-                    start_time=current_time,
-                    resources_collected={},
-                    active_duration_seconds=0
-                )
-                session.add(farm_session)
-                session.flush()  # Get the ID
-                
-                # Initialize session state
-                self.active_sessions[farm_session.id] = {
-                    'is_paused': False,
-                    'last_pause_time': None,
-                    'accumulated_duration': 0
-                }
-                
-                return farm_session.id
+            current_time = self.get_current_time()
+            
+            # Build resource counts
+            resource_counts = {}
+            for res_id in resource_ids:
+                resource_counts[str(res_id)] = resource_counts.get(str(res_id), 0) + 1
+            
+            with self.get_connection() as conn:
+                with conn.cursor() as cur:
+                    try:
+                        cur.execute("""
+                            INSERT INTO map_vertices 
+                                (map_id, zone_id, vertex_uid, resource_counts, created_at, updated_at)
+                            VALUES 
+                                (%s, %s, %s, %s, %s, %s)
+                            ON CONFLICT (vertex_uid) DO UPDATE SET
+                                resource_counts = %s,
+                                updated_at = %s
+                            WHERE 
+                                map_vertices.updated_at < %s
+                            RETURNING updated_at = %s as was_updated
+                        """, (
+                            vertex.mapId,
+                            vertex.zoneId,
+                            vertex.UID,
+                            json.dumps(resource_counts),
+                            current_time,
+                            current_time,
+                            json.dumps(resource_counts),
+                            current_time,
+                            current_time - timedelta(days=self.expiration_days),
+                            current_time
+                        ))
+                        
+                        result = cur.fetchone()
+                        conn.commit()
+                        return result is not None and result[0]
+                        
+                    except Exception as e:
+                        self.logger.error(f"Database error in update_vertex_resources: {e}")
+                        conn.rollback()
+                        return False
+
+    def get_vertex_resources(self, vertex_uid: str, ignore_expiration: bool = False) -> Optional[Dict[str, int]]:
+        """Get resource counts for a specific vertex"""
+        with self.get_connection() as conn:
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                try:
+                    if not ignore_expiration:
+                        expiration_date = self.get_current_time() - timedelta(days=self.expiration_days)
+                        cur.execute("""
+                            SELECT resource_counts FROM map_vertices 
+                            WHERE vertex_uid = %s AND updated_at >= %s
+                        """, (vertex_uid, expiration_date))
+                    else:
+                        cur.execute("""
+                            SELECT resource_counts FROM map_vertices 
+                            WHERE vertex_uid = %s
+                        """, (vertex_uid,))
+                    
+                    result = cur.fetchone()
+                    return dict(result['resource_counts']) if result else None
+                except Exception as e:
+                    self.logger.error(f"Database error in get_vertex_resources: {e}")
+                    return None
+
+    def get_vertices_with_resource_minimum(self, resource_id: str, min_count: int) -> List[Dict]:
+        """Find vertices with minimum resource count"""
+        with self.get_connection() as conn:
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                try:
+                    cur.execute("""
+                        SELECT * FROM map_vertices
+                        WHERE (resource_counts->>%s)::int >= %s
+                        AND updated_at >= %s
+                        ORDER BY (resource_counts->>%s)::int DESC
+                    """, (
+                        resource_id,
+                        min_count,
+                        self.get_current_time() - timedelta(days=self.expiration_days),
+                        resource_id
+                    ))
+                    return cur.fetchall()
+                except Exception as e:
+                    self.logger.error(f"Database error in get_vertices_with_resource_minimum: {e}")
+                    return []
+
+    def start_farm_session(self, path_id: str) -> Optional[int]:
+        """Start a new farming session"""
+        with self._lock:
+            current_time = self.get_current_time()
+            
+            with self.get_connection() as conn:
+                with conn.cursor() as cur:
+                    try:
+                        cur.execute("""
+                            INSERT INTO farm_sessions 
+                                (path_id, start_time, resources_collected, 
+                                active_duration_seconds, total_duration_seconds)
+                            VALUES (%s, %s, %s::jsonb, 0, 0)
+                            RETURNING id
+                        """, (
+                            path_id,
+                            current_time,
+                            '{}'
+                        ))
+                        
+                        session_id = cur.fetchone()[0]
+                        conn.commit()
+                        
+                        # Initialize session state
+                        self.active_sessions[session_id] = {
+                            'is_paused': False,
+                            'last_pause_time': None,
+                            'accumulated_duration': 0
+                        }
+                        
+                        return session_id
+                    except Exception as e:
+                        self.logger.error(f"Database error in start_farm_session: {str(e)}")
+                        conn.rollback()
+                        return None
+
+    def update_session_collected_resources(self, session_id: int, resource_id: str, qty: int) -> bool:
+        """Update resources collected in a session, handling both positive and negative quantities"""
+        with self._lock:
+            with self.get_connection() as conn:
+                with conn.cursor() as cur:
+                    try:
+                        # First, get current value for the resource
+                        cur.execute("""
+                            SELECT COALESCE((resources_collected->>%s)::integer, 0) as current_qty
+                            FROM farm_sessions
+                            WHERE id = %s
+                        """, (resource_id, session_id))
+                        
+                        result = cur.fetchone()
+                        if result is None:
+                            self.logger.error(f"Session {session_id} not found")
+                            return False
+                        
+                        current_qty = result[0]
+                        new_qty = current_qty + qty
+                        
+                        # Ensure we don't go below 0
+                        if new_qty < 0:
+                            self.logger.warning(
+                                f"Attempted to reduce resource {resource_id} below 0 "
+                                f"(current: {current_qty}, change: {qty})"
+                            )
+                            new_qty = 0
+                        
+                        # Update the resource count
+                        cur.execute("""
+                            UPDATE farm_sessions 
+                            SET resources_collected = 
+                                CASE 
+                                    WHEN %s = 0 THEN 
+                                        resources_collected - %s::text
+                                    ELSE
+                                        jsonb_set(
+                                            COALESCE(resources_collected, '{}'::jsonb),
+                                            ARRAY[%s],
+                                            %s::text::jsonb
+                                        )
+                                END,
+                                last_update = %s
+                            WHERE id = %s
+                            RETURNING resources_collected->>%s as new_quantity
+                        """, (
+                            new_qty,
+                            resource_id,
+                            resource_id,
+                            str(new_qty),
+                            self.get_current_time(),
+                            session_id,
+                            resource_id
+                        ))
+                        
+                        result = cur.fetchone()
+                        if result is None:
+                            self.logger.error(f"Session {session_id} not found")
+                            return False
+                            
+                        conn.commit()
+                        
+                        # Log the update with value calculation
+                        try:
+                            new_qty = int(result[0]) if result[0] else 0
+                            avg_price = Kernel().averagePricesFrame.getItemAveragePrice(int(resource_id))
+                            if avg_price:
+                                value = avg_price * qty
+                                total_value = avg_price * new_qty
+                                self.logger.debug(
+                                    f"{'Added' if qty > 0 else 'Removed'} {abs(qty)} x {resource_id} "
+                                    f"(value: {abs(value):,} kamas, total: {total_value:,} kamas)"
+                                )
+                            else:
+                                self.logger.debug(
+                                    f"{'Added' if qty > 0 else 'Removed'} {abs(qty)} x {resource_id} "
+                                    "(no price available)"
+                                )
+                        except (ValueError, TypeError) as e:
+                            self.logger.warning(f"Error calculating value for resource {resource_id}: {e}")
+                        
+                        return True
+                        
+                    except Exception as e:
+                        self.logger.error(f"Database error in update_session_collected_resources: {e}")
+                        conn.rollback()
+                        return False
 
     def end_farm_session(self, session_id: int, resources_collected: Dict[str, int]):
-        """
-        End a farming session. Only stores raw data without calculating values.
-        
-        Args:
-            session_id: ID of the session to end
-            resources_collected: Dictionary of {resource_id: quantity}
-        """
+        """End a farming session"""
         with self._lock:
-            with self.session_scope() as session:
-                farm_session = session.query(FarmSession).get(session_id)
-                if not farm_session:
-                    self.logger.error(f"Session {session_id} not found")
-                    return
-                
-                end_time = self.get_current_time()
-                duration = (end_time - farm_session.start_time).total_seconds()
-                
-                # Only store raw data
-                farm_session.end_time = end_time
-                farm_session.duration_seconds = duration
-                farm_session.resources_collected = resources_collected
-    
-    def calculate_session_value(self, farm_session: FarmSession) -> int:
-        """
-        Calculate current value of a session based on current market prices.
-        """
-        total_value = 0
-        price_frame = Kernel().averagePricesFrame
-        
-        for resource_id, quantity in farm_session.resources_collected.items():
-            avg_price = price_frame.getItemAveragePrice(int(resource_id))
-            if avg_price:
-                total_value += avg_price * quantity
-                
-        return total_value
-    
-    def get_path_statistics(self, path_id: str, days: Optional[int] = None) -> Dict:
-        """
-        Get detailed statistics for a farming path using current market prices.
-        """
-        with self.session_scope() as session:
-            query = session.query(FarmSession).filter(FarmSession.path_id == path_id)
+            current_time = self.get_current_time()
             
-            if days is not None:
-                cutoff = self.get_current_time() - timedelta(days=days)
-                query = query.filter(FarmSession.end_time >= cutoff)
-            
-            sessions = query.all()
-            
-            if not sessions:
-                return None
-            
-            # Initialize statistics
-            total_duration = sum(s.duration_seconds for s in sessions)
-            total_value = sum(self.calculate_session_value(s) for s in sessions)
-            
-            # Aggregate resource counts
-            resource_totals = {}
-            for s in sessions:
-                for res_id, qty in s.resources_collected.items():
-                    resource_totals[res_id] = resource_totals.get(res_id, 0) + qty
-            
-            # Calculate hourly rates based on current prices
-            hours = total_duration / 3600
-            value_per_hour = total_value / hours if hours > 0 else 0
-            
-            # Calculate current value per resource
-            price_frame = Kernel().averagePricesFrame
-            resource_values = []
-            for res_id, qty in resource_totals.items():
-                avg_price = price_frame.getItemAveragePrice(int(res_id))
-                if avg_price:
-                    total_res_value = avg_price * qty
-                    resource_values.append({
-                        'resource_id': res_id,
-                        'quantity': qty,
-                        'current_value': total_res_value,
-                        'value_per_hour': total_res_value / hours if hours > 0 else 0
-                    })
-            
-            return {
-                'total_sessions': len(sessions),
-                'total_duration_hours': hours,
-                'current_total_value': total_value,  # Renamed to emphasize this is current value
-                'current_value_per_hour': value_per_hour,  # Renamed to emphasize this is current value
-                'resources_per_hour': {
-                    res_id: qty / hours if hours > 0 else 0
-                    for res_id, qty in resource_totals.items()
-                },
-                'resource_statistics': sorted(
-                    resource_values,
-                    key=lambda x: x['current_value'],
-                    reverse=True
-                )
-            }
+            with self.get_connection() as conn:
+                with conn.cursor() as cur:
+                    try:
+                        # Get current session data
+                        cur.execute("""
+                            SELECT start_time FROM farm_sessions WHERE id = %s
+                        """, (session_id,))
+                        
+                        result = cur.fetchone()
+                        if not result:
+                            self.logger.error(f"Session {session_id} not found")
+                            return
+                            
+                        start_time = result[0]
+                        total_duration = (current_time - start_time).total_seconds()
+                        
+                        # Calculate active duration
+                        session_state = self.active_sessions.get(session_id)
+                        active_duration = 0
+                        
+                        if session_state:
+                            if session_state['is_paused']:
+                                active_duration = session_state['accumulated_duration']
+                            else:
+                                last_active_start = session_state['last_pause_time'] or start_time
+                                final_duration = (current_time - last_active_start).total_seconds()
+                                active_duration = session_state['accumulated_duration'] + final_duration
+                        
+                        # Update session
+                        cur.execute("""
+                            UPDATE farm_sessions SET
+                                end_time = %s,
+                                total_duration_seconds = %s,
+                                active_duration_seconds = %s,
+                                resources_collected = %s
+                            WHERE id = %s
+                        """, (
+                            current_time,
+                            total_duration,
+                            active_duration,
+                            json.dumps(resources_collected),
+                            session_id
+                        ))
+                        
+                        conn.commit()
+                        
+                        # Clean up session state
+                        self.active_sessions.pop(session_id, None)
+                        
+                    except Exception as e:
+                        self.logger.error(f"Database error in end_farm_session: {e}")
+                        conn.rollback()
+
+    def get_path_statistics(self, path_id: str, days: Optional[int] = None) -> Optional[Dict]:
+        """Get detailed path statistics"""
+        with self.get_connection() as conn:
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                try:
+                    cur.execute("""
+                        WITH expanded_sessions AS (
+                            SELECT 
+                                id,
+                                total_duration_seconds,
+                                active_duration_seconds,
+                                jsonb_each_text(resources_collected) as resource_data
+                            FROM farm_sessions
+                            WHERE path_id = %s
+                            AND (%s IS NULL OR end_time >= %s)
+                        ),
+                        resource_stats AS (
+                            SELECT 
+                                (resource_data).key as resource_id,
+                                SUM(CAST((resource_data).value AS INTEGER)) as total_qty
+                            FROM expanded_sessions
+                            GROUP BY (resource_data).key
+                        ),
+                        session_stats AS (
+                            SELECT 
+                                COUNT(DISTINCT id) as total_sessions,
+                                SUM(total_duration_seconds) as total_duration,
+                                SUM(active_duration_seconds) as active_duration
+                            FROM expanded_sessions
+                        )
+                        SELECT 
+                            ss.*,
+                            jsonb_object_agg(
+                                rs.resource_id,
+                                rs.total_qty
+                            ) as resource_totals
+                        FROM session_stats ss
+                        LEFT JOIN resource_stats rs ON true
+                        GROUP BY 
+                            ss.total_sessions,
+                            ss.total_duration,
+                            ss.active_duration
+                    """, (
+                        path_id,
+                        days is not None,
+                        self.get_current_time() - timedelta(days=days) if days else None
+                    ))
+                    
+                    result = cur.fetchone()
+                    if not result or not result['total_sessions']:
+                        return None
+                    
+                    # Process results as before...
+                    return {
+                        'total_sessions': result['total_sessions'],
+                        'total_duration_hours': result['total_duration'] / 3600 if result['total_duration'] else 0,
+                        'active_duration_hours': result['active_duration'] / 3600 if result['active_duration'] else 0,
+                        'pause_duration_hours': (result['total_duration'] - result['active_duration']) / 3600 
+                            if result['total_duration'] and result['active_duration'] else 0,
+                        'current_total_value': 0,  # Will be calculated below
+                        'current_value_per_active_hour': 0,  # Will be calculated below
+                        'resources_per_active_hour': {},  # Will be calculated below
+                        'resource_statistics': []  # Will be calculated below
+                    }
+                    
+                except Exception as e:
+                    self.logger.error(f"Database error in get_path_statistics: {str(e)}")
+                    return None
 
     def pause_session(self, session_id: int):
-        """
-        Pause time tracking for a session (e.g., during inventory management)
-        """
+        """Pause time tracking for a session"""
         with self._lock:
             session_state = self.active_sessions.get(session_id)
             if not session_state or session_state['is_paused']:
                 return
             
             current_time = self.get_current_time()
-            with self.session_scope() as session:
-                farm_session = session.query(FarmSession).get(session_id)
-                if farm_session:
-                    farm_session.paused_at = current_time
-                    # Calculate and update active duration up to this point
-                    if not session_state['last_pause_time']:  # If this is first pause
-                        active_duration = (current_time - farm_session.start_time).total_seconds()
-                    else:
-                        active_duration = (current_time - session_state['last_pause_time']).total_seconds()
-                    
-                    farm_session.active_duration_seconds += active_duration
-                    session_state['accumulated_duration'] = farm_session.active_duration_seconds
-                    
-            session_state['is_paused'] = True
-            session_state['last_pause_time'] = current_time
+            
+            with self.get_connection() as conn:
+                with conn.cursor() as cur:
+                    try:
+                        # Get session start time
+                        cur.execute("""
+                            SELECT start_time FROM farm_sessions WHERE id = %s
+                        """, (session_id,))
+                        
+                        result = cur.fetchone()
+                        if result:
+                            # Calculate active duration
+                            if not session_state['last_pause_time']:
+                                active_duration = (current_time - result[0]).total_seconds()
+                            else:
+                                active_duration = (current_time - session_state['last_pause_time']).total_seconds()
+                            
+                            session_state['accumulated_duration'] += active_duration
+                            
+                            # Update session
+                            cur.execute("""
+                                UPDATE farm_sessions SET
+                                    paused_at = %s,
+                                    active_duration_seconds = %s
+                                WHERE id = %s
+                            """, (
+                                current_time,
+                                session_state['accumulated_duration'],
+                                session_id
+                            ))
+                            
+                            conn.commit()
+                            
+                            session_state['is_paused'] = True
+                            session_state['last_pause_time'] = current_time
+                            
+                    except Exception as e:
+                        self.logger.error(f"Database error in pause_session: {e}")
+                        conn.rollback()
 
     def resume_session(self, session_id: int):
-        """
-        Resume time tracking for a session
-        """
+        """Resume time tracking for a session"""
         with self._lock:
             session_state = self.active_sessions.get(session_id)
             if not session_state or not session_state['is_paused']:
@@ -382,33 +512,85 @@ class ResourceTracker:
             session_state['is_paused'] = False
             session_state['last_pause_time'] = current_time
 
-# Usage example in ResourceFarm class:
-"""
-class ResourceFarm(AbstractFarmBehavior):
-    def __init__(self, path: AbstractFarmPath, jobFilters: List[JobFilter], timeout=None):
-        super().__init__(timeout)
-        self.jobFilters = jobFilters
-        self.path = path
-        self.deadEnds = set()
-        # Initialize with custom expiration (e.g., 15 days)
-        self.resource_tracker = ResourceTracker(expiration_days=15)
+    def clean_expired_data(self):
+        """Remove expired vertex entries"""
+        with self._lock:
+            with self.get_connection() as conn:
+                with conn.cursor() as cur:
+                    try:
+                        expiration_date = self.get_current_time() - timedelta(days=self.expiration_days)
+                        cur.execute("""
+                            DELETE FROM map_vertices 
+                            WHERE updated_at < %s
+                            RETURNING id
+                        """, (expiration_date,))
+                        
+                        deleted_count = len(cur.fetchall())
+                        conn.commit()
+                        self.logger.info(f"Cleaned {deleted_count} expired vertex entries")
+                        
+                    except Exception as e:
+                        self.logger.error(f"Database error in clean_expired_data: {e}")
+                        conn.rollback()
+    
+    def __del__(self):
+        """Clean up connection pool on deletion"""
+        if hasattr(self, 'pool'):
+            self.pool.closeall()
 
-    def getAvailableResources(self) -> list[CollectableResource]:
-        if not Kernel().interactiveFrame:
-            Logger().error("No interactive frame found")
-            return None
-            
-        collectables = Kernel().interactiveFrame.collectables.values()
-        
-        # Track resources for current vertex
-        current_vertex = PlayedCharacterManager().currVertex
-        resources_ids = [it.skill.gatheredRessource.id for it in collectables]
-        self.resource_tracker.update_vertex_resources(current_vertex, resources_ids)
-        
-        # Periodically clean expired data (could be moved to a maintenance task)
-        if random.random() < 0.01:  # 1% chance to clean on each call
-            self.resource_tracker.clean_expired_data()
-        
-        collectableResources = [CollectableResource(it) for it in collectables]
-        return collectableResources
-"""
+if __name__ == "__main__":
+    Logger.logToConsole = True
+    tracker = ResourceTracker()
+    
+    # Test 1: Update vertex resources
+    print("\n--- Test 1: Update Vertex Resources ---")
+    vertex = Vertex(123456, 1, "test_vertex_1")
+    result = tracker.update_vertex_resources(vertex, [1234, 1234, 5678])  # Multiple resources
+    print(f"Update result: {result}")
+
+    # Test 2: Get vertex resources
+    print("\n--- Test 2: Get Vertex Resources ---")
+    resources = tracker.get_vertex_resources("test_vertex_1")
+    print(f"Retrieved resources: {resources}")
+
+    # Test 3: Start farm session
+    print("\n--- Test 3: Start Farm Session ---")
+    session_id = tracker.start_farm_session("test_path_1")
+    print(f"Started session ID: {session_id}")
+
+    # Test 4: Update collected resources
+    print("\n--- Test 4: Update Session Resources ---")
+    if session_id:
+        result = tracker.update_session_collected_resources(session_id, "1234", 5)
+        print(f"Updated session resources: {result}")
+
+    # Test 5: Pause/Resume session
+    print("\n--- Test 5: Pause/Resume Session ---")
+    if session_id:
+        tracker.pause_session(session_id)
+        print("Session paused")
+        # Wait a bit to simulate pause
+        import time
+        time.sleep(2)
+        tracker.resume_session(session_id)
+        print("Session resumed")
+
+    # Test 6: End session
+    print("\n--- Test 6: End Session ---")
+    if session_id:
+        tracker.end_farm_session(session_id, {"1234": 5, "5678": 3})
+        print("Session ended")
+
+    # Test 7: Get statistics
+    print("\n--- Test 7: Get Path Statistics ---")
+    stats = tracker.get_path_statistics("test_path_1")
+    print(f"Path statistics: {stats}")
+
+    # Test 8: Find vertices with minimum resources
+    print("\n--- Test 8: Find Vertices with Resources ---")
+    vertices = tracker.get_vertices_with_resource_minimum("1234", 2)
+    print(f"Found vertices: {vertices}")
+
+    # Test 9: Clean expired data
+    print("\n--- Test 9: Clean Expired Data ---")
+    tracker.clean_expired_data()

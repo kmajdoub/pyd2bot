@@ -1,6 +1,6 @@
 from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.TransitionTypeEnum import \
     TransitionTypeEnum
-from typing import TYPE_CHECKING, Iterator, List
+from typing import TYPE_CHECKING, Iterator, List, Tuple
 from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.astar.AStar import \
     AStar
 from pyd2bot.misc.Localizer import Localizer
@@ -31,6 +31,7 @@ class AbstractFarmPath:
         self.name = "undefined"
         self._mapIds = []
         self._vertices = set()
+        self._edge_count = 0
 
     @property
     def vertices(self) -> Set['Vertex']:
@@ -41,6 +42,19 @@ class AbstractFarmPath:
     @property
     def mapIds(self) -> list[int]:
         raise NotImplementedError()
+
+    def get_edge_count(self) -> int:
+        """
+        Returns the number of unique edges in the connected component.
+        """
+        _, edge_count = self.calculate_graph_size()
+        return edge_count
+
+    def get_vertices_count(self) -> int:
+        """
+        Returns the number of vertices in the connected component.
+        """
+        return len(self.vertices)
 
     @property
     def currentVertex(self) -> 'Vertex':
@@ -122,3 +136,45 @@ class AbstractFarmPath:
             if TransitionTypeEnum(tr.type) not in tr_types_whitelist:
                 edge.transitions.remove(tr)
         return edge
+
+    def calculate_graph_size(self) -> Tuple[int, int]:
+        """
+        Calculate number of vertices and edges in the connected component.
+        Returns tuple of (vertex_count, edge_count)
+        """
+        if self._edge_count is not None:
+            return len(self.vertices), self._edge_count
+
+        edge_set: Set[Tuple[int, int]] = set()
+        
+        # Use vertices from parent class (already computed and cached)
+        for vertex in self.vertices:
+            # Get all valid outgoing edges
+            for edge in self.outgoingEdges(vertex):
+                # Add edge in canonical form
+                edge_tuple = tuple(sorted([edge.src.UID, edge.dst.UID]))
+                edge_set.add(edge_tuple)
+        
+        # Cache the edge count
+        self._edge_count = len(edge_set)
+        
+        Logger().debug(f"""Graph size for path {self.name}:
+            - Vertices: {len(self.vertices)}
+            - Edges: {self._edge_count}
+            - Average degree: {2 * self._edge_count / max(1, len(self.vertices)):.2f}""")
+            
+        return len(self.vertices), self._edge_count
+
+    def get_edge_count(self) -> int:
+        """
+        Returns the number of unique edges in the connected component.
+        """
+        _, edge_count = self.calculate_graph_size()
+        return edge_count
+
+    def get_vertices_count(self) -> int:
+        """
+        Returns the number of vertices in the connected component.
+        """
+        vertex_count, _ = self.calculate_graph_size()
+        return vertex_count

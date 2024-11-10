@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
 from pyd2bot.logic.roleplay.behaviors.movement.AutoTrip import AutoTrip
-from pyd2bot.logic.roleplay.behaviors.teleport.EnterHavenBag import ToggleHavenBag
+from pyd2bot.logic.roleplay.behaviors.teleport.ToggleHavenBag import ToggleHavenBag
 from pyd2bot.logic.roleplay.behaviors.skill.UseSkill import UseSkill
 from pyd2bot.logic.roleplay.behaviors.teleport.UseZaap import UseZaap
 from pyd2bot.misc.Localizer import Localizer
@@ -74,7 +74,7 @@ class AutoTripUseZaap(AbstractBehavior):
         
         # Calculate teleport cost here before we use it
         self.teleportCostFromCurrToDstMap = 10 * MapTools.distL2Maps(self.currMapId, self.dstZaapMapId)
-        Logger().debug(f"Teleport cost to destination: {self.teleportCostFromCurrToDstMap}")
+        # Logger().debug(f"Teleport cost to destination: {self.teleportCostFromCurrToDstMap}")
 
         # Find best travel plan
         self.travel_plan = self.findBestTravelPlan()
@@ -323,7 +323,7 @@ class AutoTripUseZaap(AbstractBehavior):
             return self.finish(code, err)
 
         if self.withSaveZaap:
-            self.saveZaap(self.onDstZaapSaved)
+            self.save_zaap(self.onDstZaapSaved)
         else:
             self.travelToDestOnFeet()
 

@@ -263,7 +263,6 @@ class ChangeMap(AbstractBehavior):
         self.finish(False, "Request Map data timeout")
 
     def onCurrentMap(self, event: Event, mapId: int):
-        Logger().info("Map changed!")
         if self.mapChangeRejectListener:
             self.mapChangeRejectListener.delete()
         if self.mapChangeListener:

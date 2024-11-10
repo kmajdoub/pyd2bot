@@ -145,5 +145,5 @@ class UseZaap(AbstractBehavior):
     def _on_dest_map_processed(self, event=None):
         KernelEventsManager().send(KernelEvent.ZAAP_TELEPORT)
         if self.bsaveZaap and Kernel().zaapFrame.spawnMapId != PlayedCharacterManager().currentMap.mapId:
-            return self.saveZaap(self._on_zaap_saved)
+            return self.save_zaap(self._on_zaap_saved)
         return self.finish(0)

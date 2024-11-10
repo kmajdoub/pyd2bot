@@ -23,6 +23,8 @@ class CustomRandomFarmPath(AbstractFarmPath):
         self._mapIds = mapIds
         random_start_map = random.choice(self._mapIds)
         self.startVertex = WorldGraph().getVertex(random_start_map, 1)
+        # Cache for edge count
+        self._edge_count = None
 
     @property
     def mapIds(self) -> list[int]:
@@ -30,6 +32,7 @@ class CustomRandomFarmPath(AbstractFarmPath):
     
     def init(self):
         Logger().info(f"CustomRandomFarmPath {self.name} initialized with {len(self.vertices)} vertices")
+        vertex_count, edge_count = self.calculate_graph_size()
 
     def __next__(self, forbiddenEdges=None) -> Edge:
         outgoingEdges = list(self.outgoingEdges(onlyNonRecentVisited=False))
@@ -71,4 +74,6 @@ class CustomRandomFarmPath(AbstractFarmPath):
             raise NoTransitionFound()
         edge = random.choice(outgoingEdges)
         return edge
+    
+    
     

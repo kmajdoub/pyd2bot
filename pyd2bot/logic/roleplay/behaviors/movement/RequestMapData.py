@@ -30,7 +30,7 @@ class RequestMapData(AbstractBehavior):
             mapId = MapDisplayManager().currentMapPoint.mapId
         mapId = float(mapId)
         self.mapId = mapId
-        Logger().info(f"Requesting data for map {mapId}")
+        # Logger().info(f"Requesting data for map {mapId}")
         self.listener = self.once_map_processed(
             lambda: self.finish(True, None), 
             mapId=mapId,

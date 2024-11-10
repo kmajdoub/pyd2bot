@@ -11,10 +11,14 @@ class UseItemsByType(AbstractBehavior):
         self.item = None
 
     def run(self):
-        inventory_items = InventoryManager().inventory.getView("storageConsumables").content
-        self._items_to_use = [item for item in inventory_items if item.typeId == self.item_type]
+        self._items_to_use = self.has_items(self.item_type)
         self._process_next()
     
+    @classmethod
+    def has_items(cls, item_type):
+        inventory_items = InventoryManager().inventory.getView("storageConsumables").content
+        return [item for item in inventory_items if item.typeId == item_type]
+        
     def _process_next(self):
         if not self._items_to_use:
             return self.finish(0)

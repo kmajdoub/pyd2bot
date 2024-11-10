@@ -6,6 +6,7 @@ from pyd2bot.logic.roleplay.behaviors.farm.AbstractFarmBehavior import \
 from pyd2bot.logic.roleplay.behaviors.farm.CollectableResource import \
     CollectableResource
 from pyd2bot.logic.roleplay.behaviors.farm.ResourcesTracker import ResourceTracker
+from pyd2bot.logic.roleplay.behaviors.quest.UseItemsByType import UseItemsByType
 from pyd2bot.logic.roleplay.behaviors.skill.UseSkill import UseSkill
 from pyd2bot.farmPaths.AbstractFarmPath import AbstractFarmPath
 from pyd2bot.data.models import JobFilter
@@ -39,6 +40,7 @@ class ResourceFarm(AbstractFarmBehavior):
         self.path = path
         self.deadEnds = set()
         self.resource_tracker = ResourceTracker(expiration_days=30)
+        self.session_paused = False  # Track session pause state locally
 
     def init(self):
         self.path.init()
@@ -67,8 +69,7 @@ class ResourceFarm(AbstractFarmBehavior):
         return False
     
     def _check_has_resources_bags(self):
-        consumables_view: "StorageGenericView" = InventoryManager().inventory.getView("storageConsumables")
-        if consumables_view.hasItemType(self.RESOURCE_BAGS_TYPE_ID):
+        if UseItemsByType.has_items(self.RESOURCE_BAGS_TYPE_ID):
             self.use_items_of_type(self.RESOURCE_BAGS_TYPE_ID, lambda *_: self.main())
             return True
         return False
@@ -76,6 +77,7 @@ class ResourceFarm(AbstractFarmBehavior):
     def _on_full_pods(self):
         # Pause session timing during inventory management
         if self.current_session_id is not None:
+            self.session_paused = True
             self.resource_tracker.pause_session(self.current_session_id)
 
         self.retrieve_sell({39: 100}, callback=self._on_selling_over)
@@ -83,20 +85,21 @@ class ResourceFarm(AbstractFarmBehavior):
     def _on_selling_over(self, code, error):
         # Resume session timing after inventory management
         if self.current_session_id is not None:
+            self.session_paused = False
             self.resource_tracker.resume_session(self.current_session_id)
             
         if error:
-            self.finish(code, error)
+            return self.finish(code, error)
         self.main()  # Continue farming
         
-    def finish(self):
+    def finish(self, code, error):
         # after shutdown save how much collected during the session
         if self.current_session_id is not None:
             self.resource_tracker.end_farm_session(
                 self.current_session_id,
                 self.session_resources
             )
-        super().finish()
+        super().finish(code, error)
 
     def makeAction(self):
         '''
@@ -114,7 +117,7 @@ class ResourceFarm(AbstractFarmBehavior):
         nonForbiddenResources = [r for r in farmable_resources if r.uid not in self.forbiddenActions]
         nonForbiddenResources.sort(key=lambda r: r.distance)
         if len(nonForbiddenResources) == 0:
-            Logger().warning("No farmable resource found!")
+            Logger().info("No farmable resource found")
             self._move_to_next_step()
         else:
             self.logResourcesTable(nonForbiddenResources)
@@ -127,12 +130,18 @@ class ResourceFarm(AbstractFarmBehavior):
             )
         
     def onObjectAdded(self, event, iw: ItemWrapper, qty: int):
+        if self.session_paused:
+            return
+        
         resource_id = str(iw.objectGID)
         self.session_resources[resource_id] = self.session_resources.get(resource_id, 0) + qty
         averageKamasWon = (
             Kernel().averagePricesFrame.getItemAveragePrice(iw.objectGID) * qty
         )
         Logger().debug(f"Average kamas won: {averageKamasWon}")
+        
+        if self.current_session_id is not None:
+            self.resource_tracker.update_session_collected_resources(self.current_session_id, resource_id, qty)
 
     def onResourceCollectEnd(self, code, error, iePosition=None):
         if not self.running.is_set():

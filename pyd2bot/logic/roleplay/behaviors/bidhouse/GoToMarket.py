@@ -1,5 +1,9 @@
 from pyd2bot.misc.Localizer import Localizer
+from pydofus2.com.ankamagames.dofus.datacenter.world.Area import Area
+from pydofus2.com.ankamagames.dofus.datacenter.world.Hint import Hint
+from pydofus2.com.ankamagames.dofus.datacenter.world.SubArea import SubArea
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
+from pydofus2.com.ankamagames.dofus.logic.common.managers.PlayerManager import PlayerManager
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import PlayedCharacterManager
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
@@ -9,7 +13,7 @@ class GoToMarket(AbstractBehavior):
     
     ERROR_HDV_NOT_FOUND = 7676999
     
-    def __init__(self, marketplace_gfx_id: int, exclude_market_at_maps: list[int]=None):
+    def __init__(self, marketplace_gfx_id: int, exclude_market_at_maps: list[int]=None, item_level=200):
         """
         Initialize market travel behavior
         Args:
@@ -23,12 +27,13 @@ class GoToMarket(AbstractBehavior):
         if exclude_market_at_maps is None:
             exclude_market_at_maps = []
         self.exclude_market_at_maps = exclude_market_at_maps
+        self.item_level = item_level
 
     def run(self) -> bool:
         """Start travel to marketplace"""
         if not self._validate_marketplace_access():
             return False
-            
+        
         if self.hdv_vertex != PlayedCharacterManager().currVertex or PlayedCharacterManager().currVertex.mapId in self.exclude_market_at_maps:
             self.travel_using_zaap(
                 self.hdv_vertex.mapId,
@@ -49,6 +54,16 @@ class GoToMarket(AbstractBehavior):
         if not current_map:
             return self.finish(1, "Couldn't determine player current map!")
 
+        if self.item_level > 60:
+            if PlayerManager().isBasicAccount():
+                return self.finish(1, "Basic accounts can't sell higher than lvl 60 items, so no market can satisfy that!")
+
+            for hint in Hint.getHints():
+                if int(hint.mapId) not in list(map(int, self.exclude_market_at_maps)):
+                    map_sub_area = SubArea.getSubAreaByMapId(hint.mapId)
+                    if map_sub_area.areaId in [45, 18]: # exclude ankarnam and astrub markets for items with level higher than 60 !
+                        self.exclude_market_at_maps.append(hint.mapId)
+                
         self.path_to_hdv = Localizer.findClosestHintMapByGfx(current_map, self.marketplace_gfx_id, excludeMaps=self.exclude_market_at_maps)
         
         if self.path_to_hdv is None:

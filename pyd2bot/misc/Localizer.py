@@ -312,7 +312,7 @@ class Localizer:
             Logger().warning(f"Could not find any vertex for map {startMapId}")
             return None
         
-        Logger().debug(f"Found {possible_start_vertices} vertices for map {startMapId}")
+        # Logger().debug(f"Found {possible_start_vertices} vertices for map {startMapId}")
         
         # Collect all valid zaap candidates first
         candidates = []
@@ -352,7 +352,7 @@ class Localizer:
 
     @classmethod
     def findPathToClosestVertexCandidate(cls, vertex: Vertex, candidates: list[Vertex]) -> list["Edge"]:
-        Logger().info(f"Searching closest map from vertex to one of the candidates")
+        # Logger().info(f"Searching closest map from vertex to one of the candidates")
         if not candidates:
             Logger().warning(f"No candidates to search path to!")
             return None

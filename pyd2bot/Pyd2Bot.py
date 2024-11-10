@@ -51,6 +51,17 @@ class Pyd2Bot(DofusClient):
         self._stats_auto_upgrade = None
 
     def shutdown(self, message="", reason=None):
+        if self._main_behavior:
+            if isinstance(self._main_behavior, ResourceFarm):
+                behavior = self._main_behavior
+            elif isinstance(self._main_behavior, MultiplePathsResourceFarm):
+                behavior = self._main_behavior._current_running_behavior
+            if behavior.current_session_id is not None:
+                behavior.resource_tracker.end_farm_session(
+                    behavior.current_session_id,
+                    behavior.session_resources
+                )
+                Logger().debug(f"Farm stat Session {behavior.current_session_id} ended")
         return super().shutdown(message, reason)
     
     def checkBreed(self, session: Session):
@@ -100,9 +111,9 @@ class Pyd2Bot(DofusClient):
         # self._main_behavior = UpdateBidsBehavior(PIWI_FEATHER_GIDS, 100, 0, 0.25)
         # self._main_behavior = RetrieveFromBank(PIWI_FEATHER_GIDS, quantities)
         
-        self._main_behavior = UseItemsByType(100)
-        self._main_behavior.start(callback=self.onMainBehaviorFinish)
-        return
+        # self._main_behavior = UseItemsByType(100)
+        # self._main_behavior.start(callback=self.onMainBehaviorFinish)
+        # return
         
         BotEventsManager().on(
             BotEventsManager.TAKE_NAP, 

@@ -2,6 +2,7 @@ from typing import Dict, Optional
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
 from pyd2bot.logic.roleplay.behaviors.bank.RetrieveFromBank import RetrieveFromBank
 from pyd2bot.logic.roleplay.behaviors.bidhouse.SellItemsFromBag import SellItemsFromBag
+from pydofus2.com.ankamagames.dofus.logic.common.managers.PlayerManager import PlayerManager
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import PlayedCharacterManager
 from pydofus2.com.ankamagames.dofus.types.enums.ItemCategoryEnum import ItemCategoryEnum
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
@@ -30,6 +31,11 @@ class RetrieveSellUpdate(AbstractBehavior):
         # Store starting position
         self._start_map_id = PlayedCharacterManager().currentMap.mapId
         self._start_zone = PlayedCharacterManager().currentZoneRp
+        if PlayerManager().isBasicAccount():
+            Logger().warning("played is not subscribed, max item lvl he can sell is 60")
+            self._max_item_level = 60
+        else:
+            self._max_item_level = 200
         self._start_retrieve_cycle()
         return True
 
@@ -41,6 +47,7 @@ class RetrieveSellUpdate(AbstractBehavior):
             type_batch_size=self.type_batch_size,
             gid_batch_size=self.gid_batch_size,
             return_to_start=False,  # Don't return since we'll be selling
+            max_item_level=self._max_item_level,
             callback=self._on_items_retrieved,
         )
 

@@ -24,7 +24,7 @@ class RetrieveFromBank(AbstractBehavior):
         TRAVEL_ERROR = 87656458
         WAIT_REQUIRED = 87656459
 
-    def __init__(self, type_batch_size: Dict[int, int]=None, gid_batch_size: Dict[int, int]=None, return_to_start=False, bank_infos=None):
+    def __init__(self, type_batch_size: Dict[int, int]=None, gid_batch_size: Dict[int, int]=None, return_to_start=False, bank_infos=None, item_max_level=200):
         super().__init__()
         self._logger = Logger()
         self._start_map_id = None
@@ -35,7 +35,8 @@ class RetrieveFromBank(AbstractBehavior):
         self._items_uids = []
         self._quantities = []
         self.type_batch_size = type_batch_size
-        
+        self.item_max_level = item_max_level
+
     def _safe_finish(self, code: ERROR_CODES, error: Optional[Exception] = None) -> None:
         """Ensures bank is closed before finishing with error"""
         def on_bank_closed(close_code: int, close_error: Optional[Exception]) -> None:
@@ -82,7 +83,9 @@ class RetrieveFromBank(AbstractBehavior):
                 self._logger.error(f"Error parsing wait time from params {params}: {e}")
                 self._safe_finish(self.ERROR_CODES.WAIT_REQUIRED, f"Invalid wait time parameters: {params}")
 
-    def filter_item(self, item_stack: ItemWrapper):
+    def can_retrieve(self, item_stack: ItemWrapper):
+        if item_stack.level > self.item_max_level:
+            return False
         if self.type_batch_size:
             return item_stack.typeId in self.type_batch_size and item_stack.quantity >= self.type_batch_size[item_stack.typeId]
         elif self.gid_batch_size:
@@ -94,23 +97,23 @@ class RetrieveFromBank(AbstractBehavior):
         self._has_remaining = False
         self.items_to_retrieve = list[tuple[int, int]]()
         bank_item_stacks = InventoryManager().bankInventory.getView("bank").content
-        candidate_item_stacks = [item for item in bank_item_stacks if not item.linked and self.filter_item(item)]
+        candidate_item_stacks = [stack for stack in bank_item_stacks if not stack.linked and self.can_retrieve(stack)]
         # Sort by value density (price/weight) in descending order
         candidate_item_stacks.sort(key=lambda item: Kernel().averagePricesFrame.getItemAveragePrice(item.objectGID) / item.weight, reverse=True)
         
         remaining_pods = self.characterApi.inventoryWeightMax() - self.characterApi.inventoryWeight()
         
-        for item in candidate_item_stacks:
+        for stack in candidate_item_stacks:
             if remaining_pods <= 0:
                 break
             
-            batch_size = self.type_batch_size.get(item.typeId, 100) if self.type_batch_size else self.gid_batch_size.get(item.objectGID, 100)
-            available_batches = (item.quantity // batch_size) * batch_size
+            batch_size = self.type_batch_size.get(stack.typeId, 100) if self.type_batch_size else self.gid_batch_size.get(stack.objectGID, 100)
+            available_batches = (stack.quantity // batch_size) * batch_size
             
             # Calculate how many complete batches we can carry
             max_quantity = min(
-                item.quantity,  # Don't take more than what's available
-                remaining_pods // item.weight  # Don't exceed weight limit
+                stack.quantity,  # Don't take more than what's available
+                remaining_pods // stack.weight  # Don't exceed weight limit
             )
             # Round down to nearest complete batch
             batches_can_carry = (max_quantity // batch_size) * batch_size
@@ -121,9 +124,9 @@ class RetrieveFromBank(AbstractBehavior):
                    self._has_remaining = True
     
                 # Add the item and quantity to our result
-                self.items_to_retrieve.append((item.objectUID, batches_can_carry))
+                self.items_to_retrieve.append((stack.objectUID, batches_can_carry))
                 # Update remaining weight capacity
-                remaining_pods -= max_quantity * item.weight
+                remaining_pods -= max_quantity * stack.weight
                 
     def _on_storage_open(self, code: int, err: Optional[Exception]) -> None:
         if err:

@@ -85,6 +85,7 @@ class SellItemsFromBag(AbstractBehavior):
         self.open_market(
             from_type=item.category,
             exclude_market_at_maps=self.markets_excluded_for_items[item.objectGID],
+            item_level=item.level,
             callback=self._on_market_open
         )
     
@@ -127,7 +128,8 @@ class SellItemsFromBag(AbstractBehavior):
 
     def _on_search_result(self, code, error):
         if error:
-            return self.finish(code, error)
+            self._current_idx += 1
+            return self._process_current_item()
         
         self._market_frame.check_price(self.current_item.objectGID, self._on_price_info)
         

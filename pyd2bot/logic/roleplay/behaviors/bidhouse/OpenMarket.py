@@ -30,7 +30,7 @@ class OpenMarket(AbstractBehavior):
         MAP_ERROR = 7676991
         ITEM_NOT_FOUND = 77777778
 
-    def __init__(self, from_gid: Optional[int] = None, from_object_category: Optional[int] = None, exclude_market_at_maps: list[int] = None, mode="sell"):
+    def __init__(self, from_gid: Optional[int] = None, from_object_category: Optional[int] = None, exclude_market_at_maps: list[int] = None, mode="sell", item_level=200):
         super().__init__()
         if not from_gid and not from_object_category:
             return self.finish(1, "Must specify either from_gid or from_type")
@@ -40,6 +40,7 @@ class OpenMarket(AbstractBehavior):
         self._market_type = None
         self._market_frame = Kernel().marketFrame
         self.exclude_market_at_maps = exclude_market_at_maps
+        self.item_level = item_level
         
     def run(self) -> bool:
         self._market_type = self._determine_market_type()
@@ -63,7 +64,8 @@ class OpenMarket(AbstractBehavior):
         # Get marketplace GFX ID and start travel
         market_gfx_id = self.MARKETPLACE_TYPES[self._market_type][1]
         self.goto_market(
-            market_gfx_id, 
+            market_gfx_id,
+            item_level=self.item_level,
             exclude_market_at_maps=self.exclude_market_at_maps, 
             callback=self._on_market_map_reached
         )

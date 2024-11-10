@@ -62,4 +62,6 @@ class BotWorkflowFrame(Frame):
         #         pingMsg = BasicPingMessage()
         #         pingMsg.init(True)
         #         ConnectionsHandler().send(pingMsg)
-        pass
+        if textId == ServerNotificationEnum.ITEM_SOLD:
+            kamas, gid, gid, qty = list(map(int, params))
+            KernelEventsManager().send(KernelEvent.ItemSold, gid, qty, kamas)

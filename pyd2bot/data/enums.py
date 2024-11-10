@@ -13,6 +13,7 @@ class ServerNotificationEnum:
     CANT_SELL_ANYMORE_ITEMS = 5150
     WAIT_REQUIRED = 4852
     CANT_TAKE_ALL_OBJECTS = 5023
+    ITEM_SOLD = 378533
 
 class SessionTypeEnum(str, Enum):
     SOLO_FIGHT = 'SOLO_FIGHT'

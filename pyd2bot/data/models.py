@@ -313,6 +313,9 @@ class PlayerStats(BaseModel):
     visitedMapsHeatMap: Dict[int, int] = {}
     currentLevel: int = 0
     currentMapId: float = 0
+    kamasEarnedSelling: int = 0
+    timeSpentSleeping: int = 0
+    kamasSpentOnTaxes: int = 0
 
     def add_job_level(self, job_id: str, levels_gained: int) -> None:
         self.earnedJobLevels[job_id] = self.earnedJobLevels.get(job_id, 0) + levels_gained

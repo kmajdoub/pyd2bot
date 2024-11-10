@@ -2,7 +2,9 @@ from typing import Set
 
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
+from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import KernelEventsManager
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
+from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import PlayedCharacterManager
 from pydofus2.com.ankamagames.dofus.network.messages.game.inventory.KamasUpdateMessage import KamasUpdateMessage
 from pydofus2.com.ankamagames.dofus.network.messages.game.inventory.exchanges.ExchangeBidHouseItemAddOkMessage import ExchangeBidHouseItemAddOkMessage
 from pydofus2.com.ankamagames.dofus.network.messages.game.inventory.items.ObjectDeletedMessage import ObjectDeletedMessage
@@ -30,11 +32,15 @@ class PlaceBid(AbstractBehavior):
         self.price = price
         self.quantity = quantity
         self._received_sequence: Set[str] = set()
+        self._old_player_kamas = None
         
     def run(self) -> bool:
         """Start the sell operation"""
         if self.price <= 0:
-            return self.finish(self.ERROR_CODES.INVALID_PRICE, "Invalid price")
+            self.finish(self.ERROR_CODES.INVALID_PRICE, "Invalid price")
+            return
+        
+        self._old_player_kamas = PlayedCharacterManager().characteristics.kamas
         self.on(KernelEvent.MessageReceived, lambda _, m: self._process_message(m))
         Kernel().marketFrame.create_listing(self.object_uid, self.quantity, self.price)
 
@@ -45,6 +51,7 @@ class PlaceBid(AbstractBehavior):
 
         elif isinstance(msg, KamasUpdateMessage):
             self._received_sequence.add("kamas")
+            KernelEventsManager().send(KernelEvent.KamasSpentOnSellTax, msg.kamasTotal - self._old_player_kamas)
             
         elif isinstance(msg, ExchangeBidHouseItemAddOkMessage):
             self._received_sequence.add("add")

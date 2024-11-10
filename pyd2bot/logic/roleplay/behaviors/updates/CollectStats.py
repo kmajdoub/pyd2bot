@@ -45,7 +45,9 @@ class CollectStats(AbstractBehavior):
                 (KernelEvent.KamasGained, self.onKamasGained, {}),
                 (KernelEvent.TreasureHuntFinished, self.onHuntFinished, {}),
                 (KernelEvent.ZAAP_TELEPORT, self.onTeleportWithZaap, {}),
-                (KernelEvent.KamasLostFromBankOpen, self.onLostKamasByBankOpen, {})
+                (KernelEvent.KamasLostFromBankOpen, self.onLostKamasByBankOpen, {}),
+                (KernelEvent.ItemSold, self.onItemSold, {}),
+                (KernelEvent.KamasSpentOnSellTax, self.onKamasSpentOnSellTax, {}),
             ]
         )
         return True
@@ -55,6 +57,14 @@ class CollectStats(AbstractBehavior):
     
     def removeHandler(self, callback):
         self.update_listeners.remove(callback)
+
+    def onKamasSpentOnSellTax(self, event, amount):
+        self.playerStats.kamasSpentOnTaxes += amount
+        self.onPlayerUpdate(event)
+        
+    def onItemSold(self, event, gid, qty, amount):
+        self.playerStats.kamasEarnedSelling += amount
+        self.onPlayerUpdate(event)
 
     def onHuntFinished(self, event, questType):
         self.playerStats.nbrTreasuresHuntsDone += 1
@@ -142,7 +152,8 @@ class CollectStats(AbstractBehavior):
                 items.append((new_key, v))
         return dict(items)
 
-    def get_dict_diff(self, old_dict, new_dict):
+    @classmethod
+    def get_dict_diff(cls, old_dict, new_dict):
         """
         Get the difference between two dictionaries.
         Returns a dictionary with only the changed keys and their new values.

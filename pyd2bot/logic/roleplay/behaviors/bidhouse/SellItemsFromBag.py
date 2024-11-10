@@ -6,6 +6,7 @@ from pydofus2.com.ankamagames.dofus.internalDatacenter.items.ItemWrapper import 
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.InventoryManager import InventoryManager
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import PlayedCharacterManager
+from pydofus2.com.ankamagames.jerakine.benchmark.BenchmarkTimer import BenchmarkTimer
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
 from pyd2bot.data.enums import ServerNotificationEnum
@@ -23,13 +24,13 @@ class SellItemsFromBag(AbstractBehavior):
 
     def __init__(self, gid_batch_size: Dict[int, int] = None, type_batch_size: Dict[int, int] = None):
         super().__init__()
-        self._logger = Logger()
         self.items_uids = list[int]()
         self.gid_batch_size = gid_batch_size
         self.type_batch_size = type_batch_size
         self._current_idx = 0
         self._market_frame = Kernel().marketFrame
         self.markets_excluded_for_items = defaultdict(list)
+        self._tried_reopen_market = False
         
     def run(self) -> None:
         self._current_idx = 0
@@ -124,8 +125,15 @@ class SellItemsFromBag(AbstractBehavior):
 
     def _on_search_result(self, code, error):
         if error:
+            Logger().error(f"Error searching for item [{code}] : {error}")
+            if code == 2222 and not self._tried_reopen_market: # timeout and didnt try solution of reopen the market
+                self._tried_reopen_market = True
+                self.close_market(lambda *_: self._process_current_item())
+                return
             self._current_idx += 1
-            return self._process_current_item()
+            self._process_current_item()
+            return
+        self._tried_reopen_market = False # clear this if no problem happened
         item = self.current_item
         if item:
             self._market_frame.check_price(item.objectGID, self._on_price_info)
@@ -151,7 +159,7 @@ class SellItemsFromBag(AbstractBehavior):
         )
         
         if error:
-            self._logger.warning(f"Error while calculating best price for item {item.objectGID}: {error}")
+            Logger().warning(f"Error while calculating best price for item {item.objectGID}: {error}")
             self._current_idx += 1
             return self._process_current_item()
 
@@ -159,7 +167,7 @@ class SellItemsFromBag(AbstractBehavior):
         if not self._validate_sale(target_price):
             return
             
-        self._logger.info(f"Placing the bid {item.objectGID} x{qty} at {target_price}")
+        Logger().info(f"Placing the bid {item.objectGID} x{qty} at {target_price}")
 
         self.place_bid(item.objectUID, qty, target_price, self._on_bid_placed)
 
@@ -189,10 +197,10 @@ class SellItemsFromBag(AbstractBehavior):
         if item:
             qty = self.get_item_batch_size(item)
             if item.quantity >= qty:
-                self._logger.info(f"Continuing to sell {item.objectGID} x{qty}")
+                Logger().info(f"Continuing to sell {item.objectGID} x{qty}")
                 return self._market_frame.check_price(item.objectGID, self._on_price_info)
     
-        self._logger.info(f"No more instances to sell, Moving to next item")
+        Logger().info(f"No more instances to sell, Moving to next item")
         self._current_idx += 1
         self._process_current_item()
 
@@ -204,5 +212,5 @@ class SellItemsFromBag(AbstractBehavior):
         self.close_market(lambda *_: callback())
         
     def _handle_error(self, code: Optional[int], error: Optional[str]) -> None:
-        self._logger.warning(f"Error encountered [{code}]: {error}")
+        Logger().warning(f"Error encountered [{code}]: {error}")
         self._ensure_market_closed(lambda: self.finish(code, error))

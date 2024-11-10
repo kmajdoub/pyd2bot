@@ -6,6 +6,7 @@ from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
 from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import \
     KernelEventsManager
 from pydofus2.com.ankamagames.berilia.managers.Listener import Listener
+from pydofus2.com.ankamagames.jerakine.benchmark.DifferQueue import DeferQueue
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 from pydofus2.com.ankamagames.jerakine.metaclass.Singleton import Singleton
 
@@ -76,19 +77,19 @@ class AbstractBehavior(BehaviorApi, metaclass=Singleton):
         else:
             KernelEventsManager().send(KernelEvent.ClientStatusUpdate, f"FINISHED_{type(self).__name__.upper()}")
         if callback is not None:
-            callback(code, error, *args, **kwargs)
+            DeferQueue.defer(lambda: callback(code, error, *args, **kwargs))
         else:
             Logger().error(f"Callback of the behavior is None, error: {error}, code: {code}")
         while self.endListeners:
             callback = self.endListeners.pop()
-            callback(code, error, *args, **kwargs)
+            DeferQueue.defer(lambda: callback(code, error, *args, **kwargs))
         with RLOCK:
             thname = threading.current_thread().name
             if not AbstractBehavior.hasRunning(thname):
                 if thname in AbstractBehavior._onEmptyCallbacks:
                     while AbstractBehavior._onEmptyCallbacks[thname]:
                         callback = AbstractBehavior._onEmptyCallbacks[thname].pop()
-                        callback(code, error, *args, **kwargs)
+                        DeferQueue.defer(lambda: callback(code, error, *args, **kwargs))
                     del AbstractBehavior._onEmptyCallbacks[thname]
             
     @property

@@ -60,7 +60,9 @@ class Localizer:
 
     @classmethod
     def getBankInfos(cls) -> BankInfos:
-        return BankInfos(**cls.BANKS["Astrub"])
+        if PlayerManager().isBasicAccount():
+            return BankInfos(**cls.BANKS["Astrub"])
+        return BankInfos(**cls.BANKS["Bonta"])
 
     @classmethod
     def findClosestBank(

@@ -169,10 +169,11 @@ class Pyd2Bot(DofusClient):
             Logger().info(f"[{self.name}] No active behavior, starting nap immediately")
             self._saved_player_stats = self._stats_collector.playerStats # save player stats before taking a nap
             self._stats_collector.playerStats.timeSpentSleeping += self._nap_duration
+            self._stats_collector.playerStats.isSleeping = True
             self._stats_collector.onPlayerUpdate("TAKING_NAP")
             self.onReconnect(
                 None,
-                f"Taking a nap for {self._nap_duration} minutes",
+                f"Taking a nap for {int(self._nap_duration)} minutes",
                 afterTime=int(self._nap_duration * 60),
             )
 

@@ -1,4 +1,4 @@
-from typing import List, TYPE_CHECKING
+from typing import List
 from prettytable import PrettyTable
 
 from pyd2bot.logic.roleplay.behaviors.farm.AbstractFarmBehavior import \
@@ -10,7 +10,7 @@ from pyd2bot.logic.roleplay.behaviors.quest.UseItemsByType import UseItemsByType
 from pyd2bot.logic.roleplay.behaviors.skill.UseSkill import UseSkill
 from pyd2bot.farmPaths.AbstractFarmPath import AbstractFarmPath
 from pyd2bot.data.models import JobFilter
-from pyd2bot.misc.BotEventsManager import BotEventsManager
+from pyd2bot.logic.roleplay.behaviors.updates.CollectStats import CollectStats
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
 from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import \
     KernelEventsManager
@@ -30,8 +30,6 @@ from pydofus2.com.ankamagames.jerakine.benchmark.BenchmarkTimer import \
     BenchmarkTimer
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 
-if TYPE_CHECKING:
-    from pydofus2.com.ankamagames.dofus.logic.game.common.misc.inventoryView.StorageGenericView import StorageGenericView
 class ResourceFarm(AbstractFarmBehavior):
     RESOURCE_BAGS_TYPE_ID = 100
     
@@ -50,6 +48,8 @@ class ResourceFarm(AbstractFarmBehavior):
         self.session_resources = {}
         KernelEventsManager().on(KernelEvent.PlayerStatusUpdate, self.onPlayerStatusUpdate)
         Kernel().socialFrame.updateStatus(PlayerStatusEnum.PLAYER_STATUS_SOLO)
+        CollectStats().playerStats.currentPathName = self.path.name
+        CollectStats().onPlayerUpdate("PATH_SELECT")
 
     def onPlayerStatusUpdate(self, event, accountId, playerId, statusId, message):
         if playerId == PlayedCharacterManager().id:

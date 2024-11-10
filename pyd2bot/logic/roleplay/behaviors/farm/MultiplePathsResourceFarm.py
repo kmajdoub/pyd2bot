@@ -5,18 +5,18 @@ from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
 from pyd2bot.logic.roleplay.behaviors.farm.ResourceFarm import ResourceFarm
 from pyd2bot.farmPaths.AbstractFarmPath import AbstractFarmPath
 from pyd2bot.data.models import JobFilter
+from pyd2bot.logic.roleplay.behaviors.updates.CollectStats import CollectStats
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
-
 
 class MultiplePathsResourceFarm(AbstractBehavior):
     default_ncovers = 3
-    
+
     # Constants for timeout calculation
     BASE_TIMEOUT = 5 * 60       # 5 minutes base timeout
     MAX_TIMEOUT = 60 * 60       # 60 minutes maximum timeout
     VERTEX_TIME = 10            # 10 seconds per vertex for resource interaction
-    MIN_TIMEOUT = 5 * 60       # 10 minutes minimum timeout
-    
+    MIN_TIMEOUT = 5 * 60        # 10 minutes minimum timeout
+
     def __init__(self, pathsList: list[AbstractFarmPath], jobFilters: List[JobFilter], num_of_covers: int=None) -> None:
         for path in pathsList:
             if not isinstance(path, AbstractFarmPath):
@@ -87,7 +87,7 @@ class MultiplePathsResourceFarm(AbstractBehavior):
         self._wants_stop = True
         if self._current_running_behavior:
             self._current_running_behavior.stop()
-        
+
     def run(self) -> bool:
         Logger().info(f"Starting multiple paths resource farm with {len(self.pathsList)} paths in random mode.")
         self.startNextPath(None, None)
@@ -95,7 +95,7 @@ class MultiplePathsResourceFarm(AbstractBehavior):
     def coverTimeEstimate(self, path: AbstractFarmPath):
         n = len(path.vertices)
         return n * math.log(n) * math.log(n) * 5
-    
+
     def startNextPath(self, code, err):
         if self._wants_stop:
             return self.finish(self.STOPPED, None)
@@ -116,6 +116,6 @@ class MultiplePathsResourceFarm(AbstractBehavior):
         
         # Calculate smart timeout based on graph properties
         timeout = self.calculate_timeout(self.currentPath)
-        
+
         self._current_running_behavior = ResourceFarm(self.currentPath, self.jobFilters, timeout)
         self._current_running_behavior.start(callback=self.startNextPath)

@@ -336,7 +336,7 @@ class Localizer:
             Logger().warning(f"Could not find a candidate zaap for map {startMapId}")
             return None
             
-        Logger().debug(f"Found {len(candidates)} candidates maps for closest zaap to map {startMapId}")
+        # Logger().debug(f"Found {len(candidates)} candidates maps for closest zaap to map {startMapId}")
         
         # Find shortest path from any start vertex
         shortest_path = None

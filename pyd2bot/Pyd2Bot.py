@@ -2,12 +2,6 @@ import random
 
 from pyd2bot.BotSettings import BotSettings
 from pyd2bot.data.enums import SessionTypeEnum
-from pyd2bot.logic.roleplay.behaviors.bank.RetrieveFromBank import RetrieveFromBank
-from pyd2bot.logic.roleplay.behaviors.bidhouse.MonitorMarket import MonitorMarket
-from pyd2bot.logic.roleplay.behaviors.bidhouse.RetrieveSellUpdate import RetrieveSellUpdate
-from pyd2bot.logic.roleplay.behaviors.bidhouse.SellItemsFromBag import SellItemsFromBag
-from pyd2bot.logic.roleplay.behaviors.bidhouse.UpdateMarketBids import UpdateMarketBids
-from pyd2bot.logic.roleplay.behaviors.quest.UseItemsByType import UseItemsByType
 from pyd2bot.logic.roleplay.behaviors.updates.AutoUpgradeStats import AutoUpgradeStats
 from pyd2bot.logic.roleplay.behaviors.updates.CollectStats import CollectStats
 from pyd2bot.logic.common.frames.BotRPCFrame import BotRPCFrame
@@ -28,48 +22,41 @@ from pyd2bot.misc.BotEventsManager import BotEventsManager
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
 from pydofus2.com.ankamagames.dofus.kernel.net.DisconnectionReasonEnum import DisconnectionReasonEnum
 from pydofus2.com.ankamagames.dofus.network.enums.BreedEnum import BreedEnum
-from pydofus2.com.ankamagames.dofus.types.enums.ItemCategoryEnum import ItemCategoryEnum
 from pydofus2.com.ankamagames.jerakine.benchmark.BenchmarkTimer import BenchmarkTimer
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 from pydofus2.com.DofusClient import DofusClient
-import asyncio
 
 class Pyd2Bot(DofusClient):
 
     def __init__(self, session: Session):
         self.session = session
         self._mule = session.isMuleFighter
-        self.checkBreed(session)
+        BotSettings.checkBreed(session)
         super().__init__(session.character.accountId)
         self.setAutoServerSelection(session.character.serverId, session.character.id)
         self.setCredentials(session.credentials.apikey, session.credentials.certId, session.credentials.certHash)
-        self._stateUpdateListeners = []
+        self._state_update_listeners = []
         self._taking_a_nap = False
         self._nap_duration = None
         self._stats_collector = None
         self._main_behavior = None
         self._stats_auto_upgrade = None
+        self._saved_player_stats = None
 
     def shutdown(self, message="", reason=None):
         if self._main_behavior:
+            behavior = None
             if isinstance(self._main_behavior, ResourceFarm):
                 behavior = self._main_behavior
             elif isinstance(self._main_behavior, MultiplePathsResourceFarm):
                 behavior = self._main_behavior._current_running_behavior
-            if behavior.current_session_id is not None:
+            if behavior and behavior.current_session_id is not None:
                 behavior.resource_tracker.end_farm_session(
                     behavior.current_session_id,
                     behavior.session_resources
                 )
                 Logger().debug(f"Farm stat Session {behavior.current_session_id} ended")
         return super().shutdown(message, reason)
-    
-    def checkBreed(self, session: Session):
-        if session.character.breedId not in BotSettings.defaultBreedConfig:
-            supported_breeds = [BreedEnum.get_name(breedId) for breedId in BotSettings.defaultBreedConfig]
-            raise ValueError(
-                f"Breed {session.character.breedName} is not supported, supported breeds are {supported_breeds}"
-            )
 
     def onReconnect(self, event, message, afterTime=0):
         AbstractBehavior.clearAllChildren()
@@ -94,27 +81,12 @@ class Pyd2Bot(DofusClient):
             Kernel().worker.addFrame(BotMuleFightFrame(self.session.leader))
 
     def addUpdateListener(self, callback):
-        self._stateUpdateListeners.append(callback)
+        self._state_update_listeners.append(callback)
 
     def addStatusChangeListener(self, callback):
         self._statusChangedListeners.append(callback)
         
     def startSessionMainBehavior(self):
-        # Logger().info(f"Starting main behavior for {self.name}, sessionType : {self.session.type.name}")
-        # PIWI_FEATHER_GIDS = [6900, 6902, 6898, 6899, 6903, 6897]
-        # type_batch_size = {39: 100}
-        
-        # self._main_behavior = RetrieveSellUpdate(type_batch_size=type_batch_size)
-        # items_gids = [(gid, 100) for gid in PIWI_FEATHER_GIDS]        
-        # self._main_behavior = SellFromBagBehavior(items_gids)
-
-        # self._main_behavior = UpdateBidsBehavior(PIWI_FEATHER_GIDS, 100, 0, 0.25)
-        # self._main_behavior = RetrieveFromBank(PIWI_FEATHER_GIDS, quantities)
-        
-        # self._main_behavior = UseItemsByType(100)
-        # self._main_behavior.start(callback=self.onMainBehaviorFinish)
-        # return
-        
         BotEventsManager().on(
             BotEventsManager.TAKE_NAP, 
             self._on_take_nap, 
@@ -167,10 +139,6 @@ class Pyd2Bot(DofusClient):
             mainBehavior = ClassicTreasureHunt()
             mainBehavior.start(callback=self.onMainBehaviorFinish)
 
-        elif self.session.isMixed:
-            mainBehavior = random.choice([ResourceFarm(60 * 5), SoloFarmFights(60 * 3), ClassicTreasureHunt()])
-            mainBehavior.start(callback=self.switchActivity)
-
         self._main_behavior = mainBehavior
         
         if not self.session.isMuleFighter:
@@ -199,6 +167,7 @@ class Pyd2Bot(DofusClient):
             self._main_behavior.stop()
         else:
             Logger().info(f"[{self.name}] No active behavior, starting nap immediately")
+            self._saved_player_stats = self._stats_collector.playerStats # save player stats before taking a nap
             self.onReconnect(
                 None,
                 f"Taking a nap for {self._nap_duration} minutes",
@@ -248,9 +217,6 @@ class Pyd2Bot(DofusClient):
             Logger().info(f"[{self.name}] Stopping behavior for nap")
             mainBehavior.stop()
 
-    def switchActivity(self, code, err):
-        self.onReconnect(None, f"Fake disconnect and take nap", afterTime=random.random() * 60 * 3)
-
     def run(self):
         self.registerInitFrame(BotWorkflowFrame(self.session))
         self.registerInitFrame(BotRPCFrame())
@@ -258,7 +224,7 @@ class Pyd2Bot(DofusClient):
 
     def onCharacterSelectionSuccess(self, event, characterBaseInformations):
         super().onCharacterSelectionSuccess(event, characterBaseInformations)
-        self._stats_collector = CollectStats(self._stateUpdateListeners)
+        self._stats_collector = CollectStats(self._state_update_listeners, self._saved_player_stats)
         self._stats_collector.start()
         self._stats_auto_upgrade = AutoUpgradeStats(self.session.character.primaryStatId)
         self._stats_auto_upgrade.start()

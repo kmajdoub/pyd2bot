@@ -1,11 +1,13 @@
 import os
 import random
 import threading
-
+from typing import TYPE_CHECKING
 from pydofus2.com.ankamagames.dofus.network.enums.BreedEnum import BreedEnum
 from pydofus2.damageCalculation.tools.StatIds import StatIds
 
 BASEDIR = os.path.dirname(os.path.abspath(__file__))
+if TYPE_CHECKING:
+    from pyd2bot.data.models import Session
 
 class BotSettings:
     PERSISTENCE_DIR = os.path.join(os.getenv("APPDATA"), "pyd2bot", "persistence")
@@ -53,3 +55,11 @@ class BotSettings:
     @classmethod
     def generate_random_nap_duration(cls):
         return random.uniform(cls.MIN_NAP_DURATION_MINUTES, cls.MAX_NAP_DURATION_MINUTES)
+    
+    @classmethod
+    def checkBreed(self, session: "Session"):
+        if session.character.breedId not in BotSettings.defaultBreedConfig:
+            supported_breeds = [BreedEnum.get_name(breedId) for breedId in BotSettings.defaultBreedConfig]
+            raise ValueError(
+                f"Breed {session.character.breedName} is not supported, supported breeds are {supported_breeds}"
+            )

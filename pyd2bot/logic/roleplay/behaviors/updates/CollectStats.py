@@ -20,11 +20,11 @@ from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 
 class CollectStats(AbstractBehavior):
 
-    def __init__(self, listeners: list[callable]=None):
+    def __init__(self, listeners: list[callable]=None, saved_stats: PlayerStats=None):
         super().__init__()
         self.IS_BACKGROUND_TASK = True
         self._oldStats = None
-        self.playerStats = PlayerStats()
+        self.playerStats = saved_stats if saved_stats is not None else PlayerStats()
         self.initial_kamas = None
         if listeners is None:
             listeners = []

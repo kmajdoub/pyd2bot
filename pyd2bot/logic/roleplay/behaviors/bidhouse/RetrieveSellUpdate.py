@@ -3,6 +3,7 @@ from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
 from pyd2bot.logic.roleplay.behaviors.bank.RetrieveFromBank import RetrieveFromBank
 from pyd2bot.logic.roleplay.behaviors.bidhouse.SellItemsFromBag import SellItemsFromBag
 from pydofus2.com.ankamagames.dofus.logic.common.managers.PlayerManager import PlayerManager
+from pydofus2.com.ankamagames.dofus.logic.game.common.managers.InventoryManager import InventoryManager
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import PlayedCharacterManager
 from pydofus2.com.ankamagames.dofus.types.enums.ItemCategoryEnum import ItemCategoryEnum
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
@@ -92,11 +93,21 @@ class RetrieveSellUpdate(AbstractBehavior):
         self._finish_error = error
         
         # Unload in bank before finishing
-        self.unload_in_bank(
-            return_to_start=False,
-            callback=self._on_storage_open
-        )
-
+        if self.has_items_in_bag():
+            self.unload_in_bank(
+                return_to_start=False,
+                callback=self._on_storage_open
+            )
+        else:
+            self._on_storage_open(0, None)
+        
+    def has_items_in_bag(self):
+        bag_items = InventoryManager().inventory.getView("storage").content
+        for item in bag_items:
+            if not item.linked:
+                return True
+        return False
+    
     def _on_storage_open(self, code: int, error: Optional[str]) -> None:
         """Final callback after unloading bank"""
         if error:

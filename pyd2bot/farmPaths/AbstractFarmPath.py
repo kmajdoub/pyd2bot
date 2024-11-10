@@ -31,7 +31,7 @@ class AbstractFarmPath:
         self.name = "undefined"
         self._mapIds = []
         self._vertices = set()
-        self._edge_count = 0
+        self._edge_count = None
 
     @property
     def vertices(self) -> Set['Vertex']:

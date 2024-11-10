@@ -10,6 +10,7 @@ from pyd2bot.logic.roleplay.behaviors.quest.UseItemsByType import UseItemsByType
 from pyd2bot.logic.roleplay.behaviors.skill.UseSkill import UseSkill
 from pyd2bot.farmPaths.AbstractFarmPath import AbstractFarmPath
 from pyd2bot.data.models import JobFilter
+from pyd2bot.misc.BotEventsManager import BotEventsManager
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
 from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import \
     KernelEventsManager
@@ -142,6 +143,8 @@ class ResourceFarm(AbstractFarmBehavior):
         
         if self.current_session_id is not None:
             self.resource_tracker.update_session_collected_resources(self.current_session_id, resource_id, qty)
+            
+        self.send(KernelEvent.ObjectObtainedInFarm, iw.objectGID, qty, averageKamasWon)
 
     def onResourceCollectEnd(self, code, error, iePosition=None):
         if not self.running.is_set():

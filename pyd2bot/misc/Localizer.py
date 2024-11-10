@@ -213,8 +213,8 @@ class Localizer:
             excludeMaps = []
 
         Logger().debug(f"Searching closest hint with GFX {gfx} from map {startMapId}")
-        if excludeMaps:
-            Logger().debug(f"Excluding map ids : {excludeMaps}")
+        # if excludeMaps:
+        #     Logger().debug(f"Excluding map ids : {excludeMaps}")
 
         if not startMapId:
             raise ValueError(f"Invalid mapId value {startMapId}")
@@ -239,7 +239,7 @@ class Localizer:
         for hint in Hint.getHints():
             # Skip excluded maps
             if int(hint.mapId) in list(map(int, excludeMaps)):
-                Logger().debug(f"Skipping excluded hint mapId {hint.mapId}")
+                # Logger().debug(f"Skipping excluded hint mapId {hint.mapId}")
                 continue
             
             # Skip hints with wrong GFX

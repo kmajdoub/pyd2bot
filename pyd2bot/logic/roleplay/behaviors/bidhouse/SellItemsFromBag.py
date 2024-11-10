@@ -32,6 +32,9 @@ class SellItemsFromBag(AbstractBehavior):
         self.markets_excluded_for_items = defaultdict(list)
         
     def run(self) -> None:
+        self._current_idx = 0
+        self.items_uids = list[int]()
+        
         if not self.gid_batch_size and not self.type_batch_size:
             return self._handle_error(self.ERROR_CODES.MISSING_INPUTS, "You need to provide either by type or gid the batch sizes")
 
@@ -60,7 +63,7 @@ class SellItemsFromBag(AbstractBehavior):
             self.finish(self.ERROR_CODES.ITEMS_NOT_FOUND, "No item found in inventory to sell!")
             return False
 
-        Logger().debug(f"Found items : {self.items_uids}")
+        Logger().debug(f"Found items to sell : {self.items_uids}")
         return True
 
     def _process_current_item(self) -> None:
@@ -100,12 +103,6 @@ class SellItemsFromBag(AbstractBehavior):
             return False
         return True
 
-    def _ensure_sell_mode(self):
-        if self._market_frame._current_mode == "sell":
-            return self._on_sell_mode(None, None)
-
-        self._market_frame.switch_mode("sell", self._on_sell_mode)
-    
     def _on_market_open(self, code: int, error: Optional[str]) -> None:
         if error:
             return self._handle_error(code, error)
@@ -113,12 +110,11 @@ class SellItemsFromBag(AbstractBehavior):
         Logger().debug("Market is open now")
         self._ensure_sell_mode()
 
-    @property
-    def current_item(self) -> ItemWrapper:
-        itemSet = InventoryManager().inventory.getItem(self.items_uids[self._current_idx])
-        if itemSet:
-            return itemSet.item
-        return None
+    def _ensure_sell_mode(self):
+        if self._market_frame._current_mode == "sell":
+            return self._on_sell_mode(None, None)
+
+        self._market_frame.switch_mode("sell", self._on_sell_mode)
 
     def _on_sell_mode(self, event, mode) -> None:
         if not self._check_market_level():
@@ -130,9 +126,21 @@ class SellItemsFromBag(AbstractBehavior):
         if error:
             self._current_idx += 1
             return self._process_current_item()
-        
-        self._market_frame.check_price(self.current_item.objectGID, self._on_price_info)
-        
+        item = self.current_item
+        if item:
+            self._market_frame.check_price(item.objectGID, self._on_price_info)
+
+    @property
+    def current_item(self) -> ItemWrapper:
+        if self._current_idx >= len(self.items_uids):
+            return self._handle_error(1, f"{self._current_idx} is bigger than available list of items {len(self.items_uids)}!!")
+
+        itemSet = InventoryManager().inventory.getItem(self.items_uids[self._current_idx])
+        if itemSet:
+            return itemSet.item
+        return None
+
+
     def _on_price_info(self, event, msg) -> None:
         item = self.current_item
         qty = self.get_item_batch_size(item)

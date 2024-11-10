@@ -1,6 +1,7 @@
 from pyd2bot.data.models import PlayerStats
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
 from pyd2bot.logic.roleplay.behaviors.quest.ClassicTreasureHunt import ClassicTreasureHunt
+from pyd2bot.misc.BotEventsManager import BotEventsManager
 from pydofus2.com.ankamagames.atouin.HaapiEventsManager import \
     HaapiEventsManager
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
@@ -34,7 +35,7 @@ class CollectStats(AbstractBehavior):
             [
                 (KernelEvent.PlayerLeveledUp, self.onPlayerLevelUp, {}), 
                 (KernelEvent.AchievementFinished, self.onAchievementFinished, {}),
-                (KernelEvent.ObjectAdded, self.onObjectAdded, {}),
+                (KernelEvent.ObjectObtainedInFarm, self.onObjectAdded, {}),
                 (KernelEvent.MapDataProcessed, self.onMapDataProcessed, {}),
                 (KernelEvent.JobLevelUp, self.onJobLevelUp, {}),
                 (KernelEvent.JobExperienceUpdate, self.onJobExperience, {}),
@@ -100,15 +101,9 @@ class CollectStats(AbstractBehavior):
         self.playerStats.currentLevel = newLevel
         self.onPlayerUpdate(event)
 
-    def onObjectAdded(self, event, iw: ItemWrapper, qty: int):
-        HaapiEventsManager().sendRandomEvent()
-        if iw.objectGID not in ClassicTreasureHunt.CHESTS_GUID:
-            averageKamasWon = (
-                Kernel().averagePricesFrame.getItemAveragePrice(iw.objectGID) * qty
-            )
-            Logger().debug(f"Average kamas won from object {iw.name} x{qty} : {averageKamasWon}")
-            self.playerStats.estimatedKamasWon += averageKamasWon
-        self.playerStats.add_item_gained(iw.objectGID, qty)
+    def onObjectAdded(self, event, gid: int, qty:int, average_kamas: int):
+        self.playerStats.estimatedKamasWon += average_kamas
+        self.playerStats.add_item_gained(gid, qty)
         self.onPlayerUpdate(event)
 
     def onJobExperience(self, event, oldJobXp, jobExp: JobExperience):

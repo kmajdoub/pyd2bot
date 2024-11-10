@@ -15,7 +15,7 @@ class MultiplePathsResourceFarm(AbstractBehavior):
     BASE_TIMEOUT = 5 * 60       # 5 minutes base timeout
     MAX_TIMEOUT = 60 * 60       # 60 minutes maximum timeout
     VERTEX_TIME = 10            # 10 seconds per vertex for resource interaction
-    MIN_TIMEOUT = 10 * 60       # 10 minutes minimum timeout
+    MIN_TIMEOUT = 5 * 60       # 10 minutes minimum timeout
     
     def __init__(self, pathsList: list[AbstractFarmPath], jobFilters: List[JobFilter], num_of_covers: int=None) -> None:
         for path in pathsList:
@@ -80,6 +80,8 @@ class MultiplePathsResourceFarm(AbstractBehavior):
             Interaction time: {interaction_time:.1f}s
             Per cover: {time_per_cover:.1f}s
             Total timeout: {timeout:.1f}s ({timeout/60:.1f}min)""")
+
+        return timeout
 
     def stop(self):
         self._wants_stop = True

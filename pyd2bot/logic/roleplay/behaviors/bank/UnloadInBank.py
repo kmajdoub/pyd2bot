@@ -33,7 +33,7 @@ class UnloadInBank(AbstractBehavior):
         # Use open_bank helper
         self.open_bank(bankInfos=bankInfos, callback=self._on_bank_opened)
         return True
-
+    
     def _on_bank_opened(self, code, error):
         if error:
             return self.finish(code, error)

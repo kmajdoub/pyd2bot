@@ -5,7 +5,6 @@ from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
 from pyd2bot.logic.roleplay.behaviors.farm.ResourceFarm import ResourceFarm
 from pyd2bot.farmPaths.AbstractFarmPath import AbstractFarmPath
 from pyd2bot.data.models import JobFilter
-from pyd2bot.logic.roleplay.behaviors.updates.CollectStats import CollectStats
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 
 class MultiplePathsResourceFarm(AbstractBehavior):

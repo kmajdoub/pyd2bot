@@ -123,7 +123,7 @@ class AttackMonsters(AbstractBehavior):
             return
             
     def restart(self):
-        KernelEventsManager().clearAllByOrigin(self)
+        KernelEventsManager().clear_all_by_origin(self)
         self.requestMapData(callback=lambda code, err: self._start())
 
     def requestAttackMonsters(self) -> None:

@@ -42,14 +42,15 @@ class BotSettings:
     SELLER_LOCK = threading.Lock()
 
     # Static constants for random range
-    MIN_NAP_AFTER_HOURS = 1.0
-    MAX_NAP_AFTER_HOURS = 2.0
+    MIN_NAP_AFTER_HOURS = 2.0
+    MAX_NAP_AFTER_HOURS = 4.0
     MIN_NAP_DURATION_MINUTES = 10.0
     MAX_NAP_DURATION_MINUTES = 20.0
     REST_TIME_BETWEEN_HUNTS = 20
 
     @classmethod
     def generate_random_nap_timeout(cls):
+        """Generate random nap timeout in hours in a predefined range"""
         return random.uniform(cls.MIN_NAP_AFTER_HOURS, cls.MAX_NAP_AFTER_HOURS)
 
     @classmethod

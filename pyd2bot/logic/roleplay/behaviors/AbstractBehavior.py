@@ -21,7 +21,7 @@ class AbstractBehavior(BehaviorApi, metaclass=Singleton):
     IS_BACKGROUND_TASK = False
     ALREADY_RUNNING = 666
     STOPPED = 988273
-    _onEmptyCallbacks = dict[str, list[callable]]()
+    _on_idle_callbacks = dict[str, list[callable]]()
 
     def __init__(self) -> None:
         self.running = threading.Event()
@@ -61,9 +61,9 @@ class AbstractBehavior(BehaviorApi, metaclass=Singleton):
     def finish(self, code: bool, error: str = None, *args, **kwargs) -> None:
         if not self.running.is_set():
             return Logger().warning(f"[{type(self).__name__}] wants to finish but not running!")
-        KernelEventsManager().clearAllByOrigin(self)
+        KernelEventsManager().clear_all_by_origin(self)
         from pyd2bot.misc.BotEventsManager import BotEventsManager
-        BotEventsManager().clearAllByOrigin(self)
+        BotEventsManager().clear_all_by_origin(self)
         callback = self.callback
         self.callback = None
         self.running.clear()
@@ -82,20 +82,20 @@ class AbstractBehavior(BehaviorApi, metaclass=Singleton):
             Logger().error(f"Callback of the behavior is None, error: {error}, code: {code}")
         while self.endListeners:
             callback = self.endListeners.pop()
-            callback(code, error, *args, **kwargs)
+            Kernel().defer(lambda: callback(code, error, *args, **kwargs))
         with RLOCK:
             thname = threading.current_thread().name
             if not AbstractBehavior.hasRunning(thname):
-                if thname in AbstractBehavior._onEmptyCallbacks:
-                    while AbstractBehavior._onEmptyCallbacks[thname]:
-                        callback = AbstractBehavior._onEmptyCallbacks[thname].pop()
-                        callback(code, error, *args, **kwargs)
-                    del AbstractBehavior._onEmptyCallbacks[thname]
+                if thname in AbstractBehavior._on_idle_callbacks:
+                    while AbstractBehavior._on_idle_callbacks[thname]:
+                        callback = AbstractBehavior._on_idle_callbacks[thname].pop()
+                        Kernel().defer(lambda: callback(code, error, *args, **kwargs))
+                    del AbstractBehavior._on_idle_callbacks[thname]
 
     @property
     def listeners(self) -> list[Listener]:
         from pyd2bot.misc.BotEventsManager import BotEventsManager
-        return KernelEventsManager().getListenersByOrigin(self) + BotEventsManager().getListenersByOrigin(self)
+        return KernelEventsManager().get_listeners_by_origin(self) + BotEventsManager().get_listeners_by_origin(self)
 
     def isRunning(self):
         return self.running.is_set()
@@ -128,9 +128,9 @@ class AbstractBehavior(BehaviorApi, metaclass=Singleton):
     @staticmethod
     def onFinishAll(callback):
         thname = threading.current_thread().name
-        if thname not in AbstractBehavior._onEmptyCallbacks:
-            AbstractBehavior._onEmptyCallbacks[thname] = []
-        AbstractBehavior._onEmptyCallbacks[thname].append(callback)
+        if thname not in AbstractBehavior._on_idle_callbacks:
+            AbstractBehavior._on_idle_callbacks[thname] = []
+        AbstractBehavior._on_idle_callbacks[thname].append(callback)
 
     def getTreeStr(self, level=0):
         indent = '  ' * level

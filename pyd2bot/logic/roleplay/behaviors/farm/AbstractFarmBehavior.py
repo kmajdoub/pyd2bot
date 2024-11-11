@@ -12,6 +12,7 @@ from pyd2bot.farmPaths.RandomAreaFarmPath import NoTransitionFound
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
 from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import KernelEventsManager
 from pydofus2.com.ankamagames.dofus.internalDatacenter.items.ItemWrapper import ItemWrapper
+from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import PlayedCharacterManager
 from pydofus2.com.ankamagames.dofus.logic.game.roleplay.types.MovementFailError import MovementFailError
 from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Vertex import Vertex
@@ -42,7 +43,7 @@ class AbstractFarmBehavior(AbstractBehavior):
         self._moving_to_next_step = False
         super().__init__()
 
-    def stop(self):
+    def stop(self, clear_callback=False):
         self._stop_sig.set()
 
     def run(self, *args, **kwargs):
@@ -56,7 +57,7 @@ class AbstractFarmBehavior(AbstractBehavior):
     def initListeners(self):
         self.on_multiple(
             [
-                (KernelEvent.FightStarted, self.onFight, {}),
+                (KernelEvent.FightStarted, self.on_fight, {}),
                 (KernelEvent.PlayerStateChanged, self.onPlayerStateChange, {}),
                 (KernelEvent.JobExperienceUpdate, self.onJobExperience, {}),
                 (KernelEvent.InventoryWeightUpdate, self.onInventoryWeightUpdate, {}),
@@ -198,12 +199,12 @@ class AbstractFarmBehavior(AbstractBehavior):
     def onResourceCollectEnd(self, code, error, iePosition=None):
         raise NotImplementedError()
 
-    def onFight(self, event=None):
+    def on_fight(self, event=None):
         Logger().debug(f"Player entered in a fight.")
         self.inFight = True
         self._moving_to_next_step = False
         self.stopChildren()
-        KernelEventsManager().clearAllByOrigin(self)
+        KernelEventsManager().clear_all_by_origin(self)
         self.once(KernelEvent.RoleplayStarted, self._on_roleplay_started_after_fight)
 
     def _on_riding_mount(self, code, err):
@@ -243,13 +244,13 @@ class AbstractFarmBehavior(AbstractBehavior):
         self.initListeners()
         self.inFight = False
 
-        def onRolePlayMapLoaded():
+        def on_map_loaded():
             if PlayedCharacterManager().isDead():
                 Logger().warning(f"Player is dead.")
                 return self.autoRevive(callback=self._on_resurrection)
-            self.main()
+            Kernel().defer(self.main, True)
 
-        self.once_map_processed(onRolePlayMapLoaded)
+        self.once_map_processed(on_map_loaded)
 
     def _on_full_pods(self):
         self.unload_in_bank(callback=self._on_inventory_unloaded)

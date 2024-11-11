@@ -21,7 +21,7 @@ class CollectStats(AbstractBehavior):
         super().__init__()
         self.IS_BACKGROUND_TASK = True
         self._oldStats = None
-        self.playerStats = saved_stats if saved_stats is not None else PlayerStats()
+        self.playerStats = saved_stats if saved_stats else PlayerStats()
         self.initial_kamas = None
         if listeners is None:
             listeners = []

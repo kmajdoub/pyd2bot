@@ -1,4 +1,5 @@
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
+from pydofus2.com.ankamagames.atouin.HaapiEventsManager import HaapiEventsManager
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
 from pydofus2.com.ankamagames.dofus.internalDatacenter.items.ItemWrapper import \
     ItemWrapper
@@ -16,6 +17,7 @@ class UseItem(AbstractBehavior):
     def run(self):
         self.once(KernelEvent.ObjectDeleted, self._on_item_deleted)
         self.once(KernelEvent.ObjectAdded, self._on_item_added)
+        HaapiEventsManager().sendInventoryOpenEvent()
         Kernel().inventoryManagementFrame.useItem(self.item, self.qty)
     
     def _on_item_deleted(self, event, item_uid):

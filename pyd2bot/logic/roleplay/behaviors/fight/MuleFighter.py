@@ -314,7 +314,7 @@ class MuleFighter(AbstractBehavior):
             return
         Logger().info("Movement completed successfully")
 
-    def stop(self):
+    def stop(self, clear_callback=None):
         """Clean shutdown of the behavior"""
         self._reset_state()
         super().finish(True, None)

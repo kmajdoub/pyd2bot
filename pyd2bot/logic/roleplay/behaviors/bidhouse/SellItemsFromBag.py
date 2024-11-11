@@ -127,7 +127,7 @@ class SellItemsFromBag(AbstractBehavior):
         if error:
             Logger().error(f"Error searching for item [{code}] : {error}")
             if self._search_item_listener:
-                self._search_item_listener.cancel()
+                self._search_item_listener.delete()
             if code == 2222 and not self._tried_reopen_market: # timeout and didnt try solution of reopen the market
                 self._tried_reopen_market = True
                 self.close_market(lambda *_: self._process_current_item())

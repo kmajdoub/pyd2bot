@@ -2,7 +2,6 @@ import json
 import os
 from typing import TYPE_CHECKING, Dict, List
 
-from pyd2bot.misc.Localizer import Localizer
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
 from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import KernelEventsManager
 from pydofus2.com.ankamagames.dofus.datacenter.world.SubArea import SubArea
@@ -101,6 +100,8 @@ class BehaviorApi:
                 self.travel_using_zaap(dstMapId, dstZoneId, withSaveZaap, maxCost, excludeMaps, callback=callback)
 
             return self.autoTrip(154010883, 1, callback=onOutOfCelestialDim)
+
+        from pyd2bot.misc.Localizer import Localizer
 
         path_to_dest_zaap = Localizer.findPathToClosestZaap(
             dstMapId, maxCost, excludeMaps=excludeMaps, onlyKnownZaap=False
@@ -557,8 +558,8 @@ class BehaviorApi:
             callback=callback,
             timeout=timeout,
             ontimeout=ontimeout,
-            retryNbr=retryNbr,
-            retryAction=retryAction,
+            retry_count=retryNbr,
+            retry_action=retryAction,
             once=once,
             originator=self,
         )
@@ -590,7 +591,7 @@ class BehaviorApi:
         return KernelEventsManager().send(event_id, *args, **kwargs)
 
     def has_listener(self, event_id):
-        return KernelEventsManager().hasListener(event_id)
+        return KernelEventsManager().has_listener(event_id)
 
     def onEntityMoved(self, entityId, callback, timeout=None, ontimeout=None, once=False):
         return KernelEventsManager().onEntityMoved(

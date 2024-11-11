@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: pyd2bot
-Version: 1.3.0
+Version: 1.4.0
 Summary: Python bot that uses pydofus2 as a background client.
 Home-page: https://github.com/hadamrd/pyd2bot
 Author: majdoub khalid

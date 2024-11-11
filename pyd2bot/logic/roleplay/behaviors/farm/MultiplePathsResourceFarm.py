@@ -82,7 +82,7 @@ class MultiplePathsResourceFarm(AbstractBehavior):
 
         return timeout
 
-    def stop(self):
+    def stop(self, clear_callback=None):
         self._wants_stop = True
         if self._current_running_behavior:
             self._current_running_behavior.stop()

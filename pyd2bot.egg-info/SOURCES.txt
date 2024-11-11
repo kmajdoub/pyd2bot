@@ -139,6 +139,7 @@ pyd2bot/logic/roleplay/messages/SellerVacantMessage.py
 pyd2bot/logic/roleplay/messages/TakeNapMessage.py
 pyd2bot/logic/roleplay/messages/UnloadInsellerEndedMessage.py
 pyd2bot/logic/roleplay/messages/__init__.py
+pyd2bot/misc/BotEventsManager.py
 pyd2bot/misc/BotEventsmanager.py
 pyd2bot/misc/Localizer.py
 pyd2bot/misc/__init__.py

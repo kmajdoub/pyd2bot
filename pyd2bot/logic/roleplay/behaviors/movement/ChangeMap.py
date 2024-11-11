@@ -188,7 +188,7 @@ class ChangeMap(AbstractBehavior):
             return
 
         if MapMove().isRunning():
-            KernelEventsManager().clearAllByOrigin(MapMove())
+            KernelEventsManager().clear_all_by_origin(MapMove())
             MapMove().callback = lambda code, err: None
             MapMove.clear()
             
@@ -391,7 +391,7 @@ class ChangeMap(AbstractBehavior):
         Logger().info("Reached map change cell")
         if not self.isMapActionTr():
             self.setupMapChangeRejectListener()
-            self._scrollMapChangeRequestTimer = BenchmarkTimer(0.5, self.sendMapChangeRequest).start()
+            self._scrollMapChangeRequestTimer = Kernel().defer(self.sendMapChangeRequest)
 
     def actionMapChange(self):
         if PlayedCharacterManager().isInFight:

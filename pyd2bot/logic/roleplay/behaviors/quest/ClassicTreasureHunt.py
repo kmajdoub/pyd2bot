@@ -8,6 +8,7 @@ from pyd2bot.data.enums import ServerNotificationEnum
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
 from pyd2bot.logic.roleplay.behaviors.movement.AutoTripUseZaap import AutoTripUseZaap
 from pyd2bot.logic.roleplay.behaviors.quest.FindHintNpc import FindHintNpc
+from pyd2bot.logic.roleplay.behaviors.quest.UseItemsByType import UseItemsByType
 from pyd2bot.logic.roleplay.behaviors.teleport.UseTeleportItem import \
     UseTeleportItem
 from pydofus2.com.ClientStatusEnum import ClientStatusEnum
@@ -96,7 +97,7 @@ class ClassicTreasureHunt(AbstractBehavior):
         self._gained_kamas = 0
         self._stop_sig = threading.Event()
 
-    def stop(self):
+    def stop(self, clear_callback=None):
         self._stop_sig.set()
         
     @property
@@ -222,8 +223,9 @@ class ClassicTreasureHunt(AbstractBehavior):
         Logger().debug(f"Treasure hunt finished")
         self._hunts_done += 1
         if not Kernel().roleplayContextFrame:
-            Logger().debug(f"Waiting for roleplay to start")
+            Logger().debug(f"Waiting for roleplay context to start ...")
             return self.once_map_processed(lambda: self.onHuntFinished(event, questType))
+
         if self.guessedAnswers:
             for _, poiId, answerMapId in self.guessedAnswers:
                 Logger().debug(f"Will memorize the guessed answers : {self.guessedAnswers}")
@@ -231,17 +233,14 @@ class ClassicTreasureHunt(AbstractBehavior):
             self.guessedAnswers.clear()
             self.guessMode = False
         
-        if self._chests_to_open:
-            iw = self._chests_to_open.pop(0)
-            HaapiEventsManager().sendInventoryOpenEvent()
-            if not Kernel().worker.terminated.wait(3):
-                Kernel().inventoryManagementFrame.useItem(iw)
-                BenchmarkTimer(3, lambda: self.onHuntFinished(event, questType)).start()
-        else:
-            wait_time = BotSettings.REST_TIME_BETWEEN_HUNTS + abs(random.gauss(0, BotSettings.REST_TIME_BETWEEN_HUNTS))
-            Logger().debug(f"Sleeping for {round(wait_time / 60)} minutes before going to the next hunt, to avoid getting kicked.")
-            KernelEventsManager().send(KernelEvent.ClientStatusUpdate, ClientStatusEnum.TAKING_BREAK)
-            BenchmarkTimer(wait_time, lambda: self.goToHuntAtm()).start()
+        if UseItemsByType.has_items(self.CHEST_TYPE_ID):
+            self.use_items_of_type(self.CHEST_TYPE_ID, lambda *_: self.onHuntFinished(event, questType))
+            return
+
+        wait_time = BotSettings.REST_TIME_BETWEEN_HUNTS + abs(random.gauss(0, BotSettings.REST_TIME_BETWEEN_HUNTS))
+        Logger().debug(f"Sleeping for {round(wait_time / 60)} minutes before going to the next hunt, to avoid getting kicked.")
+        KernelEventsManager().send(KernelEvent.ClientStatusUpdate, ClientStatusEnum.TAKING_BREAK)
+        BenchmarkTimer(wait_time, lambda: self.goToHuntAtm()).start()
 
     def onTakeQuestMapReached(self, code, err):
         if err:

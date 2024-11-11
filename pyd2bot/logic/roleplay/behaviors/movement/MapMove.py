@@ -73,7 +73,7 @@ class MapMove(AbstractBehavior):
                 elif self.move_request_accepted:
                     Logger().warning("Player not moving but its move request already executed nothing to stop.")
                     return False
-        KernelEventsManager().clearAllByOrigin(self)
+        KernelEventsManager().clear_all_by_origin(self)
         # MapMove.clear()
         return True
         
@@ -150,7 +150,7 @@ class MapMove(AbstractBehavior):
         if self.countMoveFail > 3:
             return self.fail(reason)
         Logger().warning(f"Server rejected movement for reason {reason.name}")
-        KernelEventsManager().clearAllByOrigin(self)
+        KernelEventsManager().clear_all_by_origin(self)
         self.requestMapData(callback=lambda code, error: self.move())
 
     def sendMoveRequest(self):
@@ -178,7 +178,7 @@ class MapMove(AbstractBehavior):
         if self.delayed_stop:
             self.delayed_stop = False
             Logger().warning("Scheduled player stop movement, will stop now.")
-            BenchmarkTimer(0.4, self.stop).start()
+            BenchmarkTimer(0.2, self.stop).start()
 
     def onMovementCompleted(self, event, success):
         if PlayedCharacterManager().isFighting:

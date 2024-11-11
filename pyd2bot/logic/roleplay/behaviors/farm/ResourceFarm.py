@@ -94,7 +94,7 @@ class ResourceFarm(AbstractFarmBehavior):
     
     def _on_player_solo_mod(self, code, error):
         if error:
-            return self.finish(code, error)
+            Logger().error(error)
         self.main()  # Continue farming
     
     def finish(self, code, error):
@@ -166,9 +166,9 @@ class ResourceFarm(AbstractFarmBehavior):
             ]:
                 Logger().warning(f"Error while collecting resource: {error}, will exclude the resource.")
                 self.forbiddenActions.add(self.currentTarget.uid)
-                return self.main()
+                return Kernel().defer(self.main)
             return self.send(KernelEvent.ClientShutdown, error)
-        BenchmarkTimer(1, self.main).start()
+        BenchmarkTimer(0.5, self.main).start()
 
     def getAvailableResources(self) -> list[CollectableResource]:
         if not Kernel().interactiveFrame:

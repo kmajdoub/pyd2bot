@@ -58,7 +58,6 @@ class EditBidPrice(AbstractBehavior):
             #     + (f", waiting for: {', '.join(remaining)}" if remaining else "")
             # )
             
-            # Log specific message details
             if msg_type == "KamasUpdateMessage":
                 self._logger.info(f"Kamas updated: {msg.kamasTotal:,}")
             elif msg_type == "ExchangeBidHouseItemRemoveOkMessage":
@@ -66,7 +65,6 @@ class EditBidPrice(AbstractBehavior):
             elif msg_type == "ExchangeBidHouseItemAddOkMessage":
                 self._logger.info("New listing added successfully")
                 
-        # Sequence complete
         if self._received_sequence >= self.REQUIRED_SEQUENCE:
             self._market_frame._state = "IDLE"
             self._logger.info("Update sequence completed successfully")

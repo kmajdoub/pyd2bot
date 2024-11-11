@@ -38,10 +38,10 @@ class EditBidPrice(AbstractBehavior):
         if self._market_frame._market_type_open is None:
             return self.finish(1, "Market is not open")
         if self._market_frame._current_mode != "sell":
-            return self.finish(1, "Market is not is sell mode")
+            return self.finish(1, "Market is not in sell mode")
         self.on(KernelEvent.MessageReceived, self._on_server_message)
         if self._can_afford_tax(self.new_price):
-            self._logger.info(f"Updating listing {self.bid.uid} to price {self.new_price}")
+            self._logger.info(f"Updating bid {self.bid.uid} to price {self.new_price}")
             self._market_frame.send_update_listing(self.bid.uid, self.bid.quantity, self.new_price)
         else:
             self.finish(self.ERROR_CODES.INSUFFICIENT_KAMAS, "Insufficient kamas for tax")
@@ -69,7 +69,7 @@ class EditBidPrice(AbstractBehavior):
         # Sequence complete
         if self._received_sequence >= self.REQUIRED_SEQUENCE:
             self._market_frame._state = "IDLE"
-            self._logger.info("✓ Update sequence completed successfully")
+            self._logger.info("Update sequence completed successfully")
             self.finish(0)
 
     def _can_afford_tax(self, price: int) -> bool:

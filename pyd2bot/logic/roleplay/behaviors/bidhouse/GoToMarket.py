@@ -59,11 +59,14 @@ class GoToMarket(AbstractBehavior):
                 return self.finish(1, "Basic accounts can't sell higher than lvl 60 items, so no market can satisfy that!")
 
             for hint in Hint.getHints():
+                if int(hint.mapId) != self.marketplace_gfx_id:
+                    continue
+
                 if int(hint.mapId) not in list(map(int, self.exclude_market_at_maps)):
                     map_sub_area = SubArea.getSubAreaByMapId(hint.mapId)
                     if map_sub_area.areaId in [45, 18]: # exclude ankarnam and astrub markets for items with level higher than 60 !
                         self.exclude_market_at_maps.append(hint.mapId)
-                
+
         self.path_to_hdv = Localizer.findClosestHintMapByGfx(current_map, self.marketplace_gfx_id, excludeMaps=self.exclude_market_at_maps)
         
         if self.path_to_hdv is None:
@@ -83,4 +86,5 @@ class GoToMarket(AbstractBehavior):
     def _on_market_map_reached(self, code: int, error: str) -> None:
         if not error:
             Kernel().marketFrame._market_mapId = PlayedCharacterManager().currVertex.mapId
+            Kernel().marketFrame._market_gfx = self.marketplace_gfx_id
         self.finish(code, error)

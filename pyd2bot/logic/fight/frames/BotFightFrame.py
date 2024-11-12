@@ -312,7 +312,6 @@ class BotFightFrame(Frame):
 
     def findCellsWithLosToTargets(self, spellw: SpellWrapper, targets: list[Target], fighterCell: int) -> list[int]:
         hasLosToTargets = dict[int, list[Target]]()
-        perf_counter()
         spellZone = self.getSpellZone(spellw)
         maxRangeFromFighter = 0
         for target in targets:
@@ -333,7 +332,6 @@ class BotFightFrame(Frame):
                         hasLosToTargets[p.cellId] = list[Target]()
                     hasLosToTargets[p.cellId].append(target)
                     maxRangeFromFighter = max(maxRangeFromFighter, target.distFromPlayer)
-        # Logger().info(f"findCellsWithLosToTargets took {perf_counter() - s} seconds")
         return maxRangeFromFighter, hasLosToTargets
 
     def findPathToTarget(self, spellw: SpellWrapper, targets: list[Target]) -> Tuple[Target, list[int]]:
@@ -923,7 +921,6 @@ class BotFightFrame(Frame):
                             Logger().warning(f"Cell {unreachableCell} is an obstacle")
                             self._forbiddenCells.add(unreachableCell)
                         self._turnAction.clear()
-                # self.checkCanPlay()
                 KernelEventsManager().once(KernelEvent.SequenceExecFinished, self.checkCanPlay, originator=self)
 
         BotEventsManager().onceFighterMoved(self._currentPlayerId, onMovementApplied, originator=self)

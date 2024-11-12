@@ -16,10 +16,10 @@ from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 
 
 class CollectStats(AbstractBehavior):
-
+    IS_BACKGROUND_TASK = True
+    
     def __init__(self, listeners: list[callable]=None, saved_stats: PlayerStats=None):
         super().__init__()
-        self.IS_BACKGROUND_TASK = True
         self._oldStats = None
         self.playerStats = saved_stats if saved_stats else PlayerStats()
         self.initial_kamas = None
@@ -55,7 +55,7 @@ class CollectStats(AbstractBehavior):
     def removeHandler(self, callback):
         self.update_listeners.remove(callback)
 
-    def onKamasSpentOnSellTax(self, event, amount):
+    def onKamasSpentOnSellTax(self, event, gid, qty, amount):
         self.playerStats.kamasSpentOnTaxes += amount
         self.onPlayerUpdate(event)
         

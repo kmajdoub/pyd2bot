@@ -4,6 +4,7 @@ from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
 from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import KernelEventsManager
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
+from pydofus2.com.ankamagames.dofus.logic.game.common.managers.InventoryManager import InventoryManager
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import PlayedCharacterManager
 from pydofus2.com.ankamagames.dofus.network.messages.game.inventory.KamasUpdateMessage import KamasUpdateMessage
 from pydofus2.com.ankamagames.dofus.network.messages.game.inventory.exchanges.ExchangeBidHouseItemAddOkMessage import ExchangeBidHouseItemAddOkMessage
@@ -42,6 +43,7 @@ class PlaceBid(AbstractBehavior):
         
         self._old_player_kamas = PlayedCharacterManager().characteristics.kamas
         self.on(KernelEvent.MessageReceived, lambda _, m: self._process_message(m))
+        self.item = InventoryManager().inventory.getItem(self.object_uid)
         Kernel().marketFrame.create_listing(self.object_uid, self.quantity, self.price)
 
     def _process_message(self, msg) -> None:
@@ -51,7 +53,9 @@ class PlaceBid(AbstractBehavior):
 
         elif isinstance(msg, KamasUpdateMessage):
             self._received_sequence.add("kamas")
-            KernelEventsManager().send(KernelEvent.KamasSpentOnSellTax, msg.kamasTotal - self._old_player_kamas)
+            amount_spent = self._old_player_kamas - msg.kamasTotal
+            gid = self.item.item.objectGID
+            KernelEventsManager().send(KernelEvent.KamasSpentOnSellTax, gid, self.quantity, amount_spent)
             
         elif isinstance(msg, ExchangeBidHouseItemAddOkMessage):
             self._received_sequence.add("add")

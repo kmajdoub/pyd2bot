@@ -21,7 +21,6 @@ class AbstractBehavior(BehaviorApi, metaclass=Singleton):
     IS_BACKGROUND_TASK = False
     ALREADY_RUNNING = 666
     STOPPED = 988273
-    _on_idle_callbacks = dict[str, list[callable]]()
 
     def __init__(self) -> None:
         self.running = threading.Event()
@@ -45,7 +44,7 @@ class AbstractBehavior(BehaviorApi, metaclass=Singleton):
             error = f"{type(self).__name__} already running by parent {self.parent}."
             KernelEventsManager().send(KernelEvent.ClientStatusUpdate, f"ERROR_{type(self).__name__.upper()}", {"error": error, "code": self.ALREADY_RUNNING})
             if self.callback:
-                self.callback(self.ALREADY_RUNNING, error)
+                Kernel().defer(lambda: self.callback(self.ALREADY_RUNNING, error))
             else:
                 Logger().error(error)
             return
@@ -55,14 +54,12 @@ class AbstractBehavior(BehaviorApi, metaclass=Singleton):
     def run(self, *args, **kwargs):
         raise NotImplementedError()
 
-    def onFinish(self, callback):
-        self.endListeners.append(callback)
-
     def finish(self, code: bool, error: str = None, *args, **kwargs) -> None:
         if not self.running.is_set():
             return Logger().warning(f"[{type(self).__name__}] wants to finish but not running!")
         KernelEventsManager().clear_all_by_origin(self)
         from pyd2bot.misc.BotEventsManager import BotEventsManager
+        
         BotEventsManager().clear_all_by_origin(self)
         callback = self.callback
         self.callback = None
@@ -72,25 +69,14 @@ class AbstractBehavior(BehaviorApi, metaclass=Singleton):
         if self.parent and self in self.parent.children:
             self.parent.children.remove(self)
         error = f"[{type(self).__name__}] failed for reason : {error}" if error else None
+        if callback is not None:
+            Kernel().defer(lambda: callback(code, error, *args, **kwargs))
+        else:
+            Logger().error(f"[{type(self).__name__}] Finished with result :: [{code}] - {error}")
         if error:
             KernelEventsManager().send(KernelEvent.ClientStatusUpdate, f"ERROR_{type(self).__name__.upper()}", {"error": error, "code": str(code)})
         else:
             KernelEventsManager().send(KernelEvent.ClientStatusUpdate, f"FINISHED_{type(self).__name__.upper()}")
-        if callback is not None:
-            Kernel().defer(lambda: callback(code, error, *args, **kwargs))
-        else:
-            Logger().error(f"Callback of the behavior is None, error: {error}, code: {code}")
-        while self.endListeners:
-            callback = self.endListeners.pop()
-            Kernel().defer(lambda: callback(code, error, *args, **kwargs))
-        with RLOCK:
-            thname = threading.current_thread().name
-            if not AbstractBehavior.hasRunning(thname):
-                if thname in AbstractBehavior._on_idle_callbacks:
-                    while AbstractBehavior._on_idle_callbacks[thname]:
-                        callback = AbstractBehavior._on_idle_callbacks[thname].pop()
-                        Kernel().defer(lambda: callback(code, error, *args, **kwargs))
-                    del AbstractBehavior._on_idle_callbacks[thname]
 
     @property
     def listeners(self) -> list[Listener]:
@@ -124,13 +110,6 @@ class AbstractBehavior(BehaviorApi, metaclass=Singleton):
             if type(behavior).__name__ != cls.__name__:
                 result.append(behavior)
         return result
-
-    @staticmethod
-    def onFinishAll(callback):
-        thname = threading.current_thread().name
-        if thname not in AbstractBehavior._on_idle_callbacks:
-            AbstractBehavior._on_idle_callbacks[thname] = []
-        AbstractBehavior._on_idle_callbacks[thname].append(callback)
 
     def getTreeStr(self, level=0):
         indent = '  ' * level

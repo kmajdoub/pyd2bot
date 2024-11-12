@@ -69,7 +69,7 @@ class EditBidPrice(AbstractBehavior):
         # Sequence complete
         if self._received_sequence >= self.REQUIRED_SEQUENCE:
             self._market_frame._state = "IDLE"
-            self._logger.info("✓ Update sequence completed successfully")
+            self._logger.info("Update sequence completed successfully")
             self.finish(0)
 
     def _can_afford_tax(self, price: int) -> bool:

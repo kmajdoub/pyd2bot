@@ -1,5 +1,6 @@
 from pyd2bot.BotSettings import BotSettings
 from pyd2bot.data.enums import SessionTypeEnum
+from pyd2bot.logic.roleplay.behaviors.bidhouse.MarketPersistenceManager import MarketPersistenceManager
 from pyd2bot.logic.roleplay.behaviors.updates.AutoUpgradeStats import AutoUpgradeStats
 from pyd2bot.logic.roleplay.behaviors.updates.CollectStats import CollectStats
 from pyd2bot.logic.common.frames.BotRPCFrame import BotRPCFrame
@@ -15,6 +16,7 @@ from pyd2bot.logic.roleplay.behaviors.fight.MuleFighter import MuleFighter
 from pyd2bot.logic.roleplay.behaviors.fight.SoloFarmFights import SoloFarmFights
 from pyd2bot.logic.roleplay.behaviors.quest.ClassicTreasureHunt import ClassicTreasureHunt
 from pyd2bot.data.models import Session
+from pyd2bot.misc.BotEventsManager import BotEventsManager
 from pyd2bot.misc.NapManager import NapManager
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
 from pydofus2.com.ankamagames.dofus.kernel.net.DisconnectionReasonEnum import DisconnectionReasonEnum
@@ -36,6 +38,8 @@ class Pyd2Bot(DofusClient):
         self._main_behavior = None
         self._stats_auto_upgrade = None
         self._saved_player_stats = None
+        self.session_run_id = None
+        self._market_persistence_manager = None
 
     def shutdown(self, message="", reason=None):
         if self._main_behavior:
@@ -54,6 +58,7 @@ class Pyd2Bot(DofusClient):
 
     def onReconnect(self, event, message, afterTime=0):
         AbstractBehavior.clear_children()
+        self._saved_player_stats = self._stats_collector.playerStats # save player stats before restarting
         return super().onReconnect(event, message, afterTime)
 
     def onInGame(self):
@@ -61,12 +66,12 @@ class Pyd2Bot(DofusClient):
         if self.session.isSeller:
             BotSettings.SELLER_VACANT.set()
         self.notifyOtherBots()
-        self.startSessionMainBehavior()
+        self.startMainBehavior()
 
     def notifyOtherBots(self):
-        for instId, inst in Kernel.getInstances():
+        for instId, inst in BotEventsManager.getInstances():
             if instId != self.name:
-                inst.worker.process(PlayerConnectedMessage(self.name))
+                inst.send(BotEventsManager.BOT_CONNECTED, self.name)
 
     def onFight(self, event):
         if not self._mule:
@@ -80,7 +85,7 @@ class Pyd2Bot(DofusClient):
     def addStatusChangeListener(self, callback):
         self._statusChangedListeners.append(callback)
         
-    def startSessionMainBehavior(self): 
+    def startMainBehavior(self): 
         mainBehavior = None
         
         if self.session.isFarmSession:
@@ -152,4 +157,6 @@ class Pyd2Bot(DofusClient):
         self._stats_collector.start()
         self._stats_auto_upgrade = AutoUpgradeStats(self.session.character.primaryStatId)
         self._stats_auto_upgrade.start()
+        self._market_persistence_manager = MarketPersistenceManager(self)
+        self._market_persistence_manager.start()
         self._nap_manager = NapManager(self)

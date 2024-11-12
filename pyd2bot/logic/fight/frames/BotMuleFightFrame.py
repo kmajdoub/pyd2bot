@@ -56,9 +56,9 @@ class BotMuleFightFrame(Frame):
             return True
 
         elif isinstance(msg, CurrentMapMessage):
-            gcrmsg = GameContextReadyMessage()
-            gcrmsg.init(int(msg.mapId))
-            ConnectionsHandler().send(gcrmsg)
+            msg = GameContextReadyMessage()
+            msg.init(int(msg.mapId))
+            ConnectionsHandler().send(msg)
             return True
         
         elif isinstance(msg, (GameMapNoMovementMessage, GameActionFightNoSpellCastMessage, GameFightTurnStartPlayingMessage, TextInformationMessage)):

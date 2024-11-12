@@ -38,10 +38,10 @@ class EditBidPrice(AbstractBehavior):
         if self._market_frame._market_type_open is None:
             return self.finish(1, "Market is not open")
         if self._market_frame._current_mode != "sell":
-            return self.finish(1, "Market is not is sell mode")
+            return self.finish(1, "Market is not in sell mode")
         self.on(KernelEvent.MessageReceived, self._on_server_message)
         if self._can_afford_tax(self.new_price):
-            self._logger.info(f"Updating listing {self.bid.uid} to price {self.new_price}")
+            self._logger.info(f"Updating bid {self.bid.uid} to price {self.new_price}")
             self._market_frame.send_update_listing(self.bid.uid, self.bid.quantity, self.new_price)
         else:
             self.finish(self.ERROR_CODES.INSUFFICIENT_KAMAS, "Insufficient kamas for tax")
@@ -58,7 +58,6 @@ class EditBidPrice(AbstractBehavior):
             #     + (f", waiting for: {', '.join(remaining)}" if remaining else "")
             # )
             
-            # Log specific message details
             if msg_type == "KamasUpdateMessage":
                 self._logger.info(f"Kamas updated: {msg.kamasTotal:,}")
             elif msg_type == "ExchangeBidHouseItemRemoveOkMessage":
@@ -66,7 +65,6 @@ class EditBidPrice(AbstractBehavior):
             elif msg_type == "ExchangeBidHouseItemAddOkMessage":
                 self._logger.info("New listing added successfully")
                 
-        # Sequence complete
         if self._received_sequence >= self.REQUIRED_SEQUENCE:
             self._market_frame._state = "IDLE"
             self._logger.info("Update sequence completed successfully")

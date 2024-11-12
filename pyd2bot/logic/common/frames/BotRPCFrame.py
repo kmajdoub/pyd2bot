@@ -103,7 +103,7 @@ class BotRPCFrame(Frame):
         elif isinstance(msg, TakeNapMessage):
             Logger().info(f"[{threading.current_thread().name}] Processing nap notification for {msg.nap_duration} minutes")
             try:
-                BotEventsManager().send(BotEventsManager.TAKE_NAP, msg.nap_duration)
+                BotEventsManager().send(BotEventsManager.events.TAKE_NAP, msg.nap_duration)
             except Exception as e:
                 Logger().error(f"Error processing nap notification: {str(e)}")
             return True

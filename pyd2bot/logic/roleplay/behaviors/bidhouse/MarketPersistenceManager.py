@@ -79,7 +79,8 @@ class MarketPersistenceManager(AbstractBehavior):
             max_sell_slots=mgr.max_item_count,
             accepted_resources=mgr.allowed_types,
             npc_id=mgr.npc_id,
-            require_subscription=not dst_sub_area.basicAccountAllowed
+            require_subscription=not dst_sub_area.basicAccountAllowed,
+            gfx_id=self.market_frame._market_gfx
         )
         
         bids_data = [{
@@ -93,7 +94,7 @@ class MarketPersistenceManager(AbstractBehavior):
             bids=bids_data,
             server_id=PlayerManager().server.id,
             account_id=PlayerManager().accountId,
-            session_id=self.client.session_run_id
+            session_uuid=self.client.session_run_id
         )
         
     def _on_listing_added(self, event, bid: MarketBid):
@@ -103,7 +104,7 @@ class MarketPersistenceManager(AbstractBehavior):
                 uid=bid.uid,
                 server_id=PlayerManager().server.id,
                 account_id=PlayerManager().accountId,
-                session_id=self.client.session_run_id,
+                session_uuid=self.client.session_run_id,
                 price=bid.price,
                 object_gid=bid.item_gid,
                 batch_size=bid.quantity
@@ -129,7 +130,7 @@ class MarketPersistenceManager(AbstractBehavior):
                 tax_amount=amount_payed,
                 server_id=PlayerManager().server.id,
                 account_id=PlayerManager().accountId,
-                session_id=self.client.session_run_id
+                session_uuid=self.client.session_run_id
             )
         except Exception as e:
             self.logger.error(f"Failed to record tax payment: {e}")

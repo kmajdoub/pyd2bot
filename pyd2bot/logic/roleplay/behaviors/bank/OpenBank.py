@@ -42,7 +42,9 @@ class OpenBank(AbstractBehavior):
             self.finish(self.INSUFFICIENT_KAMAS, "Insufficient kamas to open bank")
         elif textId == ServerNotificationEnum.KAMAS_LOST:
             self.send(KernelEvent.KamasLostFromBankOpen, int(params[0]))
-            
+        elif textId == ServerNotificationEnum.BANK_OPEN_TAX:
+            self.send(KernelEvent.KamasLostFromBankOpen, int(params[0]))
+
     def onBankManDialogEnded(self, code, error):
         if error:
             return self.finish(code, error)

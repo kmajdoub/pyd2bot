@@ -14,6 +14,7 @@ class ServerNotificationEnum:
     WAIT_REQUIRED = 4852
     CANT_TAKE_ALL_OBJECTS = 5023
     ITEM_SOLD = 378533
+    BANK_OPEN_TAX = 325835
 
 class SessionTypeEnum(str, Enum):
     SOLO_FIGHT = 'SOLO_FIGHT'

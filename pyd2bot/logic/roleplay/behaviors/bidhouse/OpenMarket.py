@@ -41,6 +41,7 @@ class OpenMarket(AbstractBehavior):
         self._market_frame = Kernel().marketFrame
         self.exclude_market_at_maps = exclude_market_at_maps
         self.item_level = item_level
+        self.market_ie = None
         
     def run(self) -> bool:
         self._market_type = self._determine_market_type()
@@ -72,7 +73,12 @@ class OpenMarket(AbstractBehavior):
 
     def _on_market_open(self, code, error):
         if error:
+            self._market_frame._market_ie_id = None
+            self._market_frame._market_gfx = None
             return self.finish(code, error)
+
+        self._market_frame._market_ie_id = self.MARKETPLACE_TYPES[self._market_type][0]
+        self._market_frame._market_gfx = self.MARKETPLACE_TYPES[self._market_type][1]
         self._market_frame._market_type_open = self._market_type
         if self._market_frame._current_mode is None:
             self._market_frame._current_mode = "buy"
@@ -101,16 +107,19 @@ class OpenMarket(AbstractBehavior):
     def _open_marketplace(self) -> None:
         Logger().debug("Opening marketplace...")
         
-        element = Kernel().interactiveFrame.getIeByTypeId(self.MARKETPLACE_TYPES[self._market_type][0])
+        self.market_ie = Kernel().interactiveFrame.getIeByTypeId(self.MARKETPLACE_TYPES[self._market_type][0])
         
-        if not element:
+        if not self.market_ie:
             return self.finish(
                 self.ERROR_CODES.HDV_NOT_FOUND,
                 "Marketplace interactive element not found"
             )
-                
+        
+        self._market_frame._market_ie_id = self.MARKETPLACE_TYPES[self._market_type][0]
+        self._market_frame._market_gfx = self.MARKETPLACE_TYPES[self._market_type][1]
+        
         self.useSkill(
-            ie=element,
+            ie=self.market_ie,
             waitForSkillUsed=False,
             callback=self._on_market_open
         )

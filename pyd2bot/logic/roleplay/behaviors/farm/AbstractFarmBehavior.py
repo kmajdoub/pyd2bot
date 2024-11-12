@@ -246,7 +246,6 @@ class AbstractFarmBehavior(AbstractBehavior):
 
         def on_map_loaded():
             if PlayedCharacterManager().isDead():
-                Logger().warning(f"Player is dead.")
                 return self.autoRevive(callback=self._on_resurrection)
             Kernel().defer(self.main, True)
 

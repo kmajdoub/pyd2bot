@@ -1,4 +1,4 @@
-from enum import auto
+from enum import Enum, auto
 from time import perf_counter
 from typing import TYPE_CHECKING
 
@@ -27,9 +27,10 @@ class BotEventsManager(EventsHandler, metaclass=Singleton):
     SELLER_AVAILABLE = auto()
     MOVE_TO_VERTEX = auto()
     ALL_MEMBERS_JOINED_FIGHT = auto()
-    TAKE_NAP = auto()
-    # Farm
-    ObjectObtainedInFarm = auto()
+
+    class events(Enum):
+        TimeToNextNap = auto()
+        TAKE_NAP = auto()
 
     def __init__(self):
         super().__init__()

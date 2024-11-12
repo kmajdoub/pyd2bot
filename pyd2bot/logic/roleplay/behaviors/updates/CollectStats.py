@@ -1,13 +1,17 @@
+import time
 from pyd2bot.data.models import PlayerStats
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
+from pyd2bot.misc.BotEventsManager import BotEventsManager
 from pydofus2.com.ankamagames.atouin.HaapiEventsManager import \
     HaapiEventsManager
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
 from pydofus2.com.ankamagames.dofus.kernel.net.ConnectionsHandler import \
     ConnectionsHandler
+from pydofus2.com.ankamagames.dofus.logic.game.common.managers.InventoryManager import InventoryManager
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import \
     PlayedCharacterManager
+from pydofus2.com.ankamagames.dofus.network.enums.FightOutcomeEnum import FightOutcomeEnum
 from pydofus2.com.ankamagames.dofus.network.messages.game.achievement.AchievementRewardRequestMessage import \
     AchievementRewardRequestMessage
 from pydofus2.com.ankamagames.dofus.network.types.game.context.roleplay.job.JobExperience import JobExperience
@@ -45,10 +49,37 @@ class CollectStats(AbstractBehavior):
                 (KernelEvent.KamasLostFromBankOpen, self.onLostKamasByBankOpen, {}),
                 (KernelEvent.ItemSold, self.onItemSold, {}),
                 (KernelEvent.KamasSpentOnSellTax, self.onKamasSpentOnSellTax, {}),
+                (KernelEvent.BankInventoryContent, self.onBankContent, {}),
+                (KernelEvent.InventoryWeightUpdate, self.onWeightUpdate, {}),
+                (KernelEvent.FightOutcomeForPlayer, self.onFightOutcome, {}),
+                (KernelEvent.PlayerDied, self.onPlayerDied, {})
             ]
         )
+        BotEventsManager().on(BotEventsManager.events.TimeToNextNap, self.onNapScheduled, originator=self)
+        self.onKamasUpdate(KernelEvent.KamasUpdate, InventoryManager().inventory.kamas)
         return True
     
+    def onPlayerDied(self, event):
+        self.playerStats.nbrOfDeaths += 1
+        self.onPlayerUpdate(event)
+
+    def onFightOutcome(self, event, outcome: FightOutcomeEnum):
+        if outcome == FightOutcomeEnum.RESULT_LOST:
+            self.playerStats.nbrFightsLost += 1
+            self.onPlayerUpdate(event)
+
+    def onWeightUpdate(self, event, lastInventoryWeight, inventoryWeight, weightMax):
+        self.playerStats.currentInventoryWeightPercent = round(100 * inventoryWeight / weightMax, 2)
+        self.onPlayerUpdate(event)
+        
+    def onBankContent(self, event, objects, kamas):
+        self.playerStats.currentBankKamasBalance = kamas
+        self.onPlayerUpdate(event)
+
+    def onNapScheduled(self, event, nap_timeout):
+        self.playerStats.nextPauseTimestamp = time.time() + nap_timeout
+        self.onPlayerUpdate(event)
+
     def addHandler(self, callback):
         self.update_listeners.append(callback)
     
@@ -89,8 +120,9 @@ class CollectStats(AbstractBehavior):
             self.initial_kamas = totalKamas
         else:
             self.playerStats.earnedKamas = totalKamas - self.initial_kamas
+            self.playerStats.currentInventoryKamasBalance = totalKamas
             self.onPlayerUpdate(event)
-                      
+
     def onJobLevelUp(self, event, jobId, jobName, lastJobLevel, newLevel, podsBonus):
         HaapiEventsManager().sendProfessionsOpenEvent()
         Kernel().worker.terminated.wait(2)

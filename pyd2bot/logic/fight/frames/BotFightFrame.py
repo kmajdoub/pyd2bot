@@ -50,6 +50,7 @@ from pydofus2.com.ankamagames.dofus.logic.game.fight.miscs.TackleUtil import \
     TackleUtil
 from pydofus2.com.ankamagames.dofus.network.enums.FightOptionsEnum import \
     FightOptionsEnum
+from pydofus2.com.ankamagames.dofus.network.enums.FightOutcomeEnum import FightOutcomeEnum
 from pydofus2.com.ankamagames.dofus.network.messages.game.actions.fight.GameActionFightCastRequestMessage import \
     GameActionFightCastRequestMessage
 from pydofus2.com.ankamagames.dofus.network.messages.game.actions.fight.GameActionFightNoSpellCastMessage import \
@@ -644,11 +645,28 @@ class BotFightFrame(Frame):
 
         elif isinstance(msg, GameFightEndMessage):
             self._inFight = False
+            # Check fight outcome for the player
+            if msg.results:  # Only process if we have results
+                player_id = PlayedCharacterManager().id
+                for result in msg.results:
+                    # Find the player's result entry
+                    if hasattr(result, 'id') and result.id == player_id:
+                        Logger().info(f"Fight ended, fight outcome for player: {FightOutcomeEnum(result.outcome).name}")
+                        if result.outcome == FightOutcomeEnum.RESULT_LOST.value:
+                            Logger().warning(f"Player {player_id} lost the fight !")
+
+                        # Fire event with fight outcome
+                        KernelEventsManager().send(
+                            KernelEvent.FightOutcomeForPlayer,
+                            FightOutcomeEnum(result.outcome)
+                        )
+    
             if self.session.followers:
                 for player in self.session.followers:
                     playerManager = PlayedCharacterManager.getInstance(player.accountId)
                     if playerManager:
                         playerManager.isFighting = False
+
             Kernel().worker.removeFrame(self)
             return True
 

@@ -17,7 +17,7 @@ class NapManager:
         self.logger = Logger()
         
         BotEventsManager().once(
-            BotEventsManager.TAKE_NAP, 
+            BotEventsManager.events.TAKE_NAP, 
             self._on_nap_notification
         )
 
@@ -27,6 +27,7 @@ class NapManager:
     def _schedule_next_nap(self) -> None:
         nap_timeout = BotSettings.generate_random_nap_timeout() * 60 * 60  # Convert hours to seconds
         self._nap_take_timer = BenchmarkTimer(int(nap_timeout), self._initiate_nap)
+        BotEventsManager().send(BotEventsManager.events.TimeToNextNap, int(nap_timeout))
         self._nap_take_timer.start()
 
     def _on_nap_notification(self, event, nap_duration: int) -> None:
@@ -34,7 +35,7 @@ class NapManager:
         self.logger.info(f"[{self.client.name}] Received nap notification for {nap_duration} minutes")
         self._nap_duration = nap_duration
         self._taking_a_nap = True
-        self._save_stats()
+        self._send_update_to_front()
         self._handle_nap_start(nap_duration)
 
     def _handle_nap_start(self, nap_duration: Optional[int] = None) -> None:
@@ -53,7 +54,7 @@ class NapManager:
     def _initiate_nap(self) -> None:
         self._taking_a_nap = True
         self._nap_duration = BotSettings.generate_random_nap_duration()
-        self._save_stats()
+        self._send_update_to_front()
         
         if hasattr(self.client.session, 'followers') and self.client.session.followers:
             self._notify_followers()
@@ -64,9 +65,9 @@ class NapManager:
         for follower in self.client.session.followers:
             follower_events = BotEventsManager.getInstance(follower.accountId)
             if follower_events:
-                follower_events.send(BotEventsManager.TAKE_NAP, self._nap_duration)
+                follower_events.send(BotEventsManager.events.TAKE_NAP, self._nap_duration)
 
-    def _save_stats(self) -> None:
+    def _send_update_to_front(self) -> None:
         if self.client._stats_collector:
             self.client._stats_collector.playerStats.timeSpentSleeping += self._nap_duration
             self.client._stats_collector.playerStats.isSleeping = True

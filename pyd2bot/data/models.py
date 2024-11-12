@@ -318,7 +318,12 @@ class PlayerStats(BaseModel):
     kamasSpentOnTaxes: int = 0
     isSleeping: bool = False
     currentPathName: str = ""
-
+    nextPauseTimestamp: int = 0
+    currentBankKamasBalance: int = 0
+    currentInventoryKamasBalance: int = 0
+    currentInventoryWeightPercent: float = 0
+    nbrFightsLost: int = 0
+    
     def add_job_level(self, job_id: str, levels_gained: int) -> None:
         self.earnedJobLevels[job_id] = self.earnedJobLevels.get(job_id, 0) + levels_gained
 

@@ -56,7 +56,8 @@ class CollectStats(AbstractBehavior):
             ]
         )
         BotEventsManager().on(BotEventsManager.events.TimeToNextNap, self.onNapScheduled, originator=self)
-        self.onKamasUpdate(KernelEvent.KamasUpdate, InventoryManager().inventory.kamas)
+        self.playerStats.currentInventoryKamasBalance = InventoryManager().inventory.kamas
+        self.onPlayerUpdate(KernelEvent.KamasUpdate)
         return True
     
     def onPlayerDied(self, event):

@@ -297,12 +297,10 @@ class MarketPersistence(metaclass=ThreadSharedSingleton):
             with self.get_connection() as conn:
                 with conn.cursor() as cur:
                     try:
-                        # Convert Unix timestamp to datetime with timezone
-                        sold_at_datetime = datetime.fromtimestamp(sold_at, tz=timezone.utc)
-                        
+                        # Use the timestamp directly as an integer
                         cur.execute("""
                             UPDATE bids
-                            SET sold_at = %s
+                            SET sold_at = to_timestamp(%s)
                             WHERE id = (
                                 SELECT id
                                 FROM bids
@@ -316,7 +314,7 @@ class MarketPersistence(metaclass=ThreadSharedSingleton):
                                 FOR UPDATE
                             )
                             RETURNING uid
-                        """, (sold_at_datetime, server_id, object_gid, batch_size, price))
+                        """, (sold_at, server_id, object_gid, batch_size, price))
                         
                         result = cur.fetchone()
                         conn.commit()

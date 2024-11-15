@@ -93,7 +93,10 @@ class AutoTrip(AbstractBehavior):
         if PlayedCharacterManager().currentMap is None:
             Logger().warning("Waiting for Map to be processed...")
             return KernelEventsManager().onceMapProcessed(self.walkToNextStep, originator=self)
-        if self.path:
+        if self.path is not None:
+            if len(self.path) == 0:
+                Logger().debug("Player already at the destination nothing to do")
+                return self.finish(0)
             self.state = AutoTripState.FOLLOWING_EDGE
             currMapId = PlayedCharacterManager().currentMap.mapId
             currZoneId = PlayedCharacterManager().currentZoneRp

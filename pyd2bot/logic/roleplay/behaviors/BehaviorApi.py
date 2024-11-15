@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Dict, List
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
 from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import KernelEventsManager
 from pydofus2.com.ankamagames.dofus.datacenter.world.SubArea import SubArea
+from pydofus2.com.ankamagames.dofus.internalDatacenter.DataEnum import DataEnum
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
 from pydofus2.com.ankamagames.dofus.kernel.net.ConnectionsHandler import ConnectionsHandler
 from pydofus2.com.ankamagames.dofus.logic.common.managers.MarketBid import MarketBid
@@ -106,7 +107,7 @@ class BehaviorApi:
         path_to_dest_zaap = Localizer.findPathToClosestZaap(
             dstMapId, maxCost, excludeMaps=excludeMaps, onlyKnownZaap=False
         )
-        if not path_to_dest_zaap:
+        if path_to_dest_zaap is None:
             Logger().warning(f"No dest zaap found for cost {maxCost} and map {dstMapId}!")
             return self.autoTrip(dstMapId, dstZoneId, callback=callback)
         dstZaapVertex = path_to_dest_zaap[-1].dst
@@ -320,6 +321,24 @@ class BehaviorApi:
         from pyd2bot.logic.roleplay.behaviors.teleport.UseZaap import UseZaap
 
         UseZaap().start(dstMapId, saveZaap, callback=callback, parent=self)
+
+    def useRappelPotion(self, callback):
+        iw = ItemWrapper._cacheGId.get(DataEnum.RAPPEL_POTION_GUID)
+        if iw:
+            self.useTeleportItem(iw, callback=callback)
+            return True
+        for iw in InventoryManager().inventory.getView("storageConsumables").content:
+            if iw.objectGID == DataEnum.RAPPEL_POTION_GUID:
+                self.useTeleportItem(iw, callback=callback)
+                return True
+        return False
+    
+    def put_pet_mount(self, callback):
+        from pyd2bot.logic.roleplay.behaviors.mount.PutPetsMount import PutPetsMount
+
+        b = PutPetsMount()
+        b.start(callback=callback, parent=self)
+        return b
 
     def useSkill(
         self,

@@ -1,6 +1,6 @@
-from logging import Logger
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.InventoryManager import InventoryManager
+from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 
 
 class UseItemsByType(AbstractBehavior):
@@ -22,7 +22,8 @@ class UseItemsByType(AbstractBehavior):
     def _process_next(self):
         if not self._items_to_use:
             return self.finish(0)
-
+        
+        Logger().debug(f"Found {len(self._items_to_use)} items to use")
         self.item = self._items_to_use.pop()
         self.use_item(self.item, self.item.quantity, self._on_item_used)
     

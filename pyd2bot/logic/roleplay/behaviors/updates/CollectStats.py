@@ -25,8 +25,8 @@ class CollectStats(AbstractBehavior):
     def __init__(self, listeners: list[callable]=None, saved_stats: PlayerStats=None):
         super().__init__()
         self._oldStats = None
-        self.playerStats = saved_stats if saved_stats else PlayerStats()
-        self.initial_kamas = None
+        self.sessionStats = saved_stats if saved_stats else PlayerStats()
+        self._old_saved_kamas = None
         if listeners is None:
             listeners = []
         self.update_listeners = listeners
@@ -56,29 +56,29 @@ class CollectStats(AbstractBehavior):
             ]
         )
         BotEventsManager().on(BotEventsManager.events.TimeToNextNap, self.onNapScheduled, originator=self)
-        self.playerStats.currentInventoryKamasBalance = InventoryManager().inventory.kamas
+        self.sessionStats.currentInventoryKamasBalance = InventoryManager().inventory.kamas
         self.onPlayerUpdate(KernelEvent.KamasUpdate)
         return True
     
     def onPlayerDied(self, event):
-        self.playerStats.nbrOfDeaths += 1
+        self.sessionStats.nbrOfDeaths += 1
         self.onPlayerUpdate(event)
 
     def onFightOutcome(self, event, outcome: FightOutcomeEnum):
         if outcome == FightOutcomeEnum.RESULT_LOST:
-            self.playerStats.nbrFightsLost += 1
+            self.sessionStats.nbrFightsLost += 1
             self.onPlayerUpdate(event)
 
     def onWeightUpdate(self, event, lastInventoryWeight, inventoryWeight, weightMax):
-        self.playerStats.currentInventoryWeightPercent = round(100 * inventoryWeight / weightMax, 2)
+        self.sessionStats.currentInventoryWeightPercent = round(100 * inventoryWeight / weightMax, 2)
         self.onPlayerUpdate(event)
         
     def onBankContent(self, event, objects, kamas):
-        self.playerStats.currentBankKamasBalance = kamas
+        self.sessionStats.currentBankKamasBalance = kamas
         self.onPlayerUpdate(event)
 
     def onNapScheduled(self, event, nap_timeout):
-        self.playerStats.nextPauseTimestamp = time.time() + nap_timeout
+        self.sessionStats.nextPauseTimestamp = time.time() + nap_timeout
         self.onPlayerUpdate(event)
 
     def addHandler(self, callback):
@@ -88,48 +88,48 @@ class CollectStats(AbstractBehavior):
         self.update_listeners.remove(callback)
 
     def onKamasSpentOnSellTax(self, event, gid, qty, amount):
-        self.playerStats.kamasSpentOnTaxes += amount
+        self.sessionStats.kamasSpentOnTaxes += amount
         self.onPlayerUpdate(event)
         
     def onItemSold(self, event, gid, qty, amount):
-        self.playerStats.kamasEarnedSelling += amount
+        self.sessionStats.kamasEarnedSelling += amount
         self.onPlayerUpdate(event)
 
     def onHuntFinished(self, event, questType):
-        self.playerStats.nbrTreasuresHuntsDone += 1
+        self.sessionStats.nbrTreasuresHuntsDone += 1
         self.onPlayerUpdate(event)
     
     def onLostKamasByBankOpen(self, event, amount):
-        self.playerStats.kamasSpentOpeningBank += int(amount)
+        self.sessionStats.kamasSpentOpeningBank += int(amount)
         self.onPlayerUpdate(event)
         
     def onTeleportWithZaap(self, event):
-        self.playerStats.numberOfTeleports += 1
+        self.sessionStats.numberOfTeleports += 1
         self.onPlayerUpdate(event)
         
     def onKamasGained(self, event, amount):
-        self.playerStats.earnedKamas += int(amount)
+        self.sessionStats.earnedKamas += int(amount)
         self.onPlayerUpdate(event)
 
     def onKamasTeleport(self, event, amount):
-        self.playerStats.kamasSpentTeleporting += int(amount)
+        self.sessionStats.kamasSpentTeleporting += int(amount)
         self.onPlayerUpdate(event)
         
     def onKamasUpdate(self, event, totalKamas):
         Logger().debug(f"Player kamas updated : {totalKamas}")
-        if self.initial_kamas is None:
-            self.initial_kamas = totalKamas
+        if self._old_saved_kamas is None:
+            self._old_saved_kamas = totalKamas
         else:
-            self.playerStats.earnedKamas = totalKamas - self.initial_kamas
-            self.playerStats.currentInventoryKamasBalance = totalKamas
+            self.sessionStats.earnedKamas = totalKamas - self._old_saved_kamas
+            self.sessionStats.currentInventoryKamasBalance = totalKamas
             self.onPlayerUpdate(event)
 
     def onJobLevelUp(self, event, jobId, jobName, lastJobLevel, newLevel, podsBonus):
         HaapiEventsManager().sendProfessionsOpenEvent()
         Kernel().worker.terminated.wait(2)
-        if jobId not in self.playerStats.earnedJobLevels:
-            self.playerStats.earnedJobLevels[jobId] = 0
-        self.playerStats.earnedJobLevels[jobId] += newLevel - lastJobLevel
+        if jobId not in self.sessionStats.earnedJobLevels:
+            self.sessionStats.earnedJobLevels[jobId] = 0
+        self.sessionStats.earnedJobLevels[jobId] += newLevel - lastJobLevel
         self.onPlayerUpdate(event)
 
     def onPlayerLevelUp(self, event, previousLevel, newLevel):
@@ -137,13 +137,13 @@ class CollectStats(AbstractBehavior):
         Kernel().worker.terminated.wait(2)
         HaapiEventsManager().sendSocialOpenEvent()
         Kernel().worker.terminated.wait(2)
-        self.playerStats.earnedLevels += newLevel - previousLevel
-        self.playerStats.currentLevel = newLevel
+        self.sessionStats.earnedLevels += newLevel - previousLevel
+        self.sessionStats.currentLevel = newLevel
         self.onPlayerUpdate(event)
 
     def onObjectAdded(self, event, gid: int, qty:int, average_kamas: int):
-        self.playerStats.estimatedKamasWon += average_kamas
-        self.playerStats.add_item_gained(gid, qty)
+        self.sessionStats.estimatedKamasWon += average_kamas
+        self.sessionStats.add_item_gained(gid, qty)
         self.onPlayerUpdate(event)
 
     def onJobExperience(self, event, oldJobXp, jobExp: JobExperience):
@@ -151,9 +151,9 @@ class CollectStats(AbstractBehavior):
 
     def onMapDataProcessed(self, event, mapId):
         HaapiEventsManager().sendRandomEvent()
-        self.playerStats.currentLevel = PlayedCharacterManager().limitedLevel
-        self.playerStats.currentMapId = mapId
-        self.playerStats.add_visited_map(mapId)
+        self.sessionStats.currentLevel = PlayedCharacterManager().limitedLevel
+        self.sessionStats.currentMapId = mapId
+        self.sessionStats.add_visited_map(mapId)
         self.onPlayerUpdate(event)
     
     def onAchievementFinished(self, event, achievement):
@@ -166,7 +166,7 @@ class CollectStats(AbstractBehavior):
         return True
 
     def onFight(self, event):
-        self.playerStats.nbrFightsDone += 1
+        self.sessionStats.nbrFightsDone += 1
         self.onPlayerUpdate(event)
 
     def flatten_dict(self, d, parent_key='', sep='.'):
@@ -193,7 +193,7 @@ class CollectStats(AbstractBehavior):
         return diff_dict
 
     def onPlayerUpdate(self, event):
-        serialized_stats = self.playerStats.model_dump()
+        serialized_stats = self.sessionStats.model_dump()
         if self._oldStats is not None:
             data_to_send = self.get_dict_diff(self._oldStats, serialized_stats)
         else:

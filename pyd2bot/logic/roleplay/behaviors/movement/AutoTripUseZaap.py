@@ -30,6 +30,8 @@ class TravelPlan:
     total_cost: float = float('inf')
     total_steps: int = 0
     use_havenbag: bool = False
+    havenbag_source_vertex: Optional[Vertex] = None
+    path_to_havenbag_point: Optional[List[Edge]] = None
 
 class AutoTripUseZaap(AbstractBehavior):
     NO_ASSOCIATED_ZAAP = 996555
@@ -83,6 +85,59 @@ class AutoTripUseZaap(AbstractBehavior):
         # Execute the travel plan
         self.executeTravelPlan()
 
+    def findHavenbagBasedPath(self) -> Optional[TravelPlan]:
+        """Find a path using havenbag with proper navigation to teleport point"""
+        direct_path = self.findDirectPath()
+        if not direct_path or not direct_path.direct_path:
+            return None
+
+        curr_vertex = PlayedCharacterManager().currVertex
+        if not curr_vertex:
+            return None
+
+        # Look for a suitable teleport point along the path
+        for i, edge in enumerate(direct_path.direct_path):
+            if not MapPosition.getMapPositionById(edge.src.mapId).allowTeleportFrom:
+                continue
+
+            teleport_cost = 10 * MapTools.distL2Maps(edge.src.mapId, self.dstZaapMapId)
+            if teleport_cost > self.maxCost:
+                continue
+
+            dst_zaap = WorldGraph().getVertex(self.dstZaapMapId, 1)
+            if not dst_zaap:
+                continue
+
+            # Find path to havenbag point
+            path_to_point = None
+            if edge.src.mapId != curr_vertex.mapId:
+                _, path_to_point = self.findTravelInfos(edge.src, src_vertex=curr_vertex)
+                if path_to_point is None:
+                    continue
+
+            _, path_from_dst = self.findTravelInfos(
+                WorldGraph().getVertex(self.dstMapId, self.dstZoneId or 1),
+                src_vertex=dst_zaap
+            )
+            if path_from_dst is None:
+                continue
+
+            total_steps = len(path_from_dst)
+            if path_to_point is not None:
+                total_steps += len(path_to_point)
+
+            return TravelPlan(
+                src_zaap=edge.src,
+                dst_zaap=dst_zaap,
+                path_from_dst_zaap=path_from_dst,
+                total_cost=teleport_cost,
+                total_steps=total_steps,
+                use_havenbag=True,
+                havenbag_source_vertex=edge.src,
+                path_to_havenbag_point=path_to_point
+            )
+        return None
+
     def findBestTravelPlan(self) -> Optional[TravelPlan]:
         """Find the best possible way to reach the destination"""
         plans = []
@@ -112,6 +167,9 @@ class AutoTripUseZaap(AbstractBehavior):
     def findDirectPath(self) -> Optional[TravelPlan]:
         """Attempt to find a direct walking path to destination"""
         if self.dstZoneId is None:
+            if PlayedCharacterManager().currVertex is None:
+                Logger().warning(f"Current player vertex is not defined, we cant look for path!")
+
             dst_vertex, path = self.findDestVertex(
                 PlayedCharacterManager().currVertex, self.dstMapId
             )
@@ -155,7 +213,7 @@ class AutoTripUseZaap(AbstractBehavior):
             return None
 
         _, path_from_dst_zaap = self.findTravelInfos(dst_vertex, src_vertex=dst_zaap)
-        if not path_from_dst_zaap:
+        if path_from_dst_zaap is None:
             return None
 
         # Calculate total cost
@@ -172,45 +230,16 @@ class AutoTripUseZaap(AbstractBehavior):
             total_steps=len(path_to_src_zaap) + len(path_from_dst_zaap)
         )
 
-    def findHavenbagBasedPath(self) -> Optional[TravelPlan]:
-        """Find a path using havenbag"""
-        direct_path = self.findDirectPath()
-        if not direct_path or not direct_path.direct_path:
-            return None
-
-        # Look for a suitable teleport point along the path
-        for i, edge in enumerate(direct_path.direct_path):
-            if not MapPosition.getMapPositionById(edge.src.mapId).allowTeleportFrom:
-                continue
-
-            teleport_cost = 10 * MapTools.distL2Maps(edge.src.mapId, self.dstZaapMapId)
-            if teleport_cost > self.maxCost:
-                continue
-
-            dst_zaap = WorldGraph().getVertex(self.dstZaapMapId, 1)
-            if not dst_zaap:
-                continue
-
-            _, path_from_dst = self.findTravelInfos(
-                WorldGraph().getVertex(self.dstMapId, self.dstZoneId or 1),
-                src_vertex=dst_zaap
-            )
-            if not path_from_dst:
-                continue
-
-            return TravelPlan(
-                src_zaap=edge.src,
-                dst_zaap=dst_zaap,
-                path_to_src_zaap=direct_path.direct_path[:i],
-                path_from_dst_zaap=path_from_dst,
-                total_cost=teleport_cost,
-                total_steps=i + len(path_from_dst),
-                use_havenbag=True
-            )
-        return None
+    def onHavenbagPointReached(self, code, err):
+        """Handler for reaching havenbag teleport point"""
+        if err:
+            return self.finish(code, err)
+            
+        Logger().debug(f"Reached havenbag point at {self.travel_plan.havenbag_source_vertex.mapId}")
+        self.toggle_haven_bag(wanted_state=True, callback=self.onInsideHavenbag)
 
     def executeTravelPlan(self):
-        """Execute the current travel plan"""
+        """Execute the current travel plan with proper havenbag point navigation"""
         if self.travel_plan.direct_path:
             Logger().debug("Executing direct path plan")
             self.autoTrip(
@@ -223,9 +252,22 @@ class AutoTripUseZaap(AbstractBehavior):
 
         self._wants_to_use_havenbag = self.travel_plan.use_havenbag
 
-        # Using zaaps or havenbag
+        if self._wants_to_use_havenbag:
+            if self.travel_plan.path_to_havenbag_point:
+                Logger().debug("Moving to havenbag teleport point")
+                self.autoTrip(
+                    self.travel_plan.havenbag_source_vertex.mapId,
+                    self.travel_plan.havenbag_source_vertex.zoneId,
+                    path=self.travel_plan.path_to_havenbag_point,
+                    callback=self.onHavenbagPointReached
+                )
+            else:
+                self.onHavenbagPointReached(0, None)
+            return
+
+        # Using zaaps
         if self.travel_plan.path_to_src_zaap:
-            Logger().debug("Moving to source zaap/teleport point")
+            Logger().debug("Moving to source zaap")
             self.autoTrip(
                 self.travel_plan.src_zaap.mapId,
                 self.travel_plan.src_zaap.zoneId,
@@ -249,8 +291,27 @@ class AutoTripUseZaap(AbstractBehavior):
     def onInsideHavenbag(self, code, err):
         if err:
             if code == ToggleHavenBag.CANT_USE_IN_CURRENT_MAP:
-                Logger().warning("Cannot use havenbag from current map, trying alternative path")
+                Logger().warning("Cannot use havenbag from current map, trying alternative paths")
+                
+                # Try zaap-based path first since it might be faster
+                zaap_plan = self.findZaapBasedPath()
+                if zaap_plan:
+                    Logger().debug("Using zaap as fallback path")
+                    self.travel_plan = zaap_plan
+                    if self.travel_plan.path_to_src_zaap is not None:
+                        self.autoTrip(
+                            self.travel_plan.src_zaap.mapId,
+                            self.travel_plan.src_zaap.zoneId,
+                            path=self.travel_plan.path_to_src_zaap,
+                            callback=self.onSrcZaapReached
+                        )
+                    else:
+                        self.onSrcZaapReached(0, None)
+                    return
+                
+                # If no zaap path, try direct path
                 if self.travel_plan.direct_path:
+                    Logger().debug("Using direct path as fallback")
                     self.autoTrip(
                         self.dstMapId,
                         self.dstZoneId,
@@ -258,7 +319,7 @@ class AutoTripUseZaap(AbstractBehavior):
                         callback=self.finish
                     )
                 else:
-                    self.finish(code, "Cannot use havenbag and no alternative path available")
+                    self.finish(code, "No alternative paths available after havenbag failed")
             else:
                 self.finish(code, err)
         else:
@@ -396,7 +457,8 @@ class AutoTripUseZaap(AbstractBehavior):
             path = AStar().search(WorldGraph(), src_vertex, dst_vertex)
             if path is not None:
                 return dst_vertex, path
-                
+            
+            Logger().debug(f"No path found for dest vertex in map {dst_vertex} and src {src_vertex}")
             rpZ += 1
             
         return None, None

@@ -15,10 +15,11 @@ class UseItem(AbstractBehavior):
         self.qty = qty
 
     def run(self):
-        self.once(KernelEvent.ObjectDeleted, self._on_item_deleted)
-        self.once(KernelEvent.ObjectAdded, self._on_item_added)
+        self.once(KernelEvent.ObjectDeleted, self._on_item_deleted, timeout=5, ontimeout=lambda *_: self.finish(2222, "Use item timed out!"))
+        self.on(KernelEvent.ObjectAdded, self._on_item_added)
         HaapiEventsManager().sendInventoryOpenEvent()
-        Kernel().inventoryManagementFrame.useItem(self.item, self.qty)
+        use_multiple = self.item.typeId != 172 # don't try to use multiple for chests
+        Kernel().inventoryManagementFrame.useItem(self.item, self.qty, use_multiple=use_multiple)
     
     def _on_item_deleted(self, event, item_uid):
         if item_uid == self.item.objectUID:

@@ -5,7 +5,6 @@ from pyd2bot.logic.roleplay.behaviors.updates.AutoUpgradeStats import AutoUpgrad
 from pyd2bot.logic.roleplay.behaviors.updates.CollectStats import CollectStats
 from pyd2bot.logic.common.frames.BotRPCFrame import BotRPCFrame
 from pyd2bot.logic.common.frames.BotWorkflowFrame import BotWorkflowFrame
-from pyd2bot.logic.common.rpcMessages.PlayerConnectedMessage import PlayerConnectedMessage
 from pyd2bot.logic.fight.frames.BotFightFrame import BotFightFrame
 from pyd2bot.logic.fight.frames.BotMuleFightFrame import BotMuleFightFrame
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
@@ -38,6 +37,7 @@ class Pyd2Bot(DofusClient):
         self._main_behavior = None
         self._stats_auto_upgrade = None
         self._saved_player_stats = None
+        self._old_saved_kamas = None
         self.session_run_id = None
         self._market_persistence_manager = None
 
@@ -58,7 +58,8 @@ class Pyd2Bot(DofusClient):
 
     def onReconnect(self, event, message, afterTime=0):
         AbstractBehavior.clear_children()
-        self._saved_player_stats = self._stats_collector.playerStats # save player stats before restarting
+        self._saved_player_stats = self._stats_collector.sessionStats # save player stats before restarting
+        self._old_saved_kamas = self._stats_collector._old_saved_kamas
         return super().onReconnect(event, message, afterTime)
 
     def onInGame(self):
@@ -154,6 +155,8 @@ class Pyd2Bot(DofusClient):
     def onCharacterSelectionSuccess(self, event, characterBaseInformations):
         super().onCharacterSelectionSuccess(event, characterBaseInformations)
         self._stats_collector = CollectStats(self._state_update_listeners, self._saved_player_stats)
+        self._stats_collector.sessionStats.isSleeping = False
+        self._stats_collector._old_saved_kamas = self._old_saved_kamas
         self._stats_collector.start()
         self._stats_auto_upgrade = AutoUpgradeStats(self.session.character.primaryStatId)
         self._stats_auto_upgrade.start()

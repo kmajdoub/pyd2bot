@@ -69,8 +69,8 @@ class NapManager:
 
     def _send_update_to_front(self) -> None:
         if self.client._stats_collector:
-            self.client._stats_collector.playerStats.timeSpentSleeping += self._nap_duration
-            self.client._stats_collector.playerStats.isSleeping = True
+            self.client._stats_collector.sessionStats.timeSpentSleeping += self._nap_duration
+            self.client._stats_collector.sessionStats.isSleeping = True
             self.client._stats_collector.onPlayerUpdate(KernelEvent.Paused)
 
     def is_napping(self) -> bool:

@@ -36,7 +36,7 @@ class UseTeleportItem(AbstractBehavior):
         else:
             self.finish(self.TIME_OUT, "Use teleport item timedout!")
             
-    def onNewMap(self, code, err):
+    def onNewMap(self, code, err=None):
         if err:
             return self.finish(code, err)
     

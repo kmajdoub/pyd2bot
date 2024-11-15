@@ -6,6 +6,7 @@ from pyd2bot.logic.roleplay.behaviors.farm.AbstractFarmBehavior import \
 from pyd2bot.logic.roleplay.behaviors.farm.CollectableResource import \
     CollectableResource
 from pyd2bot.logic.roleplay.behaviors.farm.ResourcesTracker import ResourceTracker
+from pyd2bot.logic.roleplay.behaviors.mount.PutPetsMount import PutPetsMount
 from pyd2bot.logic.roleplay.behaviors.quest.UseItemsByType import UseItemsByType
 from pyd2bot.logic.roleplay.behaviors.skill.UseSkill import UseSkill
 from pyd2bot.farmPaths.AbstractFarmPath import AbstractFarmPath
@@ -44,7 +45,7 @@ class ResourceFarm(AbstractFarmBehavior):
         self.currentTarget: CollectableResource = None
         self.current_session_id = self.resource_tracker.start_farm_session(self.path.name)
         self.session_resources = {}
-        CollectStats().playerStats.currentPathName = self.path.name
+        CollectStats().sessionStats.currentPathName = self.path.name
         CollectStats().onPlayerUpdate(KernelEvent.FarmPathStart)
 
     def onPartyInvited(self, event, partyId, partyType, fromId, fromName):
@@ -59,6 +60,10 @@ class ResourceFarm(AbstractFarmBehavior):
         if self._check_has_resources_bags():
             return True
         if self._check_solo_mod():
+            return True
+        if not PlayedCharacterManager().isPetsMounting and PutPetsMount.has_items():
+            Logger().debug("player has available non equiped pet mount")
+            PutPetsMount().start(callback=lambda *_: self.main())
             return True
         return False
     

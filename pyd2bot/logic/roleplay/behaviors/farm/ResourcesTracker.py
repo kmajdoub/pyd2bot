@@ -24,8 +24,6 @@ class ResourceTracker(metaclass=ThreadSharedSingleton):
                  expiration_days: int = 30,
                  min_connections: int = 5,
                  max_connections: int = 15):
-        
-        self.logger = Logger()
         self.expiration_days = expiration_days
         self.active_sessions = {}
         
@@ -153,7 +151,7 @@ class ResourceTracker(metaclass=ThreadSharedSingleton):
                         return result is not None and result[0]
                         
                     except Exception as e:
-                        self.logger.error(f"Database error in update_vertex_resources: {e}")
+                        Logger().error(f"Database error in update_vertex_resources: {e}")
                         conn.rollback()
                         return False
 
@@ -177,7 +175,7 @@ class ResourceTracker(metaclass=ThreadSharedSingleton):
                     result = cur.fetchone()
                     return dict(result['resource_counts']) if result else None
                 except Exception as e:
-                    self.logger.error(f"Database error in get_vertex_resources: {e}")
+                    Logger().error(f"Database error in get_vertex_resources: {e}")
                     return None
 
     def get_vertices_with_resource_minimum(self, resource_id: str, min_count: int) -> List[Dict]:
@@ -198,7 +196,7 @@ class ResourceTracker(metaclass=ThreadSharedSingleton):
                     ))
                     return cur.fetchall()
                 except Exception as e:
-                    self.logger.error(f"Database error in get_vertices_with_resource_minimum: {e}")
+                    Logger().error(f"Database error in get_vertices_with_resource_minimum: {e}")
                     return []
 
     def start_farm_session(self, path_id: str) -> Optional[int]:
@@ -233,7 +231,7 @@ class ResourceTracker(metaclass=ThreadSharedSingleton):
                         
                         return session_id
                     except Exception as e:
-                        self.logger.error(f"Database error in start_farm_session: {str(e)}")
+                        Logger().error(f"Database error in start_farm_session: {str(e)}")
                         conn.rollback()
                         return None
 
@@ -252,7 +250,7 @@ class ResourceTracker(metaclass=ThreadSharedSingleton):
                         
                         result = cur.fetchone()
                         if result is None:
-                            self.logger.error(f"Session {session_id} not found")
+                            Logger().error(f"Session {session_id} not found")
                             return False
                         
                         current_qty = result[0]
@@ -260,7 +258,7 @@ class ResourceTracker(metaclass=ThreadSharedSingleton):
                         
                         # Ensure we don't go below 0
                         if new_qty < 0:
-                            self.logger.warning(
+                            Logger().warning(
                                 f"Attempted to reduce resource {resource_id} below 0 "
                                 f"(current: {current_qty}, change: {qty})"
                             )
@@ -295,7 +293,7 @@ class ResourceTracker(metaclass=ThreadSharedSingleton):
                         
                         result = cur.fetchone()
                         if result is None:
-                            self.logger.error(f"Session {session_id} not found")
+                            Logger().error(f"Session {session_id} not found")
                             return False
                             
                         conn.commit()
@@ -307,22 +305,22 @@ class ResourceTracker(metaclass=ThreadSharedSingleton):
                             if avg_price:
                                 value = avg_price * qty
                                 total_value = avg_price * new_qty
-                                self.logger.debug(
+                                Logger().debug(
                                     f"{'Added' if qty > 0 else 'Removed'} {abs(qty)} x {resource_id} "
                                     f"(value: {abs(value):,} kamas, total: {total_value:,} kamas)"
                                 )
                             else:
-                                self.logger.debug(
+                                Logger().debug(
                                     f"{'Added' if qty > 0 else 'Removed'} {abs(qty)} x {resource_id} "
                                     "(no price available)"
                                 )
                         except (ValueError, TypeError) as e:
-                            self.logger.warning(f"Error calculating value for resource {resource_id}: {e}")
+                            Logger().warning(f"Error calculating value for resource {resource_id}: {e}")
                         
                         return True
                         
                     except Exception as e:
-                        self.logger.error(f"Database error in update_session_collected_resources: {e}")
+                        Logger().error(f"Database error in update_session_collected_resources: {e}")
                         conn.rollback()
                         return False
 
@@ -341,7 +339,7 @@ class ResourceTracker(metaclass=ThreadSharedSingleton):
                         
                         result = cur.fetchone()
                         if not result:
-                            self.logger.error(f"Session {session_id} not found")
+                            Logger().error(f"Session {session_id} not found")
                             return
                             
                         start_time = result[0]
@@ -381,7 +379,7 @@ class ResourceTracker(metaclass=ThreadSharedSingleton):
                         self.active_sessions.pop(session_id, None)
                         
                     except Exception as e:
-                        self.logger.error(f"Database error in end_farm_session: {e}")
+                        Logger().error(f"Database error in end_farm_session: {e}")
                         conn.rollback()
 
     def get_path_statistics(self, path_id: str, days: Optional[int] = None) -> Optional[Dict]:
@@ -450,7 +448,7 @@ class ResourceTracker(metaclass=ThreadSharedSingleton):
                     }
                     
                 except Exception as e:
-                    self.logger.error(f"Database error in get_path_statistics: {str(e)}")
+                    Logger().error(f"Database error in get_path_statistics: {str(e)}")
                     return None
 
     def pause_session(self, session_id: int):
@@ -498,7 +496,7 @@ class ResourceTracker(metaclass=ThreadSharedSingleton):
                             session_state['last_pause_time'] = current_time
                             
                     except Exception as e:
-                        self.logger.error(f"Database error in pause_session: {e}")
+                        Logger().error(f"Database error in pause_session: {e}")
                         conn.rollback()
 
     def resume_session(self, session_id: int):
@@ -527,70 +525,13 @@ class ResourceTracker(metaclass=ThreadSharedSingleton):
                         
                         deleted_count = len(cur.fetchall())
                         conn.commit()
-                        self.logger.info(f"Cleaned {deleted_count} expired vertex entries")
+                        Logger().info(f"Cleaned {deleted_count} expired vertex entries")
                         
                     except Exception as e:
-                        self.logger.error(f"Database error in clean_expired_data: {e}")
+                        Logger().error(f"Database error in clean_expired_data: {e}")
                         conn.rollback()
     
     def __del__(self):
         """Clean up connection pool on deletion"""
         if hasattr(self, 'pool'):
             self.pool.closeall()
-
-if __name__ == "__main__":
-    Logger.logToConsole = True
-    tracker = ResourceTracker()
-    
-    # Test 1: Update vertex resources
-    print("\n--- Test 1: Update Vertex Resources ---")
-    vertex = Vertex(123456, 1, "test_vertex_1")
-    result = tracker.update_vertex_resources(vertex, [1234, 1234, 5678])  # Multiple resources
-    print(f"Update result: {result}")
-
-    # Test 2: Get vertex resources
-    print("\n--- Test 2: Get Vertex Resources ---")
-    resources = tracker.get_vertex_resources("test_vertex_1")
-    print(f"Retrieved resources: {resources}")
-
-    # Test 3: Start farm session
-    print("\n--- Test 3: Start Farm Session ---")
-    session_id = tracker.start_farm_session("test_path_1")
-    print(f"Started session ID: {session_id}")
-
-    # Test 4: Update collected resources
-    print("\n--- Test 4: Update Session Resources ---")
-    if session_id:
-        result = tracker.update_session_collected_resources(session_id, "1234", 5)
-        print(f"Updated session resources: {result}")
-
-    # Test 5: Pause/Resume session
-    print("\n--- Test 5: Pause/Resume Session ---")
-    if session_id:
-        tracker.pause_session(session_id)
-        print("Session paused")
-        # Wait a bit to simulate pause
-        import time
-        time.sleep(2)
-        tracker.resume_session(session_id)
-        print("Session resumed")
-
-    # Test 6: End session
-    print("\n--- Test 6: End Session ---")
-    if session_id:
-        tracker.end_farm_session(session_id, {"1234": 5, "5678": 3})
-        print("Session ended")
-
-    # Test 7: Get statistics
-    print("\n--- Test 7: Get Path Statistics ---")
-    stats = tracker.get_path_statistics("test_path_1")
-    print(f"Path statistics: {stats}")
-
-    # Test 8: Find vertices with minimum resources
-    print("\n--- Test 8: Find Vertices with Resources ---")
-    vertices = tracker.get_vertices_with_resource_minimum("1234", 2)
-    print(f"Found vertices: {vertices}")
-
-    # Test 9: Clean expired data
-    print("\n--- Test 9: Clean Expired Data ---")
-    tracker.clean_expired_data()

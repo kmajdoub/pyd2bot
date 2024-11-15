@@ -145,7 +145,7 @@ class MarketPersistenceManager(AbstractBehavior):
                     object_gid=item.objectGID,
                     batch_size=item.quantity,
                     price=item.price,
-                    sold_at=datetime.fromtimestamp(item.date, tz=timezone.utc)
+                    sold_at=item.date
                 )
         except Exception as e:
             self.logger.error(f"Failed to process offline sales: {e}")

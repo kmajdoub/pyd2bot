@@ -478,7 +478,7 @@ class BotFightFrame(Frame):
             self.nextTurnAction("Play turn no targets")
             return
         if self.session.isTreasureHuntSession:
-            targetsFilters = [(self.spellw, True, 2672), (self.spellw, True, 91)]
+            targetsFilters = [(self.spellw, True, 2672)]
         else:
             targetsFilters = [(self.spellw, False, None), (self.spellw, True, None)]
         for args in targetsFilters:

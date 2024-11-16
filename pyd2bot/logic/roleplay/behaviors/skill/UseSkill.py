@@ -40,8 +40,8 @@ class UseSkill(AbstractBehavior):
         self.ie = None
         self.useErrorListener = None
         self._curr_skill_mp = None
-        self._reach_skillcell_fails = 0
-        self._move_to_skillcell_landingcell = None
+        self._reach_skill_cell_fails = 0
+        self._move_to_skill_cell_landingcell = None
         self._cells_blacklist = []
         self._wanted_player_stop = False
         self._stop_code = None
@@ -89,7 +89,7 @@ class UseSkill(AbstractBehavior):
                 if self._wanted_player_stop:
                     return self.finish(self._stop_code, self._stop_message)
             return self.finish(code, err)
-        self._move_to_skillcell_landingcell = landingCell
+        self._move_to_skill_cell_landingcell = landingCell
         self.requestActivateSkill()
         
     def _useSkill(self) -> None:
@@ -146,9 +146,9 @@ class UseSkill(AbstractBehavior):
                 else:
                     self.finish(True, None)
 
-    def onInteractiveUpdated(self, event, ieumsg: InteractiveElementUpdatedMessage):
-        if ieumsg.interactiveElement.elementId == self.elementId:
-            for skill in ieumsg.interactiveElement.disabledSkills:
+    def onInteractiveUpdated(self, event, msg: InteractiveElementUpdatedMessage):
+        if msg.interactiveElement.elementId == self.elementId:
+            for skill in msg.interactiveElement.disabledSkills:
                 if skill.skillInstanceUid == self.skillUID:
                     self.finish(True, None)
 
@@ -160,13 +160,13 @@ class UseSkill(AbstractBehavior):
     def onMapDataRefreshedAfterUseError(self, code, err, elementId):
         if err:
             self.finish(code, err)
-        if self._move_to_skillcell_landingcell.cellId != PlayedCharacterManager().playerMapPoint.cellId:
-            self._cells_blacklist.append(self._move_to_skillcell_landingcell.cellId)
-            self._reach_skillcell_fails += 1
-            Logger().warning(f"Player movement to useskill cell didn't actually get executed by server")
-            if self._reach_skillcell_fails > 3:
+        if self._move_to_skill_cell_landingcell.cellId != PlayedCharacterManager().playerMapPoint.cellId:
+            self._cells_blacklist.append(self._move_to_skill_cell_landingcell.cellId)
+            self._reach_skill_cell_fails += 1
+            Logger().warning(f"Player movement to use kill cell didn't actually get executed by server")
+            if self._reach_skill_cell_fails > 3:
                 return self.finish(self.USE_ERROR, f"Use Error for element {elementId} - Server refuses to move player to skill cell")
-            Logger().debug(f"retrying for {self._reach_skillcell_fails} time")
+            Logger().debug(f"retrying for {self._reach_skill_cell_fails} time")
             return self.mapMove(destCell=self._curr_skill_mp.cellId, exactDestination=False, callback=self.onUseSkillCellReached, cellsblacklist=self._cells_blacklist)
         self.finish(self.USE_ERROR, f"Use Error for element {elementId}!")
         
@@ -196,13 +196,13 @@ class UseSkill(AbstractBehavior):
 
     def sendRequestSkill(self, additionalParam=0):
         if additionalParam == 0:
-            iurmsg = InteractiveUseRequestMessage()
-            iurmsg.init(int(self.elementId), int(self.skillUID))
-            ConnectionsHandler().send(iurmsg)
+            msg = InteractiveUseRequestMessage()
+            msg.init(int(self.elementId), int(self.skillUID))
+            ConnectionsHandler().send(msg)
         else:
-            iuwprmsg = InteractiveUseWithParamRequestMessage()
-            iuwprmsg.init(int(self.elementId), int(self.skillUID), int(additionalParam))
-            ConnectionsHandler().send(iuwprmsg)
+            msg = InteractiveUseWithParamRequestMessage()
+            msg.init(int(self.elementId), int(self.skillUID), int(additionalParam))
+            ConnectionsHandler().send(msg)
         InactivityManager().activity()
 
     def getInteractiveElement(self, elementId, skilluid, callback) -> InteractiveElementData:

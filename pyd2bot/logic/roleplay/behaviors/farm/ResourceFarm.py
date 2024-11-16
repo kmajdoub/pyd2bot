@@ -132,7 +132,7 @@ class ResourceFarm(AbstractFarmBehavior):
         else:
             self.logResourcesTable(nonForbiddenResources)
             self.currentTarget = nonForbiddenResources[0]
-            self.useSkill(
+            self.use_skill(
                 elementId=self.currentTarget.resource.id,
                 skilluid=self.currentTarget.resource.interactiveSkill.skillInstanceUid,
                 cell=self.currentTarget.nearestCell.cellId,

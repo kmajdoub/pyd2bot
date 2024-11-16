@@ -243,6 +243,8 @@ class BotFightFrame(Frame):
 
     @property
     def spellId(self) -> int:
+        if self.session.isTreasureHuntSession:
+            return self.currentPlayer.treasureHuntFightSpellId
         return self.currentPlayer.primarySpellId
 
     @property

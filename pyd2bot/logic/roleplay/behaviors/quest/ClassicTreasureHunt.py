@@ -197,7 +197,7 @@ class ClassicTreasureHunt(AbstractBehavior):
         Logger().debug(f"Distance to ATM Zaap is {distanceToTHATMZaap} maps steps")
         if distanceToTHATMZaap > 12:
             if int(Kernel().zaapFrame.spawnMapId) == int(self.ZAAP_HUNT_MAP):
-                if self.useRappelPotion(self.onTeleportToDistributorNearestZaap):
+                if self.use_rappel_potion(self.onTeleportToDistributorNearestZaap):
                     return
                 Logger().debug(f"No rappel potions found in player consumable view")
             else:
@@ -252,7 +252,7 @@ class ClassicTreasureHunt(AbstractBehavior):
             return self.finish(code, err)
 
         Logger().debug(f"Getting treasure hunt from distributor")
-        self.useSkill(
+        self.use_skill(
             elementId=self.TREASURE_HUNT_ATM_IE_ID,
             skilluid=self.TREASURE_HUNT_ATM_SKILLUID,
             callback=self.onTreasureHuntTaken,
@@ -425,7 +425,7 @@ class ClassicTreasureHunt(AbstractBehavior):
     def onStartMapReached(self, code, err):
         if err:
             if code == AutoTrip.NO_PATH_FOUND:
-                if self.useRappelPotion(lambda *_: self.travel_using_zaap(self.startMapId, maxCost=self.maxCost, callback=self.onStartMapReached)):
+                if self.use_rappel_potion(lambda *_: self.travel_using_zaap(self.startMapId, maxCost=self.maxCost, callback=self.onStartMapReached)):
                     return
                 Logger().error("Bot is stuck and has no rappel potion!")
             return self.finish(code, err)

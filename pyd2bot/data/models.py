@@ -116,6 +116,10 @@ class Character(BaseModel):
         return breedId
 
     @property
+    def treasureHuntFightSpellId(self):
+        return BotSettings.defaultBreedConfig[self.breedId]["treasureHuntFightSpellId"]
+    
+    @property
     def primarySpellId(self) -> int:
         return BotSettings.defaultBreedConfig[self.breedId]["primarySpellId"]
 

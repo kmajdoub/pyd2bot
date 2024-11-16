@@ -84,7 +84,7 @@ class CollectableResource:
         return self.canCollect
 
     def farm(self, callback, caller: 'AbstractFarmBehavior'=None):
-        caller.useSkill(
+        caller.use_skill(
             elementId=self.resource.id,
             skilluid=self.resource.interactiveSkill.skillInstanceUid,
             cell=self.nearestCell.cellId,

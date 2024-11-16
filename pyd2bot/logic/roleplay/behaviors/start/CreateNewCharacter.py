@@ -117,7 +117,7 @@ class CreateNewCharacter(AbstractBehavior):
                 if error:
                    return self.finish(status, error)
                 KernelEventsManager().onceMapProcessed(lambda:self.finish(True, None, character=self.character), mapId=152046597, originator=self)
-            UseSkill().start(None, elementId=489318, skilluid=148931090, waitForSkillUsed=True, callback=onSkillUsed, parent=self)
+            self.use_skill(ie=None, elementId=489318, skilluid=148931090, waitForSkillUsed=True, callback=onSkillUsed)
         
     def onCharacterList(self, event, return_value):
         for ch in PlayerManager().charactersList:

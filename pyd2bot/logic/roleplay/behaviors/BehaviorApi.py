@@ -322,11 +322,7 @@ class BehaviorApi:
 
         UseZaap().start(dstMapId, saveZaap, callback=callback, parent=self)
 
-    def useRappelPotion(self, callback):
-        iw = ItemWrapper._cacheGId.get(DataEnum.RAPPEL_POTION_GUID)
-        if iw:
-            self.useTeleportItem(iw, callback=callback)
-            return True
+    def use_rappel_potion(self, callback):
         for iw in InventoryManager().inventory.getView("storageConsumables").content:
             if iw.objectGID == DataEnum.RAPPEL_POTION_GUID:
                 self.useTeleportItem(iw, callback=callback)
@@ -340,7 +336,7 @@ class BehaviorApi:
         b.start(callback=callback, parent=self)
         return b
 
-    def useSkill(
+    def use_skill(
         self,
         ie=None,
         cell=None,

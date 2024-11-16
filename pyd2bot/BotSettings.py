@@ -22,18 +22,22 @@ class BotSettings:
     defaultBreedConfig = {
         BreedEnum.Sadida: {
             "primarySpellId": 13516, # Ronce
+            "treasureHuntFightSpellId": 13528, # larme
             "primaryStat": StatIds.STRENGTH,
         },
         BreedEnum.Sram: {
             "primarySpellId": 12902, # Truanderie
+            "treasureHuntFightSpellId": 12902,
             "primaryStat": StatIds.STRENGTH,
         },  
         BreedEnum.Cra: {
             "primarySpellId": 13047, # Fleche optique
+            "treasureHuntFightSpellId": 13047,
             "primaryStat": StatIds.AGILITY,
         },
         BreedEnum.Feca: {
             "primarySpellId": 12978, # Attaque naturelle
+            "treasureHuntFightSpellId": 12978,
             "primaryStat": StatIds.INTELLIGENCE,
         }
     }

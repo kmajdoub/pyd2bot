@@ -31,7 +31,7 @@ class SaveZaap(AbstractBehavior):
             event_id=KernelEvent.TeleportDestinationList,
             callback=self.onTeleportDestinationList,
         )
-        self.useSkill(ie=self.zaapIe, waitForSkillUsed=False, callback=self.onZaapSkillUsed)
+        self.use_skill(ie=self.zaapIe, waitForSkillUsed=False, callback=self.onZaapSkillUsed)
         
     def onZaapSkillUsed(self, code, err):
         if err:

@@ -118,7 +118,7 @@ class OpenMarket(AbstractBehavior):
         self._market_frame._market_ie_id = self.MARKETPLACE_TYPES[self._market_type][0]
         self._market_frame._market_gfx = self.MARKETPLACE_TYPES[self._market_type][1]
         
-        self.useSkill(
+        self.use_skill(
             ie=self.market_ie,
             waitForSkillUsed=False,
             callback=self._on_market_open

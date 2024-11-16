@@ -453,7 +453,7 @@ class ChangeMap(AbstractBehavior):
         self.movementError = MovementFailError.INTERACTIVE_USE_ERROR
         self.exactDestination = False
         self.setupMapChangeListener()
-        self.useSkill(
+        self.use_skill(
             elementId=self.transition.id,
             skilluid=self.transition.skillId,
             cell=self.transition.cell,

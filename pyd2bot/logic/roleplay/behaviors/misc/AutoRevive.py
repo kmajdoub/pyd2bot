@@ -60,7 +60,7 @@ class AutoRevive(AbstractBehavior):
                 if error:
                     return self.finish(code, error)
                 Logger().info("Phenix revive skill used")
-            self.useSkill(ie=reviveIE, callback=onPhenixSkillUsed)
+            self.use_skill(ie=reviveIE, callback=onPhenixSkillUsed)
         else:
             self.once_frame_pushed("RoleplayInteractivesFrame", self.onPhenixMapReached)
             

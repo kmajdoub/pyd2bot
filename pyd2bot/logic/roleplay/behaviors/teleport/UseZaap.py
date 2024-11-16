@@ -106,7 +106,7 @@ class UseZaap(AbstractBehavior):
         return movePath.end
         
     def _use_zaap_skill(self):
-        self.useSkill(ie=self.zaapIe, waitForSkillUsed=False, callback=self._on_zaap_skill_used)
+        self.use_skill(ie=self.zaapIe, waitForSkillUsed=False, callback=self._on_zaap_skill_used)
     
     def _on_zaap_skill_used(self, code, err):
         if err:

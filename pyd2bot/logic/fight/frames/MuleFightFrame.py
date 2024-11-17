@@ -28,7 +28,7 @@ from pydofus2.com.ankamagames.jerakine.messages.Message import Message
 from pydofus2.com.ankamagames.jerakine.types.enums.Priority import Priority
 
 
-class BotMuleFightFrame(Frame):
+class MuleFightFrame(Frame):
     
     def __init__(self, leader: Character):
         super().__init__()

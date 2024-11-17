@@ -139,8 +139,8 @@ class BotExchange(AbstractBehavior):
             event_id=KernelEvent.ExchangeStartedType, 
             callback=self.onExchangeOpen, 
             timeout=self.EXCHANGE_REQ_TIMEOUT,
-            retryNbr=5,
-            retryAction=lambda: Kernel().exchangeManagementFrame.exchangePlayerRequest(ExchangeTypeEnum.PLAYER_TRADE, self.target.id),
+            retry_nbr=5,
+            retry_action=lambda: Kernel().exchangeManagementFrame.exchangePlayerRequest(ExchangeTypeEnum.PLAYER_TRADE, self.target.id),
             ontimeout=lambda: self.finish(self.EXCHANGE_REQ_TIMEOUT, "send exchange timedout"), 
         )
         Kernel().exchangeManagementFrame.exchangePlayerRequest(ExchangeTypeEnum.PLAYER_TRADE, self.target.id)
@@ -185,8 +185,8 @@ class BotExchange(AbstractBehavior):
             event_id=KernelEvent.ExchangeClose, 
             callback=self.onExchangeLeave, 
             timeout=5,
-            retryNbr=5,
-            retryAction=lambda: Kernel().commonExchangeManagementFrame.exchangeReady(True),
+            retry_nbr=5,
+            retry_action=lambda: Kernel().commonExchangeManagementFrame.exchangeReady(True),
             ontimeout=lambda: self.finish(self.EXCHANGE_READY_TIMEOUT, "Exchange ready timeout."), 
         )
         Kernel().commonExchangeManagementFrame.exchangeReady(True)

@@ -110,7 +110,11 @@ class BehaviorApi:
         if path_to_dest_zaap is None:
             Logger().warning(f"No dest zaap found for cost {maxCost} and map {dstMapId}!")
             return self.autoTrip(dstMapId, dstZoneId, callback=callback)
-        dstZaapVertex = path_to_dest_zaap[-1].dst
+        
+        if len(path_to_dest_zaap) == 0:
+            dstZaapVertex = currVertex = PlayedCharacterManager().currVertex
+        else:
+            dstZaapVertex = path_to_dest_zaap[-1].dst
 
         def on_dst_zaap_unknown():
             Logger().debug(f"Dest zaap at vertex {dstZaapVertex} is not known ==> We need to travel to register it.")
@@ -270,7 +274,22 @@ class BehaviorApi:
             cellsblacklist=cellsblacklist,
             parent=self,
         )
+    
+    def watch_fight_sequence(self, callback):
+        from pyd2bot.logic.fight.frames.fight_turn.WatchFightSequence import WatchFightSequence
 
+        WatchFightSequence().start(parent=self, callback=callback)
+        
+    def fight_move(self, path_cellIds: List[int], callback=None):
+        from pyd2bot.logic.fight.frames.fight_turn.FightMove import FightMoveBehavior
+
+        FightMoveBehavior(path_cellIds).start(callback=callback, parent=self)
+
+    def cast_spell(self, target_cellId: int, callback=None):
+        from pyd2bot.logic.fight.frames.fight_turn.CastSpell import CastSpell
+
+        CastSpell(target_cellId).start(callback=callback, parent=self)
+        
     def use_items_of_type(self, type_id, callback=None):
         from pyd2bot.logic.roleplay.behaviors.quest.UseItemsByType import UseItemsByType
 
@@ -579,14 +598,14 @@ class BehaviorApi:
             originator=self,
         )
 
-    def once(self, event_id, callback, timeout=None, ontimeout=None, retryNbr=None, retryAction=None):
+    def once(self, event_id, callback, timeout=None, ontimeout=None, retry_nbr=None, retry_action=None):
         return self.on(
             event_id,
             callback,
             timeout=timeout,
             ontimeout=ontimeout,
-            retryNbr=retryNbr,
-            retryAction=retryAction,
+            retryNbr=retry_nbr,
+            retryAction=retry_action,
             once=True,
         )
 

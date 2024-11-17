@@ -87,8 +87,8 @@ class AutoTripUseZaap(AbstractBehavior):
 
     def findHavenbagBasedPath(self) -> Optional[TravelPlan]:
         """Find a path using havenbag with proper navigation to teleport point"""
-        direct_path = self.findDirectPath()
-        if not direct_path or not direct_path.direct_path:
+        direct_path_plan = self.findDirectPathPlan()
+        if not direct_path_plan or direct_path_plan.direct_path is None:
             return None
 
         curr_vertex = PlayedCharacterManager().currVertex
@@ -96,7 +96,7 @@ class AutoTripUseZaap(AbstractBehavior):
             return None
 
         # Look for a suitable teleport point along the path
-        for i, edge in enumerate(direct_path.direct_path):
+        for i, edge in enumerate(direct_path_plan.direct_path):
             if not MapPosition.getMapPositionById(edge.src.mapId).allowTeleportFrom:
                 continue
 
@@ -143,7 +143,7 @@ class AutoTripUseZaap(AbstractBehavior):
         plans = []
 
         # Try direct path first
-        direct_plan = self.findDirectPath()
+        direct_plan = self.findDirectPathPlan()
         if direct_plan:
             plans.append(direct_plan)
 
@@ -164,7 +164,7 @@ class AutoTripUseZaap(AbstractBehavior):
         # Return the plan with lowest total steps
         return min(plans, key=lambda p: p.total_steps)
 
-    def findDirectPath(self) -> Optional[TravelPlan]:
+    def findDirectPathPlan(self) -> Optional[TravelPlan]:
         """Attempt to find a direct walking path to destination"""
         if self.dstZoneId is None:
             if PlayedCharacterManager().currVertex is None:
@@ -181,7 +181,7 @@ class AutoTripUseZaap(AbstractBehavior):
                 dst_vertex, src_vertex=PlayedCharacterManager().currVertex
             )
         
-        if not path:
+        if path is None:
             return None
 
         return TravelPlan(
@@ -240,7 +240,7 @@ class AutoTripUseZaap(AbstractBehavior):
 
     def executeTravelPlan(self):
         """Execute the current travel plan with proper havenbag point navigation"""
-        if self.travel_plan.direct_path:
+        if self.travel_plan.direct_path is not None:
             Logger().debug("Executing direct path plan")
             self.autoTrip(
                 self.dstMapId,
@@ -253,7 +253,7 @@ class AutoTripUseZaap(AbstractBehavior):
         self._wants_to_use_havenbag = self.travel_plan.use_havenbag
 
         if self._wants_to_use_havenbag:
-            if self.travel_plan.path_to_havenbag_point:
+            if self.travel_plan.path_to_havenbag_point is not None:
                 Logger().debug("Moving to havenbag teleport point")
                 self.autoTrip(
                     self.travel_plan.havenbag_source_vertex.mapId,
@@ -266,7 +266,7 @@ class AutoTripUseZaap(AbstractBehavior):
             return
 
         # Using zaaps
-        if self.travel_plan.path_to_src_zaap:
+        if self.travel_plan.path_to_src_zaap is not None:
             Logger().debug("Moving to source zaap")
             self.autoTrip(
                 self.travel_plan.src_zaap.mapId,
@@ -293,9 +293,12 @@ class AutoTripUseZaap(AbstractBehavior):
             if code == ToggleHavenBag.CANT_USE_IN_CURRENT_MAP:
                 Logger().warning("Cannot use havenbag from current map, trying alternative paths")
                 
+                # Reset havenbag flag to prevent loops
+                self._wants_to_use_havenbag = False
+            
                 # Try zaap-based path first since it might be faster
                 zaap_plan = self.findZaapBasedPath()
-                if zaap_plan:
+                if zaap_plan is not None:
                     Logger().debug("Using zaap as fallback path")
                     self.travel_plan = zaap_plan
                     if self.travel_plan.path_to_src_zaap is not None:
@@ -310,7 +313,7 @@ class AutoTripUseZaap(AbstractBehavior):
                     return
                 
                 # If no zaap path, try direct path
-                if self.travel_plan.direct_path:
+                if self.travel_plan.direct_path is not None:
                     Logger().debug("Using direct path as fallback")
                     self.autoTrip(
                         self.dstMapId,
@@ -363,10 +366,24 @@ class AutoTripUseZaap(AbstractBehavior):
                 else:
                     self.finish(code, err)
                 return
+            if code == UseZaap.ZAAP_USE_ERROR:
+                direct_plan = self.findDirectPathPlan()  # Get fresh direct path
+                if direct_plan and direct_plan.direct_path is not None:
+                    Logger().debug("Found walking path as fallback for zaap use error")
+                    self.travel_plan = direct_plan
+                    self.autoTrip(
+                        self.dstMapId,
+                        self.dstZoneId,
+                        path=self.travel_plan.direct_path,
+                        callback=self.finish
+                    )
+                else:
+                    self.finish(code, f"Zaap use failed and no walking path available: {err}")
+                return
 
             elif code in [UseZaap.DST_ZAAP_NOT_KNOWN, UseZaap.ZAAP_USE_ERROR]:
                 Logger().warning(f"Zaap error: {err}")
-                if self.travel_plan.direct_path:
+                if self.travel_plan.direct_path is not None:
                     self.autoTrip(
                         self.dstMapId,
                         self.dstZoneId,
@@ -391,7 +408,7 @@ class AutoTripUseZaap(AbstractBehavior):
 
     def travelToDestOnFeet(self):
         """Travel from destination zaap to final destination"""
-        if not self.travel_plan.path_from_dst_zaap:
+        if self.travel_plan.path_from_dst_zaap is not None:
             Logger().warning("No path from destination zaap to final destination")
             return self.finish(
                 self.NO_PATH_TO_DEST,

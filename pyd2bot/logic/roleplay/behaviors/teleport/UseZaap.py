@@ -53,8 +53,8 @@ class UseZaap(AbstractBehavior):
             self._on_teleport_destination_list,
             timeout=10,
             ontimeout=self._on_zaap_skill_use_error,
-            retryNbr=2,
-            retryAction=self._use_zaap_skill
+            retry_nbr=2,
+            retry_action=self._use_zaap_skill
         )
         self._use_zaap_skill()
     
@@ -90,8 +90,8 @@ class UseZaap(AbstractBehavior):
             self._on_teleport_destination_list,
             timeout=10,
             ontimeout=self._on_zaap_skill_use_error,
-            retryNbr=2,
-            retryAction=self._use_zaap_skill
+            retry_nbr=2,
+            retry_action=self._use_zaap_skill
         )
         self._use_zaap_skill()
 

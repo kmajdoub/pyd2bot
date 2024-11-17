@@ -39,6 +39,7 @@ class ResourceFarm(AbstractFarmBehavior):
         self.deadEnds = set()
         self.resource_tracker = ResourceTracker(expiration_days=30)
         self.session_paused = False  # Track session pause state locally
+        self._skip_check_solo_mod = False
 
     def init(self):
         self.path.init()
@@ -59,7 +60,7 @@ class ResourceFarm(AbstractFarmBehavior):
     def _specific_checks(self):
         if self._check_has_resources_bags():
             return True
-        if self._check_solo_mod():
+        if not self._skip_check_solo_mod and self._check_solo_mod():
             return True
         if not PlayedCharacterManager().isPetsMounting and PutPetsMount.has_items():
             Logger().debug("player has available non equiped pet mount")
@@ -100,6 +101,7 @@ class ResourceFarm(AbstractFarmBehavior):
     def _on_player_solo_mod(self, code, error):
         if error:
             Logger().error(error)
+        self._skip_check_solo_mod = True
         self.main()  # Continue farming
     
     def finish(self, code, error):

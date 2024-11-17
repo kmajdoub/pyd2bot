@@ -1,7 +1,6 @@
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
 from pyd2bot.logic.roleplay.behaviors.movement.MapMove import MapMove
-from pyd2bot.logic.roleplay.behaviors.movement.RequestMapData import \
-    RequestMapData
+
 from pydofus2.com.ankamagames.berilia.managers.EventsHandler import (Event,
                                                                      Listener)
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
@@ -11,7 +10,6 @@ from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
 from pydofus2.com.ankamagames.dofus.kernel.net.ConnectionsHandler import \
     ConnectionsHandler
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.InactivityManager import InactivityManager
-from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import PlayedCharacterManager
 from pydofus2.com.ankamagames.dofus.network.messages.game.context.roleplay.fight.GameRolePlayAttackMonsterRequestMessage import \
     GameRolePlayAttackMonsterRequestMessage
 from pydofus2.com.ankamagames.dofus.network.types.game.context.GameContextActorInformations import \
@@ -101,14 +99,13 @@ class AttackMonsters(AbstractBehavior):
                 return self.finish(self.ENTITY_VANISHED, self._stop_message)
         if error:
             return self.finish(status, error)
-        self.attackMonsterListener = KernelEventsManager().once(
+        self.attackMonsterListener = self.once(
             event_id=KernelEvent.FightStarted,
             callback=lambda event: self.finish(True, None), 
             timeout=self.FIGHT_REQ_TIMEOUT, 
             ontimeout=self.finish, 
-            retryNbr=3,
-            retryAction=self.restart,
-            originator=self
+            retry_nbr=3,
+            retry_action=self.restart
         )
         self.requestAttackMonsters()
 

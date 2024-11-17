@@ -186,8 +186,8 @@ class UseSkill(AbstractBehavior):
                 self.onUseError,
                 timeout=self.REQ_TIMEOUT,
                 ontimeout=lambda _: self.finish(self.TIMEOUT, "Request timed out"),
-                retryAction=self.sendRequestSkill,
-                retryNbr=self.MAX_TIMEOUTS,
+                retry_action=self.sendRequestSkill,
+                retry_nbr=self.MAX_TIMEOUTS,
             )
             self.currentRequestedElementId = self.elementId
         self.sendRequestSkill()

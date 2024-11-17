@@ -346,7 +346,7 @@ class Localizer:
         
         for startVertex in possible_start_vertices:
             path = cls.findPathToClosestVertexCandidate(startVertex, candidates)
-            if path and (shortest_path is None or len(path) < shortest_distance):
+            if (path is not None) and (shortest_path is None or len(path) < shortest_distance):
                 shortest_path = path
                 shortest_distance = len(path)
                 

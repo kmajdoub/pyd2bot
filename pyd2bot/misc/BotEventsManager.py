@@ -64,15 +64,7 @@ class BotEventsManager(EventsHandler, metaclass=Singleton):
 
         return KernelEventsManager().on(KernelEvent.FighterMovementApplied, onEvt, originator=originator)
 
-    def onceFighterCastedSpell(self, fighterId, cellId, callback, args=[], originator=None):
-        def onEvt(event: Event, sourceId, destinationCellId, sourceCellId, spellId):
-            if sourceId == fighterId and cellId == destinationCellId:
-                event.listener.delete()
-                callback(*args)
-
-        return KernelEventsManager().on(KernelEvent.FighterCastedSpell, onEvt, originator=originator)
-
-    def onceMuleJoinedFightContext(self, tgt_muleId, callback, originator=None):
+    def once_member_joined_fight_context(self, tgt_muleId, callback, originator=None):
         def onMuleJoinedFightContext(event: Event, muleId):
             if muleId == tgt_muleId:
                 event.listener.delete()

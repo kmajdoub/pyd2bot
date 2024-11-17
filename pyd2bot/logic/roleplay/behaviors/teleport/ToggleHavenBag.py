@@ -61,8 +61,8 @@ class ToggleHavenBag(AbstractBehavior):
                     KernelEvent.InHavenBag,
                     self.finish,
                     timeout=self.TIMEOUT,
-                    retryNbr=self.MAX_RETRIES,
-                    retryAction=self.onHeavenBagEnterTimeout,
+                    retry_nbr=self.MAX_RETRIES,
+                    retry_action=self.onHeavenBagEnterTimeout,
                     ontimeout=lambda _: self.finish(self.TIMEDOUT, "Haven bag enter timedout too many times"),
                 )
             else:

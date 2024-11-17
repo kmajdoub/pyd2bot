@@ -44,8 +44,8 @@ class RetrieveRecipeFromBank(AbstractBehavior):
             KernelEvent.InventoryWeightUpdate, 
             self.onInventoryWeightUpdate, 
             timeout=15,
-            retryNbr=5,
-            retryAction=self.pullItems,
+            retry_nbr=5,
+            retry_action=self.pullItems,
             ontimeout=lambda: self.finish(self.RETRIEVE_ITEMS_TIMED_OUT, "Pull items from bank storage timeout"),
         )
         self.pullItems()
@@ -74,8 +74,8 @@ class RetrieveRecipeFromBank(AbstractBehavior):
             callback=self.onStorageClose,
             timeout=10,
             ontimeout=lambda: self.finish(self.BANK_CLOSE_TIMED_OUT, "Bank close timed out!"),
-            retryNbr=5,
-            retryAction=Kernel().commonExchangeManagementFrame.leaveShopStock,
+            retry_nbr=5,
+            retry_action=Kernel().commonExchangeManagementFrame.leaveShopStock,
         )
         Kernel().commonExchangeManagementFrame.leaveShopStock()
 

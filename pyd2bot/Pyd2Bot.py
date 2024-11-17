@@ -5,8 +5,8 @@ from pyd2bot.logic.roleplay.behaviors.updates.AutoUpgradeStats import AutoUpgrad
 from pyd2bot.logic.roleplay.behaviors.updates.CollectStats import CollectStats
 from pyd2bot.logic.common.frames.BotRPCFrame import BotRPCFrame
 from pyd2bot.logic.common.frames.BotWorkflowFrame import BotWorkflowFrame
-from pyd2bot.logic.fight.frames.BotFightFrame import BotFightFrame
-from pyd2bot.logic.fight.frames.BotMuleFightFrame import BotMuleFightFrame
+from pyd2bot.logic.fight.frames.FightAIFrame import FightAIFrame
+from pyd2bot.logic.fight.frames.MuleFightFrame import MuleFightFrame
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
 from pyd2bot.logic.roleplay.behaviors.farm.MultiplePathsResourceFarm import MultiplePathsResourceFarm
 from pyd2bot.logic.roleplay.behaviors.farm.ResourceFarm import ResourceFarm
@@ -76,9 +76,9 @@ class Pyd2Bot(DofusClient):
 
     def onFight(self, event):
         if not self._mule:
-            Kernel().worker.addFrame(BotFightFrame(self.session))
+            Kernel().worker.addFrame(FightAIFrame(self.session))
         else:
-            Kernel().worker.addFrame(BotMuleFightFrame(self.session.leader))
+            Kernel().worker.addFrame(MuleFightFrame(self.session.leader))
 
     def addUpdateListener(self, callback):
         self._state_update_listeners.append(callback)

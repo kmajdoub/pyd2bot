@@ -57,8 +57,8 @@ class UnloadInBank(AbstractBehavior):
             event_id=KernelEvent.InventoryWeightUpdate, 
             callback=self._on_inventory_weight_update, 
             timeout=10,
-            retryNbr=5,
-            retryAction=Kernel().exchangeManagementFrame.exchangeObjectTransferAllFromInv,
+            retry_nbr=5,
+            retry_action=Kernel().exchangeManagementFrame.exchangeObjectTransferAllFromInv,
             ontimeout=lambda: self.finish(self.TRANSFER_ITEMS_TIMED_OUT, "Transfer items to bank storage timeout."),
         )
         

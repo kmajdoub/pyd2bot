@@ -138,13 +138,13 @@ class ChangeMap(AbstractBehavior):
 
     def followTransition(self):
         if PlayedCharacterManager().isInFight:
-            self.stop(True)
+            self.stop(0)
             return
 
         if not self.transition.isValid:
             return self.finish(self.INVALID_TRANSITION, "Trying to follow a non valid transition")
         if self.dstMapId == PlayedCharacterManager().currentMap.mapId:
-            return self.finish(True, None)
+            return self.finish(0)
         self.trType = TransitionTypeEnum(self.transition.type)
         self.askChangeMap()
 

@@ -48,7 +48,6 @@ def find_cells_with_los_to_targets(spellw: "SpellWrapper", targets: list["Target
     """
     Logger().debug("=" * 50)
     Logger().debug(f"findCellsWithLosToTargets for spell {spellw.spell.name}, with fighter cell {fighterCell}")
-    # Logger().debug(f"Number of targets to check: {len(targets)}")
 
     hasLosToTargets = dict[int, list["Target"]]()
     spellZone = getSpellZone(spellw)
@@ -56,45 +55,26 @@ def find_cells_with_los_to_targets(spellw: "SpellWrapper", targets: list["Target
 
     Logger().debug(f"Target positions: {[f'Target(cell={t.pos.cellId}, dist={t.distFromPlayer})' for t in targets]}")
 
-    for target_idx, target in enumerate(targets):
-        # Logger().debug(f"\n----- Processing Target {target_idx + 1}/{len(targets)} at cell {target.pos.cellId} -----")
-
+    for target in targets:
         currSpellZone = spellZone.getCells(target.pos.cellId)
-        # Logger().debug(f"Spell zone cells around target: {currSpellZone}")
-        # Logger().debug(f"Number of potential casting cells to check: {len(currSpellZone)}")
 
-        for cell_idx, cell in enumerate(currSpellZone):
+        for cell in currSpellZone:
             p = MapPoint.fromCellId(cell)
-            # Logger().debug(f"\nChecking cell {cell_idx + 1}/{len(currSpellZone)}: {p.cellId} (x={p.x}, y={p.y})")
-
-            # Special check for fighter's current cell
-            if fighterCell == p.cellId:
-                # Logger().debug("-> This is fighter's current cell - checking if we can cast from here")
-                pass
-
+            
             # Get line between target and potential casting cell
             line = MapTools.getMpLine(target.pos.cellId, p.cellId)
-            # Logger().debug(f"Line between target and casting cell: {[(mp.x, mp.y) for mp in line]}")
 
             los = True
             if len(line) > 1:
-                # Logger().debug(f"Line length is {len(line)} - checking for obstacles...")
-                for idx, mp in enumerate(line[:-1]):
+                for mp in line[:-1]:
                     has_los = DataMapProvider().pointLos(mp.x, mp.y, False)
-                    # Logger().debug(
-                    #     f"  Point {idx + 1}/{len(line)-1} at ({mp.x}, {mp.y}): {'Clear' if has_los else 'BLOCKED'}"
-                    # )
                     if not has_los:
-                        # Logger().debug("-> Found blocking obstacle - breaking LOS check")
                         los = False
                         break
             else:
-                # Logger().debug("Target and casting cell are adjacent - no LOS check needed")
                 pass
 
             if los:
-                # Logger().debug("[OK] LOS CHECK PASSED - Recording valid casting position")
-
                 # Special case - we can cast from current position
                 if fighterCell == p.cellId:
                     Logger().debug("=> Can cast from current position - returning immediately")
@@ -102,26 +82,17 @@ def find_cells_with_los_to_targets(spellw: "SpellWrapper", targets: list["Target
 
                 # Record this casting position
                 if p.cellId not in hasLosToTargets:
-                    # Logger().debug(f"Creating new target list for cell {p.cellId}")
                     hasLosToTargets[p.cellId] = list[Target]()
                 hasLosToTargets[p.cellId].append(target)
 
                 # Update max range
-                old_max = maxRangeFromFighter
                 maxRangeFromFighter = max(maxRangeFromFighter, target.distFromPlayer)
-                if maxRangeFromFighter != old_max:
-                    # Logger().debug(f"Updated max range from fighter: {old_max} -> {maxRangeFromFighter}")
-                    pass
-            else:
-                # Logger().debug("[X] LOS CHECK FAILED - Cannot cast from this position")
-                pass
+
 
     # Final summary
     Logger().debug("\n" + "=" * 20 + " FINAL RESULTS " + "=" * 20)
     Logger().debug(f"Max range from fighter: {maxRangeFromFighter}")
     Logger().debug(f"Number of valid casting positions found: {len(hasLosToTargets)}")
-    # for cell, targets in hasLosToTargets.items():
-    #     Logger().debug(f"Cell {cell} can hit {len(targets)} targets: {[t.pos.cellId for t in targets]}")
     Logger().debug("=" * 50)
 
     return maxRangeFromFighter, hasLosToTargets
@@ -192,7 +163,7 @@ def buildPath(parentOfCell: dict[int, int], endCellId):
     path.reverse()
     return path
 
-def get_targetable_entities(spellw: "SpellWrapper", fighter_infos: "GameFightFighterInformations", target_sums=False, boneId=None) -> list[Target]:
+def get_targetable_entities(spellw: "SpellWrapper", fighter_infos: "GameFightFighterInformations", target_sums=False, target_boneId=None) -> list[Target]:
     result = list[Target]()
     infosTable = list[dict]()
     if not Kernel().fightEntitiesFrame or not Kernel().battleFrame:
@@ -243,7 +214,7 @@ def get_targetable_entities(spellw: "SpellWrapper", fighter_infos: "GameFightFig
                 and (target_sums or not entry["summoned"])
                 and entry["canhit"]
                 and entry["cell"] != -1
-                and (boneId is None or entity.look.bonesId == boneId)
+                and (target_boneId is None or entity.look.bonesId == target_boneId)
             ):
                 result.append(Target(entity, fighter_infos.disposition.cellId))
     summaryTable = PrettyTable(
@@ -262,7 +233,7 @@ def analyze_tackle_path(
     total_ap: int,
     spell_ap_cost: int
 ) -> tuple[bool, list[int], int]:
-    """Analyze path considering tackle effects, exactly matching original logic.
+    """Analyze path considering tackle effects.
     
     Args:
         path: List of cell IDs for movement

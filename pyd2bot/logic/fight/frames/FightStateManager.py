@@ -100,7 +100,8 @@ class FightStateManager(metaclass=Singleton):
             spell_cast_manager.nextTurn()
 
         self._turn_preparation_done = False
-
+        self.current_player = None
+        
     def validate_turn_state(self) -> bool:
         """
         Validate that all required state is properly initialized

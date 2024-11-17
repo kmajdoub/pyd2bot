@@ -5,6 +5,7 @@ from pyd2bot.logic.fight.frames.fight_turn.spell_utils import can_cast_spell_on_
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
 from pydofus2.com.ankamagames.atouin.HaapiEventsManager import HaapiEventsManager
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
+from pydofus2.com.ankamagames.dofus.logic.game.common.managers.InactivityManager import InactivityManager
 from pydofus2.com.ankamagames.dofus.network.messages.game.actions.fight.GameActionFightCastRequestMessage import GameActionFightCastRequestMessage
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 
@@ -60,6 +61,7 @@ class CastSpell(AbstractBehavior):
         message = GameActionFightCastRequestMessage()
         message.init(self.state_manager.spellId, self.target_cellId)
         self.state_manager.connection.send(message)
+        InactivityManager().activity()
         if random.random() < 0.9:
             HaapiEventsManager().registerShortcutUse('useSpellLine1')
 

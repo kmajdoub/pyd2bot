@@ -2,6 +2,7 @@ from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
 from pydofus2.com.ankamagames.dofus.internalDatacenter.DataEnum import DataEnum
 from pydofus2.com.ankamagames.dofus.internalDatacenter.items.ItemWrapper import ItemWrapper
 from pydofus2.com.ankamagames.dofus.kernel.net.ConnectionsHandler import ConnectionsHandler
+from pydofus2.com.ankamagames.dofus.logic.game.common.managers.InactivityManager import InactivityManager
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.InventoryManager import InventoryManager
 from pydofus2.com.ankamagames.dofus.network.enums.CharacterInventoryPositionEnum import CharacterInventoryPositionEnum
 from pydofus2.com.ankamagames.dofus.network.messages.game.inventory.items.ObjectSetPositionMessage import ObjectSetPositionMessage
@@ -31,3 +32,4 @@ class PutPetsMount(AbstractBehavior):
         msg = ObjectSetPositionMessage()
         msg.init(mount_iw.objectUID, CharacterInventoryPositionEnum.ACCESSORY_POSITION_PETS, 1)
         ConnectionsHandler().send(msg)
+        InactivityManager().activity()

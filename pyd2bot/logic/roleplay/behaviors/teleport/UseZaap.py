@@ -21,10 +21,11 @@ class UseZaap(AbstractBehavior):
     INSUFFICIENT_KAMAS = 788888
     ZAAP_DIALOG_OPEN_TIMEOUT = 788889
     ZAAP_USE_ERROR = 788890
-    
+    MAX_TELEPORT_RETRIES = 2
     
     def __init__(self) -> None:
         super().__init__()
+        self._teleport_retry_count = 0
 
     def run(self, dstMapId, bsaveZaap=False) -> bool:
         Logger().debug(f"Use zaap to dest {dstMapId} called")
@@ -113,7 +114,28 @@ class UseZaap(AbstractBehavior):
             if self.teleportDestinationListener:
                 self.teleportDestinationListener.delete()
             self._on_zaap_skill_use_error()
-        
+    
+    def _retry_teleport(self):
+        Logger().debug(f"Retrying teleport attempt {self._teleport_retry_count + 1} of {self.MAX_TELEPORT_RETRIES}")
+        self._teleport_retry_count += 1
+        if self._teleport_retry_count <= self.MAX_TELEPORT_RETRIES:
+            self.once_map_processed(
+                self._on_dest_map_processed,
+                timeout=10,
+                ontimeout=self._retry_teleport if self._teleport_retry_count < self.MAX_TELEPORT_RETRIES else lambda: self._handle_error(
+                    self.ZAAP_USE_ERROR,
+                    f"Failed to process destination map after {self.MAX_TELEPORT_RETRIES} attempts"
+                )
+            )
+            self.once(KernelEvent.ServerTextInfo, self._on_server_info)
+            Kernel().zaapFrame.sendTeleportRequest(self._current_cost, self._current_ttype, 
+                                                 self._current_dest_type, self.dst_mapId)
+        else:
+            self._handle_error(
+                self.ZAAP_USE_ERROR,
+                f"Failed to process destination map after {self.MAX_TELEPORT_RETRIES} attempts"
+            )
+
     def _on_teleport_destination_list(self, event, destinations: list[TeleportDestinationWrapper], ttype):
         Logger().debug(f"Zaap teleport destinations received.")
         for dst in destinations:
@@ -124,7 +146,16 @@ class UseZaap(AbstractBehavior):
                         f"Insufficient kamas to take zaap, player kamas ({PlayedCharacterManager().characteristics.kamas}), teleport cost ({dst.cost})"
                     )
                     return
-                self.once_map_processed(self._on_dest_map_processed)
+                self._current_cost = dst.cost
+                self._current_ttype = ttype
+                self._current_dest_type = dst.destinationType
+                self._teleport_retry_count = 0
+                
+                self.once_map_processed(
+                    self._on_dest_map_processed,
+                    timeout=10,
+                    ontimeout=self._retry_teleport
+                )
                 self.once(KernelEvent.ServerTextInfo, self._on_server_info)
                 Kernel().zaapFrame.sendTeleportRequest(dst.cost, ttype, dst.destinationType, dst.mapId)
                 return 

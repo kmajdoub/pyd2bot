@@ -22,7 +22,7 @@ class BotSettings:
     defaultBreedConfig = {
         BreedEnum.Sadida: {
             "primarySpellId": 13516, # Ronce
-            "treasureHuntFightSpellId": 13528, # larme
+            "treasureHuntFightSpellId": 13577,
             "primaryStat": StatIds.STRENGTH,
         },
         BreedEnum.Sram: {

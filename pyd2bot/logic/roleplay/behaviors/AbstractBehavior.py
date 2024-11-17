@@ -71,8 +71,10 @@ class AbstractBehavior(BehaviorApi, metaclass=Singleton):
         self.running.clear()
         type(self).clear()
         # Logger().info(f"[{type(self).__name__}] Finished.")
+    
         if self.parent and self in self.parent.children:
             self.parent.children.remove(self)
+
         error = f"[{type(self).__name__}] failed for reason : {error}" if error else None
         if callback is not None:
             Kernel().defer(lambda: callback(code, error, *args, **kwargs))

@@ -3,6 +3,7 @@ from typing import Optional
 from pyd2bot.logic.fight.frames.FightStateManager import FightStateManager
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
+from pydofus2.com.ankamagames.dofus.logic.game.common.managers.InactivityManager import InactivityManager
 from pydofus2.com.ankamagames.dofus.network.messages.game.context.GameMapMovementRequestMessage import GameMapMovementRequestMessage
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 from pydofus2.com.ankamagames.jerakine.types.positions.MovementPath import MovementPath
@@ -85,6 +86,7 @@ class FightMoveBehavior(AbstractBehavior):
         message = GameMapMovementRequestMessage()
         message.init(self.path.keyMoves(), PlayedCharacterManager().currentMap.mapId)
         self.state_manager.connection.send(message)
+        InactivityManager().activity()
         self._movement_request_sent = True
         
     def move_to_cell(self) -> None:

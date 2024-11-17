@@ -52,6 +52,7 @@ class NpcDialog(AbstractBehavior):
         self.once(KernelEvent.NpcQuestion, self.onNpcQuestion)
         self.on(KernelEvent.ServerTextInfo, self.onServerTextInfo)
         ConnectionsHandler().send(msg)
+        InactivityManager().activity()
         
     def onServerTextInfo(self, event, msgId, msgType, textId, text, params):
         if textId == 309584: # The conditions for validating this response haven't been met.

@@ -29,13 +29,14 @@ class AutoTrip(AbstractBehavior):
     NO_PATH_FOUND = 2202203
     PLAYER_IN_COMBAT = 89090
 
-    def __init__(self):
+    def __init__(self, farm_resources_on_way):
         super().__init__()
         self.path = None
         self.state = AutoTripState.IDLE
         self.dstMapId = None
         self.dstRpZone = None
         self._nbr_follow_edge_fails = 0
+        self.farm_resources_on_way = farm_resources_on_way
 
     def run(self, dstMapId, dstZoneId=None, path: list[Edge] = None):
         self.dstMapId = dstMapId
@@ -55,7 +56,19 @@ class AutoTrip(AbstractBehavior):
                 return i
         Logger().error("Unable to find current player vertex index in the path!")
 
-    def onNextMapProcessed(self, code, error):
+    def _on_next_map_processed(self, code1, error1):
+        if not error1 and self.farm_resources_on_way:
+            def _on_resources_collected(code2, error2):
+                if error2:
+                    return self.finish(code2, error2)
+
+                self._next_step(code1, error1)
+
+            self.collect_all_map_resources(callback=_on_resources_collected)
+        else:
+            self._next_step(code1, error1)
+    
+    def _next_step(self, code, error):
         if error:
             currentIndex = self.currentEdgeIndex()
             if currentIndex is None:
@@ -104,7 +117,7 @@ class AutoTrip(AbstractBehavior):
             dstZoneId = self.path[-1].dst.zoneId
             if (not self.dstRpZone and currMapId == dstMapId) or (self.dstRpZone and currMapId == dstMapId and currZoneId == dstZoneId):
                 Logger().info(f"Trip reached destination Map : {dstMapId}")
-                return self.finish(True, None)
+                return self.finish(0)
             currentIndex = self.currentEdgeIndex()
             if currentIndex is None:
                 return self.findPath(self.dstMapId, self.dstRpZone, self.onPathFindResult)
@@ -114,7 +127,7 @@ class AutoTrip(AbstractBehavior):
             Logger().debug(f"\t|- src {nextEdge.src.mapId} -> dst {nextEdge.dst.mapId}")
             for tr in nextEdge.transitions:
                 Logger().debug(f"\t| => {tr}")
-            self.changeMap(edge=nextEdge, callback=self.onNextMapProcessed)
+            self.changeMap(edge=nextEdge, callback=self._on_next_map_processed)
         else:
             self.state = AutoTripState.CALCULATING_PATH
             self.findPath(self.dstMapId, self.dstRpZone, self.onPathFindResult)
@@ -124,7 +137,7 @@ class AutoTrip(AbstractBehavior):
             return self.finish(code, error)
         if len(path) == 0:
             Logger().debug(f"Empty path found")
-            return self.finish(True, None)
+            return self.finish(0)
         for e in path:
             Logger().debug(f"\t|- src {e.src.mapId} -> dst {e.dst.mapId}")
             for tr in e.transitions:
@@ -135,7 +148,7 @@ class AutoTrip(AbstractBehavior):
     def findPath(self, dstMapId, linkedZone, callback) -> None:
         src = PlayedCharacterManager().currVertex
         if src is None:
-            return self.once_map_processed(self.findPath, [dstMapId, linkedZone, callback])
+            return self.once_map_rendered(self.findPath, [dstMapId, linkedZone, callback])
         Logger().info(f"Start searching path from {src} to destMapId {dstMapId}, linkedZone {linkedZone}")
         if linkedZone is None and PlayedCharacterManager().currentMap.mapId == dstMapId:
             return callback(0, None, [])

@@ -57,6 +57,7 @@ class AutoTripUseZaap(AbstractBehavior):
         dstZoneId,
         dstZaapMapId,
         withSaveZaap=False,
+        farm_resources_on_way=False,
         maxCost=float("inf"),
     ):
         if not dstMapId:
@@ -67,6 +68,7 @@ class AutoTripUseZaap(AbstractBehavior):
         self.dstZoneId = dstZoneId
         self.withSaveZaap = withSaveZaap
         self.dstZaapMapId = dstZaapMapId
+        self.farm_resources_on_way = farm_resources_on_way
         
         self.on(KernelEvent.ServerTextInfo, self.onServerInfo)
         
@@ -246,6 +248,7 @@ class AutoTripUseZaap(AbstractBehavior):
                 self.dstMapId,
                 self.dstZoneId,
                 path=self.travel_plan.direct_path,
+                farm_resources_on_way=self.farm_resources_on_way,
                 callback=self.finish
             )
             return
@@ -259,6 +262,7 @@ class AutoTripUseZaap(AbstractBehavior):
                     self.travel_plan.havenbag_source_vertex.mapId,
                     self.travel_plan.havenbag_source_vertex.zoneId,
                     path=self.travel_plan.path_to_havenbag_point,
+                    farm_resources_on_way=self.farm_resources_on_way,
                     callback=self.onHavenbagPointReached
                 )
             else:
@@ -272,6 +276,7 @@ class AutoTripUseZaap(AbstractBehavior):
                 self.travel_plan.src_zaap.mapId,
                 self.travel_plan.src_zaap.zoneId,
                 path=self.travel_plan.path_to_src_zaap,
+                farm_resources_on_way=self.farm_resources_on_way,
                 callback=self.onSrcZaapReached
             )
         else:
@@ -306,6 +311,7 @@ class AutoTripUseZaap(AbstractBehavior):
                             self.travel_plan.src_zaap.mapId,
                             self.travel_plan.src_zaap.zoneId,
                             path=self.travel_plan.path_to_src_zaap,
+                            farm_resources_on_way=self.farm_resources_on_way,
                             callback=self.onSrcZaapReached
                         )
                     else:
@@ -319,6 +325,7 @@ class AutoTripUseZaap(AbstractBehavior):
                         self.dstMapId,
                         self.dstZoneId,
                         path=self.travel_plan.direct_path,
+                        farm_resources_on_way=self.farm_resources_on_way,
                         callback=self.finish
                     )
                 else:
@@ -361,6 +368,7 @@ class AutoTripUseZaap(AbstractBehavior):
                         self.dstMapId,
                         self.dstZoneId,
                         path=self.travel_plan.direct_path,
+                        farm_resources_on_way=self.farm_resources_on_way,
                         callback=self.finish
                     )
                 else:
@@ -375,6 +383,7 @@ class AutoTripUseZaap(AbstractBehavior):
                         self.dstMapId,
                         self.dstZoneId,
                         path=self.travel_plan.direct_path,
+                        farm_resources_on_way=self.farm_resources_on_way,
                         callback=self.finish
                     )
                 else:
@@ -388,6 +397,7 @@ class AutoTripUseZaap(AbstractBehavior):
                         self.dstMapId,
                         self.dstZoneId,
                         path=self.travel_plan.direct_path,
+                        farm_resources_on_way=self.farm_resources_on_way,
                         callback=self.finish
                     )
                 else:
@@ -419,6 +429,7 @@ class AutoTripUseZaap(AbstractBehavior):
             self.dstMapId,
             self.dstZoneId,
             path=self.travel_plan.path_from_dst_zaap,
+            farm_resources_on_way=self.farm_resources_on_way,
             callback=self.finish
         )
 

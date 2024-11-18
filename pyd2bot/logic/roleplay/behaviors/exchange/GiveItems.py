@@ -98,7 +98,7 @@ class GiveItems(AbstractBehavior):
             return self.finish(errorId, error)
         if self.state == GiveItemsStates.RETURNING_TO_START_POINT:
             Logger().info("[UnloadInSellerFrame] Trip ended, returned to start point")
-            return self.finish(True, None)
+            return self.finish(0)
         elif self.state == GiveItemsStates.WALKING_TO_BANK:
             Logger().info("[UnloadInSellerFrame] Trip ended, waiting for seller to come")
             self.state = GiveItemsStates.WAITING_FOR_SELLER
@@ -127,7 +127,7 @@ class GiveItems(AbstractBehavior):
                 return self.checkGuestStatus(self.seller.accountId)
             return self.finish(errorId, error)
         if not self.return_to_start:
-            return self.finish(True, None)
+            return self.finish(0)
         else:
             self.state = GiveItemsStates.RETURNING_TO_START_POINT
             self.travel_using_zaap(self._startMapId, self._startRpZone, callback=self.onTripEnded)

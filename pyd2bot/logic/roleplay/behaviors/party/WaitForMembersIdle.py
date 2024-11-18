@@ -59,7 +59,7 @@ class WaitForMembersIdle(AbstractBehavior):
                         return
             else:
                 Logger().info(f"All members are idle.")
-                return self.finish(True, None)
+                return self.finish(0)
         Logger().debug("Fetch status finished because worker is terminated")
     
     def getMuleStatus(self, instanceId):
@@ -78,7 +78,7 @@ class WaitForMembersIdle(AbstractBehavior):
                 return "loadingMap"
             elif not Kernel.getInstance(instanceId).roleplayEntitiesFrame.mcidm_processed:
                 return "processingMapData"
-            elif PlayedCharacterManager.getInstance(instanceId).isDead():
+            elif PlayedCharacterManager.getInstance(instanceId).is_dead():
                 return "muleIsDead"
             Logger().debug(f"Checking if player {instanceId} is running behaviors")
             for behavior in AbstractBehavior.getSubs(instanceId):

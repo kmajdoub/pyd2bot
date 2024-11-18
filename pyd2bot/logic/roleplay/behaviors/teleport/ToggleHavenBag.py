@@ -66,6 +66,6 @@ class ToggleHavenBag(AbstractBehavior):
                     ontimeout=lambda _: self.finish(self.TIMEDOUT, "Haven bag enter timedout too many times"),
                 )
             else:
-                self.once_map_processed(lambda *_: self.finish(0))
+                self.once_map_rendered(lambda *_: self.finish(0))
         self.on(KernelEvent.ServerTextInfo, self.onServerTextInfo)
         self.useEnterHavenBagShortcut()

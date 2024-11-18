@@ -17,7 +17,7 @@ class SaveZaap(AbstractBehavior):
     def run(self) -> bool:
         if int(Kernel().zaapFrame.spawnMapId) == int(PlayedCharacterManager().currentMap.mapId):
             Logger().debug(f"Zaap already saved in current map {PlayedCharacterManager().currentMap.mapId}.")
-            return self.finish(True, None)
+            return self.finish(0)
         if Kernel().interactiveFrame:
             self.openCurrMapZaapDialog()
         else:

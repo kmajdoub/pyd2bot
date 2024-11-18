@@ -57,7 +57,7 @@ class AbstractFarmBehavior(AbstractBehavior):
     def initListeners(self):
         self.on_multiple(
             [
-                (KernelEvent.FightStarted, self.on_fight, {}),
+                (KernelEvent.FightStarted, self._on_fight, {}),
                 (KernelEvent.PlayerStateChanged, self.onPlayerStateChange, {}),
                 (KernelEvent.JobExperienceUpdate, self.onJobExperience, {}),
                 (KernelEvent.InventoryWeightUpdate, self.onInventoryWeightUpdate, {}),
@@ -84,7 +84,7 @@ class AbstractFarmBehavior(AbstractBehavior):
         if err:
             if code == MovementFailError.PLAYER_IS_DEAD:
                 Logger().warning(f"Player is dead.")
-                return self.autoRevive(callback=self._on_resurrection)
+                return self.auto_resurrect(callback=self._on_resurrection)
             elif code == AutoTrip.PLAYER_IN_COMBAT:
                 Logger().debug("Player in combat")
                 return
@@ -122,9 +122,8 @@ class AbstractFarmBehavior(AbstractBehavior):
         self._moving_to_next_step = False
         if error:
             if code == MovementFailError.PLAYER_IS_DEAD:
-                return self.send(
-                    KernelEvent.ClientShutdown, f"Tried to move to next path vertex while Player is dead!"
-                )
+                Logger().error(f"Tried to move to next path vertex while Player is dead!")
+                return self.auto_resurrect(callback=self._on_resurrection)
             if code == ChangeMap.LANDED_ON_WRONG_MAP:
                 Logger().warning(f"Player landed on the wrong map while moving to next path Vertex!")
             elif code in [
@@ -182,7 +181,7 @@ class AbstractFarmBehavior(AbstractBehavior):
         Logger().warning(f"Bot is out of farm path, searching path to previous vertex...")
         if not PlayedCharacterManager().currVertex:
             Logger().warning("Bot vertex not loaded yet!, delaying return to path after Map is processed...")
-            return self.once_map_processed(callback=self._on_out_of_path)
+            return self.once_map_rendered(callback=self._on_out_of_path)
 
         self.travel_using_zaap(
             self.path.startVertex.mapId,
@@ -199,11 +198,10 @@ class AbstractFarmBehavior(AbstractBehavior):
     def onResourceCollectEnd(self, code, error, iePosition=None):
         raise NotImplementedError()
 
-    def on_fight(self, event=None):
+    def _on_fight(self, event=None):
         Logger().debug(f"Player entered in a fight.")
         self.inFight = True
-        self._moving_to_next_step = False
-        self.stopChildren()
+        self.stop_children()
         KernelEventsManager().clear_all_by_origin(self)
         self.once(KernelEvent.RoleplayStarted, self._on_roleplay_started_after_fight)
 
@@ -245,11 +243,11 @@ class AbstractFarmBehavior(AbstractBehavior):
         self.inFight = False
 
         def on_map_loaded():
-            if PlayedCharacterManager().isDead():
-                return self.autoRevive(callback=self._on_resurrection)
+            if PlayedCharacterManager().is_dead():
+                return self.auto_resurrect(callback=self._on_resurrection)
             Kernel().defer(self.main, True)
 
-        self.once_map_processed(on_map_loaded)
+        self.once_map_rendered(on_map_loaded)
 
     def _on_full_pods(self):
         self.unload_in_bank(callback=self._on_inventory_unloaded)
@@ -259,23 +257,23 @@ class AbstractFarmBehavior(AbstractBehavior):
 
         if self._stop_sig.is_set():
             Logger().warning("User wanted to stop farmer!")
-            self.stopChildren(True)
-            return self.finish(True, None)
+            self.stop_children(True)
+            return self.finish(0)
 
         if not self.running.is_set():
             Logger().error(f"Is not running!")
             return
 
         if PlayedCharacterManager().currentMap is None:
-            return self.once_map_processed(callback=self.main)
+            return self.once_map_rendered(callback=self.main)
 
         if self.inFight:
             Logger().warning("Stopping farm loop because the farmer entered a fight!")
             return
 
-        if PlayedCharacterManager().isDead():
+        if PlayedCharacterManager().is_dead():
             Logger().warning(f"Player is dead.")
-            return self.autoRevive(callback=self._on_resurrection)
+            return self.auto_resurrect(callback=self._on_resurrection)
 
         if not self._deactivate_riding and PlayedCharacterApi.canRideMount():
             Logger().info(f"Mounting {PlayedCharacterManager().mount.name} ...")
@@ -301,7 +299,7 @@ class AbstractFarmBehavior(AbstractBehavior):
 
         if self.timeout and perf_counter() - self.startTime > self.timeout:
             Logger().warning(f"Ending Behavior for reason : Timeout reached")
-            return self.finish(True, None)
+            return self.finish(0)
 
         if PlayedCharacterManager().currVertex not in self.path:
             Logger().debug(f"Bot is out of farming area")

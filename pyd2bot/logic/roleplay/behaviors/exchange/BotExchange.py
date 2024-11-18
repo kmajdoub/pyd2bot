@@ -175,7 +175,7 @@ class BotExchange(AbstractBehavior):
                 if (PlayedCharacterManager().inventoryWeight / PlayedCharacterManager().inventoryWeightMax) > 0.9:
                     return self.finish(self.INVENTORY_STILL_FULL, "Inventory still full!")
             Logger().info("Exchange ended successfully.")
-            self.finish(True, None)
+            self.finish(0)
         else:
             self.finish(self.EXCHANGE_FAILED, "Exchange failed")
 

@@ -1,7 +1,7 @@
 from queue import PriorityQueue
 
 from prettytable import PrettyTable
-from pyd2bot.logic.fight.frames.fight_turn.spell_utils import getSpellZone
+from pyd2bot.logic.fight.behaviors.fight_turn.spell_utils import getSpellZone
 from pydofus2.com.ankamagames.atouin.utils.DataMapProvider import DataMapProvider
 from pydofus2.com.ankamagames.dofus.datacenter.monsters.Monster import Monster
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel

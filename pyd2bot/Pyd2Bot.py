@@ -13,7 +13,7 @@ from pyd2bot.logic.roleplay.behaviors.farm.ResourceFarm import ResourceFarm
 from pyd2bot.logic.roleplay.behaviors.fight.GroupLeaderFarmFights import GroupLeaderFarmFights
 from pyd2bot.logic.roleplay.behaviors.fight.MuleFighter import MuleFighter
 from pyd2bot.logic.roleplay.behaviors.fight.SoloFarmFights import SoloFarmFights
-from pyd2bot.logic.roleplay.behaviors.quest.ClassicTreasureHunt import ClassicTreasureHunt
+from pyd2bot.logic.roleplay.behaviors.quest.treasure_hunt.ClassicTreasureHunt import ClassicTreasureHunt
 from pyd2bot.data.models import Session
 from pyd2bot.misc.BotEventsManager import BotEventsManager
 from pyd2bot.misc.NapManager import NapManager

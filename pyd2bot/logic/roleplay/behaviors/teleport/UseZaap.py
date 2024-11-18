@@ -119,7 +119,7 @@ class UseZaap(AbstractBehavior):
         Logger().debug(f"Retrying teleport attempt {self._teleport_retry_count + 1} of {self.MAX_TELEPORT_RETRIES}")
         self._teleport_retry_count += 1
         if self._teleport_retry_count <= self.MAX_TELEPORT_RETRIES:
-            self.once_map_processed(
+            self.once_map_rendered(
                 self._on_dest_map_processed,
                 timeout=10,
                 ontimeout=self._retry_teleport if self._teleport_retry_count < self.MAX_TELEPORT_RETRIES else lambda: self._handle_error(
@@ -151,7 +151,7 @@ class UseZaap(AbstractBehavior):
                 self._current_dest_type = dst.destinationType
                 self._teleport_retry_count = 0
                 
-                self.once_map_processed(
+                self.once_map_rendered(
                     self._on_dest_map_processed,
                     timeout=10,
                     ontimeout=self._retry_teleport

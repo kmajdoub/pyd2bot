@@ -101,7 +101,7 @@ class AttackMonsters(AbstractBehavior):
             return self.finish(status, error)
         self.attackMonsterListener = self.once(
             event_id=KernelEvent.FightStarted,
-            callback=lambda event: self.finish(True, None), 
+            callback=lambda event: self.finish(0), 
             timeout=self.FIGHT_REQ_TIMEOUT, 
             ontimeout=self.finish, 
             retry_nbr=3,

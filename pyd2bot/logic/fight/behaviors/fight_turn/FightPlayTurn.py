@@ -1,15 +1,15 @@
-from typing import TYPE_CHECKING, Callable, List, Optional
-from pyd2bot.logic.fight.frames.FightStateManager import FightStateManager
-from pyd2bot.logic.fight.frames.fight_turn.TurnResult import TurnResult
-from pyd2bot.logic.fight.frames.fight_turn.fight_turn_errors_handling import handle_move_result, handle_spell_result
+from typing import Callable, List, Optional
+from pyd2bot.logic.fight.behaviors.FightStateManager import FightStateManager
+from pyd2bot.logic.fight.behaviors.fight_turn.TurnResult import TurnResult
+from pyd2bot.logic.fight.behaviors.fight_turn.fight_turn_errors_handling import handle_move_result, handle_spell_result
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
-from pyd2bot.logic.fight.frames.fight_turn.fight_algo_utils import (
+from pyd2bot.logic.fight.behaviors.fight_turn.fight_algo_utils import (
     Target,
     analyze_tackle_path,
     find_path_to_target,
     get_targetable_entities,
 )
-from pyd2bot.logic.fight.frames.fight_turn.spell_utils import can_cast_spell_on_cell
+from pyd2bot.logic.fight.behaviors.fight_turn.spell_utils import can_cast_spell_on_cell
 from pyd2bot.misc.BotEventsManager import BotEventsManager
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
@@ -19,10 +19,6 @@ from pydofus2.com.ankamagames.dofus.network.messages.game.context.fight.GameFigh
 )
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 
-if TYPE_CHECKING:
-    from pydofus2.com.ankamagames.dofus.network.types.game.context.fight.GameFightFighterInformations import (
-        GameFightFighterInformations,
-    )
 
 
 class FightPlayTurn(AbstractBehavior):

@@ -74,6 +74,7 @@ class FightPreparation(AbstractBehavior):
                 Logger().info(f"Challenge bonus {bonusId} chosen.")
                 if self.allMembersJoinedFight():
                     self.sendFightReady()
+                    self.finish(0)
                 else:
                     Logger().info("Waiting for members to join fight.")
 
@@ -91,7 +92,6 @@ class FightPreparation(AbstractBehavior):
 
     def onFighterShowed(self, event, fighterId):
         if self.session.isLeader:
-            self._my_turn = False
             if fighterId > 0:
                 player = self.session.getPlayerById(fighterId)
                 if player:

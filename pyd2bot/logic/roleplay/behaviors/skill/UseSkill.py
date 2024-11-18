@@ -144,13 +144,13 @@ class UseSkill(AbstractBehavior):
                             ontimeout=self.onElemUpdateWaitTimeout,
                         )
                 else:
-                    self.finish(True, None)
+                    self.finish(0)
 
     def onInteractiveUpdated(self, event, msg: InteractiveElementUpdatedMessage):
         if msg.interactiveElement.elementId == self.elementId:
             for skill in msg.interactiveElement.disabledSkills:
                 if skill.skillInstanceUid == self.skillUID:
-                    self.finish(True, None)
+                    self.finish(0)
 
     def onElemUpdateWaitTimeout(self, listener: Listener):
         if not self.running.is_set():
@@ -192,7 +192,7 @@ class UseSkill(AbstractBehavior):
             self.currentRequestedElementId = self.elementId
         self.sendRequestSkill()
         if not self.waitForSkillUsed:
-            BenchmarkTimer(0.75, lambda: self.finish(True, None)).start()
+            BenchmarkTimer(0.75, lambda: self.finish(0)).start()
 
     def sendRequestSkill(self, additionalParam=0):
         if additionalParam == 0:

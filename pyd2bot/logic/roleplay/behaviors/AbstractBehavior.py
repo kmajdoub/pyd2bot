@@ -2,6 +2,7 @@ import threading
 from enum import Enum
 
 from pyd2bot.logic.roleplay.behaviors.BehaviorApi import BehaviorApi
+from pyd2bot.logic.roleplay.behaviors.TreePrinter import TreePrinter
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
 from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import KernelEventsManager
 from pydofus2.com.ankamagames.berilia.managers.Listener import Listener
@@ -37,16 +38,18 @@ class AbstractBehavior(BehaviorApi, metaclass=Singleton):
             Logger().debug(f"Cancel start for reason : parent {self.parent} behavior died.")
             return
         KernelEventsManager().send(KernelEvent.ClientStatusUpdate, f"STARTING_{type(self).__name__.upper()}")
+
         self.callback = callback
-        self.parent = parent
-        if self.parent:
+        if parent and parent != self:
+            self.parent = parent
             self.parent.children.append(self)
+    
         if self.running.is_set():
             error = f"{type(self).__name__} already running by parent {self.parent}."
             KernelEventsManager().send(
                 KernelEvent.ClientStatusUpdate,
                 f"ERROR_{type(self).__name__.upper()}",
-                {"error": error, "code": self.ALREADY_RUNNING},
+                { "error": error, "code": self.ALREADY_RUNNING },
             )
             if self.callback:
                 Kernel().defer(lambda: self.callback(self.ALREADY_RUNNING, error))
@@ -123,14 +126,8 @@ class AbstractBehavior(BehaviorApi, metaclass=Singleton):
                 result.append(behavior)
         return result
 
-    def getTreeStr(self, level=0):
-        indent = "  " * level
-        result = ""
-        if level > 0:
-            result = f"{indent}{type(self).__name__}\n"
-        for child in self.children:
-            result += child.getTreeStr(level + 1)
-        return result
+    def getTreeStr(self):
+        return TreePrinter.get_ascii_tree(self)
 
     def __str__(self) -> str:
         listeners = [str(listener) for listener in self.listeners]
@@ -144,10 +141,10 @@ class AbstractBehavior(BehaviorApi, metaclass=Singleton):
     def stop(self, clear_callback=False):
         if clear_callback:
             self.callback = lambda *_: Logger().debug("Callback cleared")
-        self.stopChildren(clear_callback)
+        self.stop_children(clear_callback)
         self.finish(0)
 
-    def stopChildren(self, clear_callbacks=False):
+    def stop_children(self, clear_callbacks=False):
         while self.children:
             child = self.children.pop()
             child.stop(clear_callbacks)

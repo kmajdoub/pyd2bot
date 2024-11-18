@@ -278,12 +278,12 @@ class ChangeMap(AbstractBehavior):
             self._scrollMapChangeRequestTimer.cancel()
 
         if mapId == self.dstMapId:
-            callback = lambda: self.finish(True, None)
+            callback = lambda: self.finish(0)
         else:
             callback = lambda: self.finish(
                 self.LANDED_ON_WRONG_MAP, f"Landed on new map '{mapId}', different from dest '{self.dstMapId}'."
             )
-        self.once_map_processed(callback=callback, mapId=mapId, timeout=20, ontimeout=self.onDestMapProcessedTimeout)
+        self.once_map_rendered(callback=callback, mapId=mapId, timeout=20, ontimeout=self.onDestMapProcessedTimeout)
 
     def setupMapChangeListener(self):
         if PlayedCharacterManager().isInFight:

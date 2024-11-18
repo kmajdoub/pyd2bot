@@ -1,7 +1,7 @@
 from enum import Enum, auto
 import random
-from pyd2bot.logic.fight.frames.FightStateManager import FightStateManager
-from pyd2bot.logic.fight.frames.fight_turn.spell_utils import can_cast_spell_on_cell, check_line_of_sight
+from pyd2bot.logic.fight.behaviors.FightStateManager import FightStateManager
+from pyd2bot.logic.fight.behaviors.fight_turn.spell_utils import can_cast_spell_on_cell, check_line_of_sight
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
 from pydofus2.com.ankamagames.atouin.HaapiEventsManager import HaapiEventsManager
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent

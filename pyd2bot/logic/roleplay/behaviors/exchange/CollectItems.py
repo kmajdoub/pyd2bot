@@ -44,7 +44,7 @@ class CollectItems(AbstractBehavior):
         Logger().error("[CollectFromGuest] Guest disconnected!")
         if self.state == CollectState.EXCHANGING_WITH_GUEST:
             BotExchange().stop()
-        self.finish(True, None)
+        self.finish(0)
 
     def onTripEnded(self, code, error):
         if not self.isRunning():

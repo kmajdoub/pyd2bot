@@ -1,10 +1,10 @@
 from typing import Dict, Optional, TYPE_CHECKING
-from pyd2bot.logic.fight.frames.fight_turn.CastSpell import CastSpell
-from pyd2bot.logic.fight.frames.fight_turn.FightMove import FightMoveBehavior
-from pyd2bot.logic.fight.frames.fight_turn.TurnResult import TurnResult
+from pyd2bot.logic.fight.behaviors.fight_turn.CastSpell import CastSpell
+from pyd2bot.logic.fight.behaviors.fight_turn.FightMove import FightMoveBehavior
+from pyd2bot.logic.fight.behaviors.fight_turn.TurnResult import TurnResult
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 if TYPE_CHECKING:
-    from pyd2bot.logic.fight.frames.fight_turn.FightPlayTurn import FightPlayTurn
+    from pyd2bot.logic.fight.behaviors.fight_turn.FightPlayTurn import FightPlayTurn
 
 def handle_move_result(behavior: "FightPlayTurn", error_code: int, error_msg: str, infos: Optional[Dict] = None) -> None:
     """Handle movement action results"""

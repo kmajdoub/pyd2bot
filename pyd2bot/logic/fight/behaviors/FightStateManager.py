@@ -15,7 +15,7 @@ from pydofus2.com.ankamagames.dofus.network.messages.game.context.fight.GameFigh
 from pydofus2.com.ankamagames.jerakine.metaclass.Singleton import Singleton
 from pydofus2.com.ankamagames.jerakine.types.positions.MapPoint import MapPoint
 from pydofus2.damageCalculation.tools.StatIds import StatIds
-from pyd2bot.logic.fight.frames.fight_turn.spell_utils import get_player_spellw
+from pyd2bot.logic.fight.behaviors.fight_turn.spell_utils import get_player_spellw
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 
 if TYPE_CHECKING:
@@ -31,7 +31,6 @@ class FightStateManager(metaclass=Singleton):
         self._current_player = None
         self._turn_preparation_done = False
         self.turn_playing = False
-        
 
     @property
     def session(self) -> "Session":

@@ -14,7 +14,7 @@ from pydofus2.com.ankamagames.jerakine.benchmark.BenchmarkTimer import \
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 
 
-class AutoRevive(AbstractBehavior):
+class Resurrect(AbstractBehavior):
     CEMETARY_MAP_LOADED_TIMEOUT = 7
     
     def __init__(self) -> None:
@@ -25,13 +25,13 @@ class AutoRevive(AbstractBehavior):
     def run(self) -> bool:
         self.phenixMapId = Kernel().playedCharacterUpdatesFrame._phenixMapId
         if not PlayedCharacterManager().currentMap:
-            return self.once_map_processed(self.start)
+            return self.once_map_rendered(self.start)
         self.on(KernelEvent.PlayerStateChanged, self.onPlayerStateChange)
         if PlayedCharacterManager().player_life_status == PlayerLifeStatusEnum.STATUS_PHANTOM:
             Logger().debug(f"Traveling to phenix map {self.phenixMapId}")
             self.autoTrip(dstMapId=self.phenixMapId, callback=self.onPhenixMapReached)
         elif PlayedCharacterManager().player_life_status == PlayerLifeStatusEnum.STATUS_TOMBSTONE:
-            self.cemetaryMapLoadedListener = self.once_map_processed(self.onCemetaryMapLoaded)
+            self.cemetaryMapLoadedListener = self.once_map_rendered(self.onCemetaryMapLoaded)
             self.releaseSoulRequest()
         else:
             self.finish(1, f"Unknown user state {PlayedCharacterManager().player_life_status}!!")
@@ -43,7 +43,7 @@ class AutoRevive(AbstractBehavior):
             Logger().info(f"Player soul released waiting for cemetery map to load.")
         elif playerState == PlayerLifeStatusEnum.STATUS_ALIVE:
             Logger().info("Player is alive and kicking.")
-            self.finish(True, None)
+            self.finish(0)
 
     def onCemetaryMapLoaded(self, event_id=None):
         Logger().debug(f"Cemetery map loaded.")

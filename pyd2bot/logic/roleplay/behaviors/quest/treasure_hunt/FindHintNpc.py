@@ -25,7 +25,7 @@ class FindHintNpc(AbstractBehavior):
     def onTreasureHintInfos(self, event, npcId):
         if npcId == self.npcId:
             Logger().debug(f"Hint npc found!!")
-            return self.finish(True, None)
+            return self.finish(0)
 
     def onNewMap(self, code, err):
         if err:

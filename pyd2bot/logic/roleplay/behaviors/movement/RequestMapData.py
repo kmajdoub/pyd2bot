@@ -31,8 +31,8 @@ class RequestMapData(AbstractBehavior):
         mapId = float(mapId)
         self.mapId = mapId
         # Logger().info(f"Requesting data for map {mapId}")
-        self.listener = self.once_map_processed(
-            lambda: self.finish(True, None), 
+        self.listener = self.once_map_rendered(
+            lambda: self.finish(0), 
             mapId=mapId,
             timeout=self.REQUEST_MAPDATA_TIMEOUT,
             ontimeout=self.onMapDataRequestTimeout, 

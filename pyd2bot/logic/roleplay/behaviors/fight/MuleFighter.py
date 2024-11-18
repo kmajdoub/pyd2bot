@@ -70,11 +70,11 @@ class MuleFighter(AbstractBehavior):
         
     def _check_player_state(self):
         if not PlayedCharacterManager().currVertex:
-            return self.once_map_processed(self._check_player_state)
+            return self.once_map_rendered(self._check_player_state)
         """Verify player state and handle revival if needed"""
-        if PlayedCharacterManager().isDead():
+        if PlayedCharacterManager().is_dead():
             Logger().warning("Mule is dead, initiating revival sequence")
-            self.autoRevive(callback=self._on_revival_complete)
+            self.auto_resurrect(callback=self._on_revival_complete)
         if PlayedCharacterManager().isPodsFull():
             Logger().warning(f"Inventory is almost full will trigger auto unload ...")
             # return self.unloadInBank(callback=self._on_unload_in_bank)
@@ -192,7 +192,7 @@ class MuleFighter(AbstractBehavior):
             self.join_fight_listener.delete()
         self.once(
             KernelEvent.RoleplayStarted,
-            lambda _: self.once_map_processed(self._check_player_state)
+            lambda _: self.once_map_rendered(self._check_player_state)
         )
 
     def _on_join_timeout(self, listener: Listener):
@@ -276,9 +276,9 @@ class MuleFighter(AbstractBehavior):
             Logger().debug("Already processing a move request")
             return
 
-        if PlayedCharacterManager().isDead():
+        if PlayedCharacterManager().is_dead():
             Logger().warning("Cannot move while dead, initiating revival")
-            self.autoRevive(lambda code, err: self._on_revival_complete(code, err))
+            self.auto_resurrect(lambda code, err: self._on_revival_complete(code, err))
             return
 
         # Check for blocking behaviors
@@ -292,7 +292,7 @@ class MuleFighter(AbstractBehavior):
 
         if not curr_vertex:
             Logger().error("Current vertex unknown, waiting for map processing")
-            self.once_map_processed(lambda: self._on_move_to_vertex_request(event, vertex))
+            self.once_map_rendered(lambda: self._on_move_to_vertex_request(event, vertex))
             return
 
         if curr_vertex.UID == vertex.UID:

@@ -1,6 +1,6 @@
 from enum import Enum, auto
 from typing import Optional
-from pyd2bot.logic.fight.frames.FightStateManager import FightStateManager
+from pyd2bot.logic.fight.behaviors.FightStateManager import FightStateManager
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.InactivityManager import InactivityManager

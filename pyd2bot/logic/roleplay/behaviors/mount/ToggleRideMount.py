@@ -42,7 +42,7 @@ class ToggleRideMount(AbstractBehavior):
     def onMountRiding(self, event, isRiding):
         if self.wanted_ride_state is not None and self.wanted_ride_state != isRiding:
             return self.finish(self.DIDNT_GET_WANTED_STATE, "Mount riding state is not as wanted")
-        self.finish(True, None)
+        self.finish(0)
 
     def run(self, wanted_ride_state=None) -> bool:
         self.wanted_ride_state = wanted_ride_state

@@ -7,7 +7,7 @@ from pyd2bot.logic.roleplay.behaviors.farm.CollectableResource import \
     CollectableResource
 from pyd2bot.logic.roleplay.behaviors.farm.ResourcesTracker import ResourceTracker
 from pyd2bot.logic.roleplay.behaviors.mount.PutPetsMount import PutPetsMount
-from pyd2bot.logic.roleplay.behaviors.quest.UseItemsByType import UseItemsByType
+from pyd2bot.logic.roleplay.behaviors.inventory.UseItemsByType import UseItemsByType
 from pyd2bot.logic.roleplay.behaviors.skill.UseSkill import UseSkill
 from pyd2bot.farmPaths.AbstractFarmPath import AbstractFarmPath
 from pyd2bot.data.models import JobFilter

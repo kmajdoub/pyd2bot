@@ -33,7 +33,7 @@ class GetOutOfAnkarnam(AbstractBehavior):
     def onGetOutOfIncarnamNpcEnd(self, code, error):
         if error:
             return self.finish(code, error)
-        self.once_map_processed(
+        self.once_map_rendered(
             callback=self.onAstrubMapProcessed,
             mapId=self.astrubLandingMapId,
             timeout=20,
@@ -45,7 +45,7 @@ class GetOutOfAnkarnam(AbstractBehavior):
         areaId = sa._area.id
         if areaId != self.ankarnamAreaId:
             Logger().debug(f"GetOutOfAnkarnam: Current area is not Ankarnam! (areaId: {areaId})")
-            return self.finish(True, None)
+            return self.finish(0)
         self.npc_dialog(
             self.npcMapId,
             self.npcId,

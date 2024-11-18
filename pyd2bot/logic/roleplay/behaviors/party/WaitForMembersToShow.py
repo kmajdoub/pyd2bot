@@ -30,7 +30,7 @@ class WaitForMembersToShow(AbstractBehavior):
         if len(notShowed) > 0:
             return Logger().info(f"Waiting for members {notShowed} to show up.")
         Logger().info("All party members showed.")
-        self.finish(True, None)
+        self.finish(0)
 
     def onActorShowed(self, event, infos: "GameRolePlayHumanoidInformations"):
         Logger().info(f"Actor {infos.name} showed.")

@@ -1,10 +1,11 @@
-from enum import Enum
+from enum import Enum, auto
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
 from pyd2bot.logic.roleplay.behaviors.inventory.UseTeleportItem import UseTeleportItem
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import PlayedCharacterManager
 from pydofus2.com.ankamagames.dofus.network.enums.TreasureHuntRequestEnum import TreasureHuntRequestEnum
+from pydofus2.com.ankamagames.dofus.network.enums.TreasureHuntTypeEnum import TreasureHuntTypeEnum
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 from pydofus2.mapTools import MapTools
 
@@ -20,8 +21,9 @@ class TakeTreasureHuntQuest(AbstractBehavior):
     FARM_RESOURCES = True
     
     class errors(Enum):
-        UNABLE_TO_TAKE_QUEST = 475559
-    
+        UNABLE_TO_TAKE_QUEST = auto()
+        UNSUPPORTED_HUNT_TYPE = auto()
+        
     def __init__(self):
         super().__init__()
         self.maxCost = 2000  # Default max cost for zaap travel
@@ -92,10 +94,17 @@ class TakeTreasureHuntQuest(AbstractBehavior):
     def onTreasureHuntRequestAnswer(self, event, code, err):
         """Process the treasure hunt request response."""
         if code == TreasureHuntRequestEnum.TREASURE_HUNT_OK:
-            self.finish(0)  # Successfully took quest
+            self.on(KernelEvent.TreasureHuntUpdate, self.onQuestInfos)
         else:
             self.finish(self.errors.UNABLE_TO_TAKE_QUEST, f"Failed to take treasure hunt quest: {err}")
     
+    
+    def onQuestInfos(self, event, questType: int):
+        if questType == TreasureHuntTypeEnum.TREASURE_HUNT_CLASSIC:
+            self.finish(0, None)
+        else:
+            return self.finish(self.errors.UNSUPPORTED_HUNT_TYPE, f"Unsupported treasure hunt type : {questType}")
+        
     @property
     def currentMapId(self):
         """Get the current map ID."""

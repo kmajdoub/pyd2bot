@@ -58,8 +58,9 @@ class Pyd2Bot(DofusClient):
 
     def onReconnect(self, event, message, afterTime=0):
         AbstractBehavior.clear_children()
-        self._saved_player_stats = self._stats_collector.sessionStats # save player stats before restarting
-        self._old_saved_kamas = self._stats_collector._old_saved_kamas
+        if self._stats_collector:
+            self._saved_player_stats = self._stats_collector.sessionStats # save player stats before restarting
+            self._old_saved_kamas = self._stats_collector._old_saved_kamas
         return super().onReconnect(event, message, afterTime)
 
     def onInGame(self):

@@ -418,7 +418,7 @@ class AutoTripUseZaap(AbstractBehavior):
 
     def travelToDestOnFeet(self):
         """Travel from destination zaap to final destination"""
-        if self.travel_plan.path_from_dst_zaap is not None:
+        if self.travel_plan.path_from_dst_zaap is None:
             Logger().warning("No path from destination zaap to final destination")
             return self.finish(
                 self.NO_PATH_TO_DEST,

@@ -12,6 +12,7 @@ from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
 from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.WorldGraph import WorldGraph
 from pydofus2.com.ankamagames.dofus.network.enums.TreasureHuntDigRequestEnum import TreasureHuntDigRequestEnum
 from pydofus2.com.ankamagames.dofus.network.enums.TreasureHuntFlagRequestEnum import TreasureHuntFlagRequestEnum
+from pydofus2.com.ankamagames.dofus.network.enums.TreasureHuntTypeEnum import TreasureHuntTypeEnum
 from pydofus2.com.ankamagames.dofus.types.enums.TreasureHuntStepTypeEnum import TreasureHuntStepTypeEnum
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 from pydofus2.com.ankamagames.jerakine.types.enums.DirectionsEnum import DirectionsEnum
@@ -42,6 +43,7 @@ class SolveTreasureHuntStep(AbstractBehavior):
         self.guess_mode = False
         self.guessed_answers = []
         self.current_map_destination = None
+        self._is_digging = False
 
     @property
     def currentMapId(self):
@@ -49,12 +51,20 @@ class SolveTreasureHuntStep(AbstractBehavior):
         from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import PlayedCharacterManager
         return PlayedCharacterManager().currentMap.mapId
 
+    def _on_quest_update(self, event, questType: int):
+        Logger().info(f"Received quest update : {questType}")
+        self.guessMode = False
+        if questType == TreasureHuntTypeEnum.TREASURE_HUNT_CLASSIC:
+            if not self._is_digging:
+                self.finish(0, None, self.guessed_answers)
+        else:
+            self.finish(self.errors.UNSUPPORTED_HUNT_TYPE, f"Unsupported treasure hunt type : {questType}")
+        
     def run(self):
         """Start solving the current step."""
         # Subscribe to flag and dig responses
-        self.on_multiple([
-            (KernelEvent.TreasureHuntFlagRequestAnswer, self._on_flag_request_answer, {}),
-            (KernelEvent.TreasureHuntDigAnswer, self._on_dig_answer, {})
+        self.on_multiple([                
+            (KernelEvent.TreasureHuntFlagRequestAnswer, self._on_flag_request_answer, {})
         ])
         
         if self.current_step is None:
@@ -139,10 +149,14 @@ class SolveTreasureHuntStep(AbstractBehavior):
 
     def _dig_treasure(self):
         """Request to dig for treasure."""
+        self._is_digging = True
+        self.once(KernelEvent.TreasureHuntDigAnswer, self._on_dig_answer)
         Kernel().questFrame.treasureHuntDigRequest(self.quest_type)
 
     def _put_flag(self):
         """Place a flag at the current location."""
+        self.once(KernelEvent.TreasureHuntUpdate, self._on_quest_update)
+        Logger().info(str(self))
         Kernel().questFrame.treasureHuntFlagRequest(self.quest_type, self.current_step.index)
 
     def _on_selling_over(self, code, err):
@@ -160,7 +174,6 @@ class SolveTreasureHuntStep(AbstractBehavior):
         )
 
     def _on_resurrection_over(self, code, err):
-        """Handle completion of resurrection."""
         if err:
             return self.finish(code, err)
             
@@ -175,7 +188,6 @@ class SolveTreasureHuntStep(AbstractBehavior):
         )
     
     def _on_next_hint_map_reached(self, code, error):
-        """Handle arrival at next hint map."""
         if error:
             if code in [FindHintNpc.UNABLE_TO_FIND_HINT, AutoTripUseZaap.NO_PATH_TO_DEST]:
                 Logger().warning(error)
@@ -210,7 +222,8 @@ class SolveTreasureHuntStep(AbstractBehavior):
         self._put_flag()
 
     def _on_flag_request_answer(self, event, result_code, err):
-        """Handle flag placement responses."""
+        Logger().debug(f"Received flag request answer result : result_code {result_code}, error {err}")
+        
         if result_code == TreasureHuntFlagRequestEnum.TREASURE_HUNT_FLAG_OK:
             return self.finish(0, None, self.guessed_answers)
             
@@ -231,7 +244,8 @@ class SolveTreasureHuntStep(AbstractBehavior):
 
     def _on_dig_answer(self, event, wrongFlagCount, result_code, treasureHuntDigAnswerText):
         """Handle dig responses."""
+        self._is_digging = False
         if result_code == TreasureHuntDigRequestEnum.TREASURE_HUNT_DIG_WRONG_AND_YOU_KNOW_IT:
             self.finish(result_code, f"Treasure hunt dig failed: {treasureHuntDigAnswerText}")
         else:
-            self.finish(result_code, None, self.guessed_answers)
+            self.finish(0, None, self.guessed_answers)

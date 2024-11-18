@@ -73,7 +73,7 @@ class AbstractBehavior(BehaviorApi, metaclass=Singleton):
         self.callback = None
         self.running.clear()
         type(self).clear()
-        # Logger().info(f"[{type(self).__name__}] Finished.")
+        Logger().debug(f"[{type(self).__name__}] Finished.")
     
         if self.parent and self in self.parent.children:
             self.parent.children.remove(self)
@@ -130,13 +130,22 @@ class AbstractBehavior(BehaviorApi, metaclass=Singleton):
         return TreePrinter.get_ascii_tree(self)
 
     def __str__(self) -> str:
-        listeners = [str(listener) for listener in self.listeners]
-        result = f"{type(self).__name__} ({self.getState()})"
+        lines = []
+        # Add main behavior info
+        lines.append(f"{type(self).__name__} ({self.getState()})")
+        
+        # Add listeners on new lines if any
         if self.listeners:
-            result += f", Listeners: {listeners}"
+            lines.append("Listeners:")
+            for listener in self.listeners:
+                lines.append(f"  {listener}")
+                
+        # Add children tree if any
         if self.children:
-            result += f", Children: {self.getTreeStr()}"
-        return result
+            lines.append("Children:")
+            lines.append(self.getTreeStr())
+            
+        return "\n".join(lines)
 
     def stop(self, clear_callback=False):
         if clear_callback:

@@ -17,6 +17,7 @@ from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterMa
     PlayedCharacterManager
 from pydofus2.com.ankamagames.dofus.logic.game.roleplay.types.MovementFailError import \
     MovementFailError
+from pydofus2.com.ankamagames.jerakine.benchmark.BenchmarkTimer import BenchmarkTimer
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 
 class CollectAllMapResources(AbstractBehavior):
@@ -52,7 +53,7 @@ class CollectAllMapResources(AbstractBehavior):
         self.on(KernelEvent.FightStarted, self._on_fight)
 
     def _on_fight(self, event=None):
-        Logger().debug(f"Player entered in a fight.")
+        Logger().warning(f"Player entered in a fight.")
         self.inFight.set()
         self.finish()
 
@@ -82,7 +83,7 @@ class CollectAllMapResources(AbstractBehavior):
             Logger().error(f"CollectAllMapResources is not running anymore!")
             return
 
-        if self.inFight.wait(0.25):
+        if self.inFight.is_set():
             Logger().warning("Stopping farm loop because we entered a fight!")
             return
 
@@ -136,7 +137,7 @@ class CollectAllMapResources(AbstractBehavior):
                 self.forbiddenActions.add(self.currentTarget.uid)
                 return Kernel().defer(self.main)
             return self.send(KernelEvent.ClientShutdown, error)
-        Kernel().defer(self.main)
+        BenchmarkTimer(0.25, self.main).start()
 
     def getAvailableResources(self) -> list[CollectableResource]:
         if not Kernel().interactiveFrame:

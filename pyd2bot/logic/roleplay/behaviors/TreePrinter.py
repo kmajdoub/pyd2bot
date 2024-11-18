@@ -1,3 +1,4 @@
+import sys
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 
 
@@ -6,6 +7,22 @@ class TreePrinter:
     A utility class for pretty-printing tree structures with various formatting options.
     """
     
+    # Define ASCII vs Unicode characters based on platform
+    if sys.platform == 'win32':
+        CHARS = {
+            'corner': '\\--',
+            'tee': '+--',
+            'vertical': '|  ',
+            'space': '   '
+        }
+    else:
+        CHARS = {
+            'corner': '└── ',
+            'tee': '├── ',
+            'vertical': '│   ',
+            'space': '    '
+        }
+        
     @staticmethod
     def get_ascii_tree(node, prefix="", is_last=True, include_root=True):
         """
@@ -26,10 +43,11 @@ class TreePrinter:
         if not include_root and prefix == "":
             pass  # Skip root
         else:
-            result.append(f"{prefix}{'└── ' if is_last else '├── '}{type(node).__name__}")
+            node_char = TreePrinter.CHARS['corner'] if is_last else TreePrinter.CHARS['tee']
+            result.append(f"{prefix}{node_char}{type(node).__name__}")
         
         # Prepare prefix for children
-        child_prefix = prefix + ("    " if is_last else "│   ")
+        child_prefix = prefix + (TreePrinter.CHARS['space'] if is_last else TreePrinter.CHARS['vertical'])
         
         # Process children
         if hasattr(node, 'children'):

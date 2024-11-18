@@ -10,6 +10,7 @@ from pyd2bot.logic.fight.behaviors.fight_turn.fight_algo_utils import (
     get_targetable_entities,
 )
 from pyd2bot.logic.fight.behaviors.fight_turn.spell_utils import can_cast_spell_on_cell
+from pyd2bot.logic.roleplay.behaviors.farm.CollectAllMapResources import CollectAllMapResources
 from pyd2bot.misc.BotEventsManager import BotEventsManager
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
@@ -92,11 +93,10 @@ class FightPlayTurn(AbstractBehavior):
         if not self._can_cast_spells():
             return self._end_turn(TurnResult.CANNOT_CAST, "Unable to cast spells")
 
-        filters = (
-            [(True, 2672), (True, 91)]
-            if self.state_manager.session.isTreasureHuntSession
-            else [(False, None), (True, None)]
-        )
+        if not self.state_manager.session.isTreasureHuntSession or CollectAllMapResources().isRunning():
+            filters = [(False, None), (True, None)]
+        else:
+            filters = [(True, 2672), (True, 91)]
 
         # Try each filter until we find valid targets and path
         for target_filter in filters:

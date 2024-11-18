@@ -39,7 +39,7 @@ class ClassicTreasureHunt(AbstractBehavior):
         UNSUBSCRIBED = 475558
 
     Rose_of_the_Sands_GUID = 15263
-    FARM_RESOURCES = True
+    FARM_RESOURCES = False
 
     _poi_db = TreasureHuntPoiDatabase(HINTS_FILE, WRONG_ANSWERS_FILE)
 
@@ -83,7 +83,6 @@ class ClassicTreasureHunt(AbstractBehavior):
     def run(self):
         self.on_multiple(
             [
-                (KernelEvent.TreasureHuntUpdate, self.onUpdate, {}),
                 (KernelEvent.TreasureHuntFinished, self.onHuntFinished, {}),
                 (KernelEvent.ObjectAdded, self.onObjectAdded, {}),
                 (KernelEvent.ServerTextInfo, self._on_server_notif, {}),
@@ -107,11 +106,10 @@ class ClassicTreasureHunt(AbstractBehavior):
         elif textId == ServerNotificationEnum.KAMAS_LOST:
             self._gained_kamas -= int(params[0])
 
-    def _on_quest_taken(self, code, err):
+    def _on_quest_taken(self, code, err, infos=None):
         if err:
             return self.finish(code, err)
 
-        self.infos = Kernel().questFrame.getTreasureHunt(TreasureHuntTypeEnum.TREASURE_HUNT_CLASSIC)
         self.solve_next_step()
 
     def onObjectAdded(self, event, iw: ItemWrapper, qty: int):
@@ -168,6 +166,7 @@ class ClassicTreasureHunt(AbstractBehavior):
         self.solve_next_step(ignoreSame)
 
     def solve_next_step(self, ignoreSame=False):
+        Logger().debug("Treasure hunt solve step called")        
         if self._stop_sig.is_set():
             self.stop_children()
             return self.finish(self.STOPPED, None)
@@ -197,6 +196,11 @@ class ClassicTreasureHunt(AbstractBehavior):
                     callback=lambda e, m: self.onPlayerRidingMount(e, m, ignoreSame)
                 )
 
+        self.infos = Kernel().questFrame.getTreasureHunt(TreasureHuntTypeEnum.TREASURE_HUNT_CLASSIC)
+
+        if not self.infos:
+            return self.finish("Solve step called but no quest infos found!!")
+
         lastStep = self.currentStep
         idx = self._get_current_step_index()
         if idx is None:
@@ -220,15 +224,9 @@ class ClassicTreasureHunt(AbstractBehavior):
             else:
                 self._on_start_map_reached(0, None)
 
-    def onUpdate(self, event, questType: int):
-        self.guessMode = False
-        if questType == TreasureHuntTypeEnum.TREASURE_HUNT_CLASSIC:
-            self.infos = Kernel().questFrame.getTreasureHunt(questType)
-            self.solve_next_step()
-        else:
-            return self.finish(self.errors.UNSUPPORTED_HUNT_TYPE, f"Unsupported treasure hunt type : {questType}")
-
     def _on_step_solved(self, code, error, guessed_answers=None):
+        Logger().debug(f"Solve step finished with result : code {code}, error {error}")
+
         if guessed_answers:
             self.guessedAnswers.extend(guessed_answers)
                 
@@ -266,7 +264,7 @@ class ClassicTreasureHunt(AbstractBehavior):
                 Logger().error("Bot is stuck and has no rappel potion!")
             return self.finish(code, error)
         
-        solver = SolveTreasureHuntStep(
+        SolveTreasureHuntStep(
             current_step=self.currentStep,
             start_map_id=self.startMapId,
             max_cost=self.maxCost,
@@ -274,6 +272,4 @@ class ClassicTreasureHunt(AbstractBehavior):
             poi_db=self._poi_db,
             submitted_flags=self.submitted_flag_maps(),
             quest_type=self.infos.questType
-        )
-
-        solver.start(callback=self._on_step_solved, parent=self)
+        ).start(callback=self._on_step_solved, parent=self)

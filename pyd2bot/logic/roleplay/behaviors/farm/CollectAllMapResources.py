@@ -11,6 +11,7 @@ from pyd2bot.logic.roleplay.behaviors.inventory.UseItemsByType import UseItemsBy
 from pyd2bot.logic.roleplay.behaviors.skill.UseSkill import UseSkill
 from pyd2bot.data.models import JobFilter
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
+from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import KernelEventsManager
 from pydofus2.com.ankamagames.dofus.internalDatacenter.DataEnum import DataEnum
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import \
@@ -54,8 +55,9 @@ class CollectAllMapResources(AbstractBehavior):
 
     def _on_fight(self, event=None):
         Logger().warning(f"Player entered in a fight.")
+        KernelEventsManager().clear_all_by_origin(self)
+        self.stop_children(True)
         self.inFight.set()
-        self.finish()
 
     def _on_roleplay_started_after_fight(self, event=None):
         Logger().debug(f"Player ended fight and started roleplay")
@@ -103,7 +105,7 @@ class CollectAllMapResources(AbstractBehavior):
         available_resources = self.getAvailableResources()
         farmable_resources = [r for r in available_resources if r.canFarm(self.jobFilters)]
         nonForbiddenResources = [r for r in farmable_resources if r.uid not in self.forbiddenActions]
-        if len(farmable_resources) == 0:
+        if len(nonForbiddenResources) == 0:
             Logger().info("No farmable resource found")
             self.finish(0)
         else:

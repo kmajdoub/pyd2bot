@@ -12,7 +12,7 @@ from pyd2bot.data.enums import ServerNotificationEnum
 
 
 class SellItemsFromBag(AbstractBehavior):
-    MIN_PRICE_RATIO = 0.5  # Minimum acceptable price vs market average
+    MIN_PRICE_RATIO = 0.25  # Minimum acceptable price vs market average
     
     class ERROR_CODES(Enum):
         MISSING_INPUTS = 98754342

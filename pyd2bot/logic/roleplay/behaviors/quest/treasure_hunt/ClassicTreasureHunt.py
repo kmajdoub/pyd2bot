@@ -39,7 +39,7 @@ class ClassicTreasureHunt(AbstractBehavior):
         UNSUBSCRIBED = 475558
 
     Rose_of_the_Sands_GUID = 15263
-    FARM_RESOURCES = False
+    FARM_RESOURCES = True
 
     _poi_db = TreasureHuntPoiDatabase(HINTS_FILE, WRONG_ANSWERS_FILE)
 

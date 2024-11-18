@@ -36,13 +36,18 @@ class TakeTreasureHuntQuest(AbstractBehavior):
     def goToHuntAtm(self):
         """Navigate to the treasure hunt ATM."""
         Logger().debug("AutoTraveling to treasure hunt ATM")
+
         distanceToTHATMZaap = MapTools.distanceBetweenTwoMaps(self.currentMapId, self.ZAAP_HUNT_MAP)
         Logger().debug(f"Distance to ATM Zaap is {distanceToTHATMZaap} maps steps")
-        
+
         if int(Kernel().zaapFrame.spawnMapId) == int(self.ZAAP_HUNT_MAP):
-            if self.use_rappel_potion(self.onTeleportToDistributorNearestZaap):
-                return
-            Logger().debug("No rappel potions found in player consumable view")
+            if self.ZAAP_HUNT_MAP == int(PlayedCharacterManager().currentMap.mapId):
+                Logger().debug("We are already at the atm nearest zaap")
+            else:
+                if self.use_rappel_potion(self.onTeleportToDistributorNearestZaap):
+                    return
+
+                Logger().debug("No rappel potions found in player consumable view")
         else:
             Logger().debug(f"Saved Zaap ({Kernel().zaapFrame.spawnMapId}) is not the TH-ATM zaap")
             
@@ -56,7 +61,7 @@ class TakeTreasureHuntQuest(AbstractBehavior):
     
     def onTeleportToDistributorNearestZaap(self, code, err):
         """Handle teleport results."""
-        if code == UseTeleportItem.CANT_USE_ITEM_IN_MAP:
+        if code == UseTeleportItem.errors.CANT_USE_ITEM_IN_MAP:
             self.travel_using_zaap(
                 self.TAKE_QUEST_MAPID,
                 withSaveZaap=True,

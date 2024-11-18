@@ -110,6 +110,7 @@ class ClassicTreasureHunt(AbstractBehavior):
         if err:
             return self.finish(code, err)
 
+        Logger().info("Treasure hunt quest taken")
         self.solve_next_step()
 
     def onObjectAdded(self, event, iw: ItemWrapper, qty: int):
@@ -247,7 +248,9 @@ class ClassicTreasureHunt(AbstractBehavior):
             return self.finish(code, error)
             
         elif code == 0:  # Success code from solver
-            return self.solve_next_step()
+            self.infos = Kernel().questFrame.getTreasureHunt(TreasureHuntTypeEnum.TREASURE_HUNT_CLASSIC)
+            if self.infos: # quest not ended
+                return self.solve_next_step()
             
     def _on_start_map_reached(self, code, error):
         if error:

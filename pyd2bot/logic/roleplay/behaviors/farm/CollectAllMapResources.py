@@ -58,6 +58,7 @@ class CollectAllMapResources(AbstractBehavior):
         KernelEventsManager().clear_all_by_origin(self)
         self.stop_children(True)
         self.inFight.set()
+        self.once(KernelEvent.RoleplayStarted, self._on_roleplay_started_after_fight)
 
     def _on_roleplay_started_after_fight(self, event=None):
         Logger().debug(f"Player ended fight and started roleplay")

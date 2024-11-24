@@ -48,6 +48,7 @@ class OpenBank(AbstractBehavior):
     def onBankManDialogEnded(self, code, error):
         if error:
             return self.finish(code, error)
+
         Logger().info("Ended bank man dialog waiting for storage to open...")
         self.once(
             event_id=KernelEvent.ExchangeBankStartedWithStorage, 

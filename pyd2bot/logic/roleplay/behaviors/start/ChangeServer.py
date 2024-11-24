@@ -42,7 +42,7 @@ class ChangeServer(AbstractBehavior):
         ConnectionsHandler().closeConnection(DisconnectionReasonEnum.CHANGING_SERVER)
         self.finish(True, None, token=token)
 
-    def finish(self, status, error, token=None):        
+    def finish(self, status, error=None, token=None):        
         if self.reloginTokenListener:
             KernelEventsManager().removeListener(KernelEvent.ReloginToken, self.reloginTokenListener)
         super().finish(status, error, token=token)

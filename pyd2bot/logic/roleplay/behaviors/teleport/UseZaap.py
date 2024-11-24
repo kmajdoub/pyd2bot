@@ -115,7 +115,7 @@ class UseZaap(AbstractBehavior):
                 self.teleportDestinationListener.delete()
             self._on_zaap_skill_use_error()
     
-    def _retry_teleport(self, listener):
+    def _retry_teleport(self):
         Logger().debug(f"Retrying teleport attempt {self._teleport_retry_count + 1} of {self.MAX_TELEPORT_RETRIES}")
         self._teleport_retry_count += 1
         if self._teleport_retry_count <= self.MAX_TELEPORT_RETRIES:

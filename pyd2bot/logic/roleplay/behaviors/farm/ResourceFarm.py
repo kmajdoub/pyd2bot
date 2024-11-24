@@ -104,7 +104,7 @@ class ResourceFarm(AbstractFarmBehavior):
         self._skip_check_solo_mod = True
         self.main()  # Continue farming
     
-    def finish(self, code, error):
+    def finish(self, code, error=None):
         # after shutdown save how much collected during the session
         if self.current_session_id is not None:
             self.resource_tracker.end_farm_session(

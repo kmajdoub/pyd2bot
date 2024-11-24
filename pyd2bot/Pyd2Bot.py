@@ -1,6 +1,7 @@
 from pyd2bot.BotSettings import BotSettings
 from pyd2bot.data.enums import SessionTypeEnum
 from pyd2bot.logic.roleplay.behaviors.bidhouse.MarketPersistenceManager import MarketPersistenceManager
+from pyd2bot.logic.roleplay.behaviors.chat.SpammerBehavior import SmartSpammerBehavior
 from pyd2bot.logic.roleplay.behaviors.updates.AutoUpgradeStats import AutoUpgradeStats
 from pyd2bot.logic.roleplay.behaviors.updates.CollectStats import CollectStats
 from pyd2bot.logic.common.frames.BotRPCFrame import BotRPCFrame
@@ -19,6 +20,7 @@ from pyd2bot.misc.BotEventsManager import BotEventsManager
 from pyd2bot.misc.NapManager import NapManager
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
 from pydofus2.com.ankamagames.dofus.kernel.net.DisconnectionReasonEnum import DisconnectionReasonEnum
+from pydofus2.com.ankamagames.dofus.logic.game.common.managers.InactivityManager import InactivityManager
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 from pydofus2.com.DofusClient import DofusClient
 
@@ -89,6 +91,10 @@ class Pyd2Bot(DofusClient):
         
     def startMainBehavior(self): 
         mainBehavior = None
+        
+        # if self.session.character.accountId == 178805104:
+        #     InactivityManager.INACTIVITY_DELAY = 60 * 30
+        #     mainBehavior = SmartSpammerBehavior()
         
         if self.session.isFarmSession:
             Logger().info(f"Starting farm behavior for {self.name}")

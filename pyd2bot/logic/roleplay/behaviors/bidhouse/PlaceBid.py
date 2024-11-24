@@ -1,3 +1,4 @@
+from enum import Enum, auto
 from typing import Set
 
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
@@ -11,13 +12,15 @@ from pydofus2.com.ankamagames.dofus.network.messages.game.inventory.exchanges.Ex
 from pydofus2.com.ankamagames.dofus.network.messages.game.inventory.items.ObjectDeletedMessage import ObjectDeletedMessage
 from pydofus2.com.ankamagames.dofus.network.messages.game.inventory.items.ObjectQuantityMessage import ObjectQuantityMessage
 from pydofus2.com.ankamagames.dofus.network.messages.game.inventory.items.InventoryWeightMessage import InventoryWeightMessage
+from pydofus2.com.ankamagames.jerakine.benchmark.BenchmarkTimer import BenchmarkTimer
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 
 class PlaceBid(AbstractBehavior):
     """Handles the async logic for selling a single item in the marketplace"""
     
-    class ERROR_CODES:
+    class ERROR_CODES(Enum):
         INVALID_PRICE = 77777782
+        NO_MORE_TO_SELL = auto()
 
     # Server response sequence for a sale
     REQUIRED_SEQUENCE = {
@@ -40,12 +43,16 @@ class PlaceBid(AbstractBehavior):
         if self.price <= 0:
             self.finish(self.ERROR_CODES.INVALID_PRICE, "Invalid price")
             return
-        
+        self.on(KernelEvent.ServerTextInfo, self._on_server_notif)
         self._old_player_kamas = PlayedCharacterManager().characteristics.kamas
         self.on(KernelEvent.MessageReceived, lambda _, m: self._process_message(m))
         self.item = InventoryManager().inventory.getItem(self.object_uid)
         Kernel().marketFrame.create_listing(self.object_uid, self.quantity, self.price)
 
+    def _on_server_notif(self, event, msgId, msgType, textId, msgContent, params):
+        if textId == 5331:
+            self.finish(self.ERROR_CODES.NO_MORE_TO_SELL, "Dont have enough quantity to sell")
+    
     def _process_message(self, msg) -> None:
         """Track complete server response sequence"""
         if isinstance(msg, (ObjectQuantityMessage, ObjectDeletedMessage)):

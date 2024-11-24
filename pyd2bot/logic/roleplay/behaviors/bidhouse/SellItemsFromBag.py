@@ -1,25 +1,26 @@
 from collections import defaultdict
-from enum import Enum
+from enum import Enum, auto
 from typing import Dict, Optional
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
 from pydofus2.com.ankamagames.dofus.internalDatacenter.items.ItemWrapper import ItemWrapper
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.InventoryManager import InventoryManager
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import PlayedCharacterManager
+from pydofus2.com.ankamagames.dofus.types.enums.ItemCategoryEnum import ItemCategoryEnum
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
 from pyd2bot.data.enums import ServerNotificationEnum
 
 
 class SellItemsFromBag(AbstractBehavior):
-    MIN_PRICE_RATIO = 0.25  # Minimum acceptable price vs market average
-    
+    MIN_PRICE_RATIO = 0.25
+
     class ERROR_CODES(Enum):
-        MISSING_INPUTS = 98754342
-        NO_MORE_SELL_SLOTS = 98754343
-        INSUFFICIENT_KAMAS = 98754344
-        INSUFFICIENT_QUANTITY = 98754345
-        ITEMS_NOT_FOUND = 98754346
+        MISSING_INPUTS = auto()
+        NO_MORE_SELL_SLOTS = auto()
+        INSUFFICIENT_KAMAS = auto()
+        INSUFFICIENT_QUANTITY = auto()
+        ITEMS_NOT_FOUND = auto()
 
     def __init__(self, gid_batch_size: Dict[int, int] = None, type_batch_size: Dict[int, int] = None):
         super().__init__()
@@ -31,36 +32,43 @@ class SellItemsFromBag(AbstractBehavior):
         self.markets_excluded_for_items = defaultdict(list)
         self._tried_reopen_market = False
         self._search_item_listener = None
-        
+
     def run(self) -> None:
         self._current_idx = 0
         self.items_uids = list[int]()
         
-        if not self.gid_batch_size and not self.type_batch_size:
-            return self._handle_error(self.ERROR_CODES.MISSING_INPUTS, "You need to provide either by type or gid the batch sizes")
+        # if not self.gid_batch_size and not self.type_batch_size:
+        #     return self._handle_error(self.ERROR_CODES.MISSING_INPUTS, "You need to provide either by type or gid the batch sizes")
 
         if not self._check_inventory():
             return
         
         self.on(KernelEvent.ServerTextInfo, self._on_server_notif)
         self._process_current_item()
-    
+
     def get_item_batch_size(self, item: ItemWrapper):
-        if self.gid_batch_size:
-            return self.gid_batch_size[item.objectGID]
-        elif self.type_batch_size:
-            return self.type_batch_size[item.typeId]
+        if item.quantity < 10:
+            return 1
+        if 10 <= item.quantity < 100:
+            return 10
         return 100
 
     def _check_inventory(self):
         self.items_uids = list[int]()
         inventory_items = InventoryManager().inventory.getView("storage").content
         for item in inventory_items:
-            if (self.type_batch_size and item.typeId in self.type_batch_size) or \
-                (self.gid_batch_size and item.objectGID in self.gid_batch_size):
-                    self.items_uids.append(item.objectUID)
-        
+            if (
+                not item.linked
+                and item.category == ItemCategoryEnum.RESOURCES_CATEGORY
+                and Kernel().averagePricesFrame.getItemAveragePrice(item.objectGID)
+            ):
+                self.items_uids.append(item.objectUID)
+            # if self.type_batch_size:
+                # if (self.type_batch_size and item.typeId in self.type_batch_size) or \
+                #     (self.gid_batch_size and item.objectGID in self.gid_batch_size):
+                #     self.items_uids.append(item.objectUID)
         if not self.items_uids:
+            Logger().debug("No item found in inventory to sell!")
             self.finish(self.ERROR_CODES.ITEMS_NOT_FOUND, "No item found in inventory to sell!")
             return False
 
@@ -68,7 +76,10 @@ class SellItemsFromBag(AbstractBehavior):
         return True
 
     def _process_current_item(self) -> None:
+        Logger().debug(f"Processing item {self._current_idx} / {len(self.items_uids)}")
+
         if self._current_idx >= len(self.items_uids):
+            Logger().debug("Processed all items")
             return self._ensure_market_closed(lambda: self.finish(0))
         
         item = self.current_item
@@ -92,7 +103,7 @@ class SellItemsFromBag(AbstractBehavior):
             item_level=item.level,
             callback=self._on_market_open
         )
-    
+
     def _check_market_level(self):        
         market_max_lvl = self._market_frame._bids_manager.max_item_level
         if market_max_lvl is None: # Market is not open yet
@@ -160,7 +171,9 @@ class SellItemsFromBag(AbstractBehavior):
 
         # Get price with ratio validation
         target_price, error = self._market_frame._bids_manager.get_sell_price(
-            item.objectGID, qty, self.MIN_PRICE_RATIO
+            item.objectGID,
+            qty,
+            self.MIN_PRICE_RATIO
         )
         
         if error:

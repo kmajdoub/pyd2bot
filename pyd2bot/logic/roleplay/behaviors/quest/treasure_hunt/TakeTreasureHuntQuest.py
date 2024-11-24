@@ -2,6 +2,7 @@ from enum import Enum, auto
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
 from pyd2bot.logic.roleplay.behaviors.inventory.UseTeleportItem import UseTeleportItem
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
+from pydofus2.com.ankamagames.dofus.internalDatacenter.DataEnum import DataEnum
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import PlayedCharacterManager
 from pydofus2.com.ankamagames.dofus.network.enums.TreasureHuntRequestEnum import TreasureHuntRequestEnum
@@ -19,6 +20,7 @@ class TakeTreasureHuntQuest(AbstractBehavior):
     TREASURE_HUNT_ATM_SKILLUID = 152643320
     ZAAP_HUNT_MAP = 142087694
     FARM_RESOURCES = True
+
     
     class errors(Enum):
         UNABLE_TO_TAKE_QUEST = auto()
@@ -86,10 +88,10 @@ class TakeTreasureHuntQuest(AbstractBehavior):
         self.use_skill(
             elementId=self.TREASURE_HUNT_ATM_IE_ID,
             skilluid=self.TREASURE_HUNT_ATM_SKILLUID,
-            callback=self.onTreasureHuntTaken
+            callback=self._on_treasure_hunt_taken
         )
     
-    def onTreasureHuntTaken(self, code, err):
+    def _on_treasure_hunt_taken(self, code, err):
         """Handle the result of taking the treasure hunt."""
         if err:
             return self.finish(code, err)

@@ -27,13 +27,6 @@ class CollectAllMapResources(AbstractBehavior):
         MAP_CHANGED = auto()
         PLAYER_DEAD = auto()
         FULL_PODS = auto()
-        
-    RESOURCES_TO_COLLECT_SELL = {
-        DataEnum.FISH_TYPE_ID: 100, 
-        DataEnum.WOOD_TYPE_ID: 100, 
-        DataEnum.ORES_TYPE_ID: 100,
-        DataEnum.PLANTS_TYPE_ID: 100
-    }
 
     def __init__(self, jobFilters: List[JobFilter]=[]):
         super().__init__()
@@ -67,7 +60,7 @@ class CollectAllMapResources(AbstractBehavior):
         self.once_map_rendered(self._on_map_rendered_after_fight)
 
     def _on_map_rendered_after_fight(self):
-        curr_vertex = PlayedCharacterManager().currVertex.mapId
+        curr_vertex = PlayedCharacterManager().currVertex
         if self.currentVertex != curr_vertex:
             error_text = f"Vertex loaded after fight {curr_vertex}, is not the vertex player was on when farming the resources!"
             Logger().warning(error_text)

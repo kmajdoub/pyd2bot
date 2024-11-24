@@ -498,15 +498,15 @@ class BehaviorApi:
 
         RetrieveRecipeFromBank().start(recipe, return_to_start, bankInfos, callback=callback, parent=self)
 
-    def unload_in_bank(self, return_to_start=True, bankInfos=None, leave_bank_open=False, callback=None):
+    def unload_in_bank(self, return_to_start=True, bankInfos=None, leave_bank_open=False, items_gid_to_keep=None, callback=None):
         from pyd2bot.logic.roleplay.behaviors.bank.UnloadInBank import UnloadInBank
 
-        UnloadInBank().start(return_to_start, bankInfos, leave_bank_open, callback=callback, parent=self)
+        UnloadInBank().start(return_to_start, bankInfos, leave_bank_open, items_gid_to_keep, callback=callback, parent=self)
 
-    def retrieve_sell(self, type_batch_size, callback=None):
+    def retrieve_sell(self, type_batch_size, items_gid_to_keep=None, callback=None):
         from pyd2bot.logic.roleplay.behaviors.bidhouse.RetrieveSellUpdate import RetrieveSellUpdate
 
-        b = RetrieveSellUpdate(type_batch_size=type_batch_size)
+        b = RetrieveSellUpdate(type_batch_size=type_batch_size, items_gid_to_keep=items_gid_to_keep)
         b.start(callback=callback, parent=self)
         return b
 

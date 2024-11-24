@@ -1,4 +1,5 @@
 from collections import defaultdict
+from enum import Enum, auto
 from typing import Optional
 
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
@@ -24,11 +25,11 @@ class OpenMarket(AbstractBehavior):
     }
     
     # Error codes
-    class ERROR_CODES:
-        HDV_NOT_FOUND = 7676999,
-        UNSUPPORTED_TYPE = 7676990
-        MAP_ERROR = 7676991
-        ITEM_NOT_FOUND = 77777778
+    class ERROR_CODES(Enum):
+        HDV_NOT_FOUND = auto()
+        UNSUPPORTED_TYPE = auto()
+        MAP_ERROR = auto()
+        ITEM_NOT_FOUND = auto()
 
     def __init__(self, from_gid: Optional[int] = None, from_object_category: Optional[int] = None, exclude_market_at_maps: list[int] = None, mode="sell", item_level=200):
         super().__init__()

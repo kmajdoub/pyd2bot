@@ -1,4 +1,4 @@
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
 from pyd2bot.logic.roleplay.behaviors.bank.RetrieveFromBank import RetrieveFromBank
 from pyd2bot.logic.roleplay.behaviors.bidhouse.SellItemsFromBag import SellItemsFromBag
@@ -20,7 +20,7 @@ class RetrieveSellUpdate(AbstractBehavior):
     ERROR_BANK_ACCESS = 89987
     ERROR_MARKET_ACCESS = 89988
 
-    def __init__(self, gid_batch_size: Dict[int, int] = None, type_batch_size: Dict[int, int] = None):
+    def __init__(self, gid_batch_size: Dict[int, int] = None, type_batch_size: Dict[int, int] = None, items_gid_to_keep: List[int] = None):
         super().__init__()
         self._logger = Logger()
         self.gid_batch_size = gid_batch_size
@@ -28,6 +28,7 @@ class RetrieveSellUpdate(AbstractBehavior):
         self.has_remaining = False
         self._finish_code: Optional[int] = None
         self._finish_error: Optional[str] = None
+        self.items_gid_to_keep = items_gid_to_keep
 
     def run(self) -> bool:
         # Store starting position
@@ -94,13 +95,11 @@ class RetrieveSellUpdate(AbstractBehavior):
         self._finish_error = error
         
         # Unload in bank before finishing
-        if self.has_items_in_bag():
-            self.unload_in_bank(
-                return_to_start=False,
-                callback=self._on_storage_open
-            )
-        else:
-            self._on_storage_open(0, None)
+        self.unload_in_bank(
+            return_to_start=False,
+            items_gid_to_keep=self.items_gid_to_keep,
+            callback=self._on_storage_open
+        )
         
     def has_items_in_bag(self):
         bag_items = InventoryManager().inventory.getView("storage").content

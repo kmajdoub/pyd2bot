@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from collections import defaultdict
 import numpy as np
-from typing import List, Dict, Tuple
+from typing import List, Dict, Optional, Tuple
 from pyd2bot.logic.roleplay.behaviors.bidhouse.MarketPersistence import MarketPersistence
 from pydofus2.com.ankamagames.dofus.datacenter.items.Item import Item
 
@@ -31,7 +31,94 @@ class MarketItemAnalytics:
     def __init__(self):
         self.market_db = MarketPersistence()
         self._ensure_stats_table()
-    
+
+    def calculate_item_stats(self, server_id: int, gid: int, batch_size: int) -> Optional[MarketStats]:
+        """Calculate statistics for a specific item."""
+        try:
+            # Fetch specific sales data
+            with self.market_db.get_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("""
+                        SELECT 
+                            price,
+                            sold_at,
+                            created_at
+                        FROM bids
+                        WHERE server_id = %s 
+                        AND object_gid = %s 
+                        AND batch_size = %s
+                        AND sold_at IS NOT NULL
+                        ORDER BY sold_at DESC
+                    """, (server_id, gid, batch_size))
+                    
+                    sales = [{'price': float(row[0]), 'sold_at': row[1], 'created_at': row[2]} 
+                            for row in cur.fetchall()]
+                    
+                    # Fetch average tax
+                    cur.execute("""
+                        SELECT AVG(tax_amount) as avg_tax
+                        FROM tax_history
+                        WHERE server_id = %s 
+                        AND object_gid = %s 
+                        AND batch_size = %s
+                    """, (server_id, gid, batch_size))
+                    
+                    avg_tax = float(cur.fetchone()[0] or 0)
+
+            if not sales:
+                return None
+                
+            item_name = Item.getItemById(gid).name
+            
+            # Calculate time to sell in hours
+            times_to_sell = [(sale['sold_at'] - sale['created_at']).total_seconds() / 3600 
+                            for sale in sales]
+            
+            # Calculate prices
+            prices = [sale['price'] for sale in sales]
+            
+            # Calculate profits per hour
+            profits_per_hour = [
+                (sale['price'] - avg_tax) / ((sale['sold_at'] - sale['created_at']).total_seconds() / 3600)
+                for sale in sales
+                if (sale['sold_at'] - sale['created_at']).total_seconds() > 0
+            ]
+            
+            # Calculate sales rate (sales per day)
+            if len(sales) >= 2:
+                time_span = (sales[0]['sold_at'] - sales[-1]['sold_at']).total_seconds() / (24 * 3600)
+                sales_rate = len(sales) / time_span if time_span > 0 else 0
+            else:
+                sales_rate = 0
+            
+            # Fit exponential distribution to time to sell
+            exp_rate = 1 / np.mean(times_to_sell) if times_to_sell else 0
+            
+            return MarketStats(
+                server_id=server_id,
+                object_gid=gid,
+                batch_size=batch_size,
+                item_name=item_name,
+                calculated_at=datetime.now(),
+                num_samples=len(sales),
+                mean_time_to_sell=np.mean(times_to_sell),
+                std_time_to_sell=np.std(times_to_sell),
+                exp_rate=exp_rate,
+                mean_price=np.mean(prices),
+                std_price=np.std(prices),
+                median_price=np.median(prices),
+                mean_tax=avg_tax,
+                std_tax=0,
+                sales_rate=sales_rate,
+                mean_profit_per_hour=np.mean(profits_per_hour) if profits_per_hour else 0,
+                std_profit_per_hour=np.std(profits_per_hour) if profits_per_hour else 0,
+                p95_profit_per_hour=np.percentile(profits_per_hour, 95) if profits_per_hour else 0
+            )
+                    
+        except Exception as e:
+            print(f"Error calculating stats for server={server_id}, gid={gid}, batch={batch_size}: {str(e)}")
+            return None
+
     def _ensure_stats_table(self):
         """Create the statistics table if it doesn't exist."""
         with self.market_db.get_connection() as conn:

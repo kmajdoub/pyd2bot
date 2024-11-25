@@ -1,6 +1,7 @@
 from typing import Optional
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
 from pyd2bot.logic.roleplay.behaviors.farm.CollectAllMapResources import CollectAllMapResources
+from pyd2bot.logic.roleplay.behaviors.movement.AutoTrip import AutoTrip
 from pyd2bot.logic.roleplay.behaviors.movement.AutoTripUseZaap import AutoTripUseZaap
 from pyd2bot.logic.roleplay.behaviors.quest.treasure_hunt.FindHintNpc import FindHintNpc
 from pyd2bot.logic.roleplay.behaviors.quest.treasure_hunt.TreasureHuntPoiDatabase import TreasureHuntPoiDatabase
@@ -110,12 +111,7 @@ class SolveTreasureHuntStep(AbstractBehavior):
             Logger().debug(f"Next hint map is {next_map_id}, will travel to it.")
             self.current_map_destination = next_map_id
 
-            self.travel_using_zaap(
-                next_map_id,
-                maxCost=self.max_cost,
-                farm_resources_on_way=self.farm_resources,
-                callback=self._on_next_hint_map_reached,
-            )
+            self._travel_to_current_target_hint_map()
 
         elif self.current_step.type == TreasureHuntStepTypeEnum.DIRECTION_TO_HINT:
             FindHintNpc().start(
@@ -178,13 +174,7 @@ class SolveTreasureHuntStep(AbstractBehavior):
             return self.finish(code, err)
 
         Logger().info("Selling complete, resuming travel to hint map...")
-        # Resume travel to hint map
-        self.travel_using_zaap(
-            self.current_map_destination,
-            maxCost=self.max_cost,
-            farm_resources_on_way=self.farm_resources,
-            callback=self._on_next_hint_map_reached,
-        )
+        self._travel_to_current_target_hint_map()
 
     def _on_resurrection_over(self, code, err):
         if err:
@@ -192,7 +182,9 @@ class SolveTreasureHuntStep(AbstractBehavior):
 
         Logger().info("Resurrection complete, resuming travel to hint map...")
 
-        # Resume travel to hint map after resurrection
+        self._travel_to_current_target_hint_map()
+    
+    def _travel_to_current_target_hint_map(self):
         self.travel_using_zaap(
             self.current_map_destination,
             maxCost=self.max_cost,
@@ -202,6 +194,13 @@ class SolveTreasureHuntStep(AbstractBehavior):
 
     def _on_next_hint_map_reached(self, code, error):
         if error:
+            if code == AutoTrip.NO_PATH_FOUND:
+                if self.use_rappel_potion(
+                    lambda *_: self._travel_to_current_target_hint_map()
+                ):
+                    return
+                Logger().error("Bot is stuck and has no rappel potion!")
+
             if code in [FindHintNpc.UNABLE_TO_FIND_HINT, AutoTripUseZaap.NO_PATH_TO_DEST]:
                 Logger().warning(error)
                 return self._dig_treasure()
@@ -219,12 +218,7 @@ class SolveTreasureHuntStep(AbstractBehavior):
 
             if code == CollectAllMapResources.errors.MAP_CHANGED:
                 Logger().warning(f"Map changed during resource collection, retrying travel to hint map...")
-                return self.travel_using_zaap(
-                    self.current_map_destination,  # Need to store destination when starting travel
-                    maxCost=self.max_cost,
-                    farm_resources_on_way=self.farm_resources,
-                    callback=self._on_next_hint_map_reached,
-                )
+                return self._travel_to_current_target_hint_map()
 
             if code == CollectAllMapResources.errors.PLAYER_DEAD:
                 Logger().warning(f"Player died while farming resources, will resurrect and retry...")

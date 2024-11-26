@@ -122,7 +122,7 @@ class UseZaap(AbstractBehavior):
             self.once_map_rendered(
                 self._on_dest_map_processed,
                 timeout=10,
-                ontimeout=self._retry_teleport if self._teleport_retry_count < self.MAX_TELEPORT_RETRIES else lambda: self._handle_error(
+                ontimeout=self._retry_teleport if self._teleport_retry_count < self.MAX_TELEPORT_RETRIES else lambda *_: self._handle_error(
                     self.ZAAP_USE_ERROR,
                     f"Failed to process destination map after {self.MAX_TELEPORT_RETRIES} attempts"
                 )

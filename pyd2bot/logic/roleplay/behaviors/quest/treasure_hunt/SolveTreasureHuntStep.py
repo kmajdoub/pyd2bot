@@ -5,12 +5,14 @@ from pyd2bot.logic.roleplay.behaviors.movement.AutoTrip import AutoTrip
 from pyd2bot.logic.roleplay.behaviors.movement.AutoTripUseZaap import AutoTripUseZaap
 from pyd2bot.logic.roleplay.behaviors.quest.treasure_hunt.FindHintNpc import FindHintNpc
 from pyd2bot.logic.roleplay.behaviors.quest.treasure_hunt.TreasureHuntPoiDatabase import TreasureHuntPoiDatabase
+from pyd2bot.misc.Localizer import Localizer
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
 from pydofus2.com.ankamagames.dofus.datacenter.quest.treasureHunt.PointOfInterest import PointOfInterest
 from pydofus2.com.ankamagames.dofus.datacenter.world.MapPosition import MapPosition
 from pydofus2.com.ankamagames.dofus.internalDatacenter.DataEnum import DataEnum
 from pydofus2.com.ankamagames.dofus.internalDatacenter.quests.TreasureHuntStepWrapper import TreasureHuntStepWrapper
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
+from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import PlayedCharacterManager
 from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.WorldGraph import WorldGraph
 from pydofus2.com.ankamagames.dofus.network.enums.TreasureHuntDigRequestEnum import TreasureHuntDigRequestEnum
 from pydofus2.com.ankamagames.dofus.network.enums.TreasureHuntFlagRequestEnum import TreasureHuntFlagRequestEnum
@@ -92,8 +94,13 @@ class SolveTreasureHuntStep(AbstractBehavior):
         elif self.current_step.type == TreasureHuntStepTypeEnum.DIRECTION_TO_POI:
             Logger().debug(f"Current step : {self.current_step}")
             next_map_id = self._get_next_hint_map()
+            dst_vertex, _ = Localizer.findDestVertex(
+                PlayedCharacterManager().currVertex, next_map_id
+            )
+            if next_map_id and not dst_vertex:
+                Logger().warning("Found next hint mapId but its unreachable from current position!")
 
-            if not next_map_id:
+            if not dst_vertex:
                 mp = MapPosition.getMapPositionById(self.start_map_id)
                 Logger().error(
                     f"Unable to find Map of poi {self.current_step.poiLabel} from start map {self.start_map_id}:({mp.posX}, {mp.posY})!"
@@ -111,7 +118,13 @@ class SolveTreasureHuntStep(AbstractBehavior):
             Logger().debug(f"Next hint map is {next_map_id}, will travel to it.")
             self.current_map_destination = next_map_id
 
-            self._travel_to_current_target_hint_map()
+            self.travel_using_zaap(
+                dst_vertex.mapId,
+                dst_vertex.zoneId,
+                maxCost=self.max_cost,
+                farm_resources_on_way=self.farm_resources,
+                callback=self._on_next_hint_map_reached,
+            )
 
         elif self.current_step.type == TreasureHuntStepTypeEnum.DIRECTION_TO_HINT:
             FindHintNpc().start(
@@ -185,8 +198,13 @@ class SolveTreasureHuntStep(AbstractBehavior):
         self._travel_to_current_target_hint_map()
     
     def _travel_to_current_target_hint_map(self):
+        dst_vertex, _ = Localizer.findDestVertex(
+            PlayedCharacterManager().currVertex, self.current_map_destination
+        )
+        
         self.travel_using_zaap(
-            self.current_map_destination,
+            dst_vertex.mapId,
+            dst_vertex.zoneId,
             maxCost=self.max_cost,
             farm_resources_on_way=self.farm_resources,
             callback=self._on_next_hint_map_reached,

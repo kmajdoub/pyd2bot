@@ -113,11 +113,11 @@ class AutoTripUseZaap(AbstractBehavior):
             # Find path to havenbag point
             path_to_point = None
             if edge.src.mapId != curr_vertex.mapId:
-                _, path_to_point = self.findTravelInfos(edge.src, src_vertex=curr_vertex)
+                _, path_to_point = Localizer.findTravelInfos(edge.src, src_vertex=curr_vertex)
                 if path_to_point is None:
                     continue
 
-            _, path_from_dst = self.findTravelInfos(
+            _, path_from_dst = Localizer.findTravelInfos(
                 WorldGraph().getVertex(self.dstMapId, self.dstZoneId or 1),
                 src_vertex=dst_zaap
             )
@@ -172,14 +172,14 @@ class AutoTripUseZaap(AbstractBehavior):
             if PlayedCharacterManager().currVertex is None:
                 Logger().warning(f"Current player vertex is not defined, we cant look for path!")
 
-            dst_vertex, path = self.findDestVertex(
+            dst_vertex, path = Localizer.findDestVertex(
                 PlayedCharacterManager().currVertex, self.dstMapId
             )
         else:
             dst_vertex = WorldGraph().getVertex(self.dstMapId, self.dstZoneId)
             if not dst_vertex:
                 return None
-            _, path = self.findTravelInfos(
+            _, path = Localizer.findTravelInfos(
                 dst_vertex, src_vertex=PlayedCharacterManager().currVertex
             )
         
@@ -214,7 +214,7 @@ class AutoTripUseZaap(AbstractBehavior):
         if not dst_zaap:
             return None
 
-        _, path_from_dst_zaap = self.findTravelInfos(dst_vertex, src_vertex=dst_zaap)
+        _, path_from_dst_zaap = Localizer.findTravelInfos(dst_vertex, src_vertex=dst_zaap)
         if path_from_dst_zaap is None:
             return None
 
@@ -432,64 +432,6 @@ class AutoTripUseZaap(AbstractBehavior):
             farm_resources_on_way=self.farm_resources_on_way,
             callback=self.finish
         )
-
-    @classmethod
-    def findTravelInfos(
-        cls, dst_vertex: Vertex, src_mapId=None, src_vertex=None, maxLen=float("inf")
-    ) -> Tuple[Vertex, list[Edge]]:
-        if dst_vertex is None:
-            return None, None
-            
-        if src_vertex is None:
-            if src_mapId == dst_vertex.mapId:
-                return dst_vertex, []
-                
-            rpZ = 1
-            minDist = float("inf")
-            final_src_vertex = None
-            final_path = None
-            while True:
-                src_vertex = WorldGraph().getVertex(src_mapId, rpZ)
-                if not src_vertex:
-                    break
-                path = AStar().search(WorldGraph(), src_vertex, dst_vertex, maxPathLength=min(maxLen, minDist))
-                if path is not None:
-                    dist = len(path)
-                    if dist < minDist:
-                        minDist = dist
-                        final_src_vertex = src_vertex
-                        final_path = path
-                rpZ += 1
-            
-            return final_src_vertex, final_path
-        else:
-            if src_vertex.mapId == dst_vertex.mapId:
-                return src_vertex, []
-                
-            path = AStar().search(WorldGraph(), src_vertex, dst_vertex, maxPathLength=maxLen)
-            if path is None:
-                return None, None
-                
-            return src_vertex, path
-
-    @classmethod
-    def findDestVertex(cls, src_vertex, dst_mapId: int) -> Tuple[Vertex, list[Edge]]:
-        """Find a vertex and path for the destination map"""
-        rpZ = 1
-        while True:
-            Logger().debug(f"Looking for dest vertex in map {dst_mapId} with rpZ {rpZ}")
-            dst_vertex = WorldGraph().getVertex(dst_mapId, rpZ)
-            if not dst_vertex:
-                break
-                
-            path = AStar().search(WorldGraph(), src_vertex, dst_vertex)
-            if path is not None:
-                return dst_vertex, path
-            
-            Logger().debug(f"No path found for dest vertex in map {dst_vertex} and src {src_vertex}")
-            rpZ += 1
-            
-        return None, None
 
     def finish(self, code=0, error=None):
         """Clean up and finish behavior execution"""

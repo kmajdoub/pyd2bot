@@ -1,6 +1,7 @@
 import json
 import math
 import os
+from typing import Tuple
 
 from pydofus2.com.ankamagames.atouin.managers.MapDisplayManager import \
     MapDisplayManager
@@ -367,6 +368,64 @@ class Localizer:
             return []
         return path
 
+    @classmethod
+    def findTravelInfos(
+        cls, dst_vertex: Vertex, src_mapId=None, src_vertex=None, maxLen=float("inf")
+    ) -> Tuple[Vertex, list[Edge]]:
+        if dst_vertex is None:
+            return None, None
+            
+        if src_vertex is None:
+            if src_mapId == dst_vertex.mapId:
+                return dst_vertex, []
+                
+            rpZ = 1
+            minDist = float("inf")
+            final_src_vertex = None
+            final_path = None
+            while True:
+                src_vertex = WorldGraph().getVertex(src_mapId, rpZ)
+                if not src_vertex:
+                    break
+                path = AStar().search(WorldGraph(), src_vertex, dst_vertex, maxPathLength=min(maxLen, minDist))
+                if path is not None:
+                    dist = len(path)
+                    if dist < minDist:
+                        minDist = dist
+                        final_src_vertex = src_vertex
+                        final_path = path
+                rpZ += 1
+            
+            return final_src_vertex, final_path
+        else:
+            if src_vertex.mapId == dst_vertex.mapId:
+                return src_vertex, []
+                
+            path = AStar().search(WorldGraph(), src_vertex, dst_vertex, maxPathLength=maxLen)
+            if path is None:
+                return None, None
+                
+            return src_vertex, path
+
+    @classmethod
+    def findDestVertex(cls, src_vertex, dst_mapId: int) -> Tuple[Vertex, list[Edge]]:
+        """Find a vertex and path for the destination map"""
+        rpZ = 1
+        while True:
+            Logger().debug(f"Looking for dest vertex in map {dst_mapId} with rpZ {rpZ}")
+            dst_vertex = WorldGraph().getVertex(dst_mapId, rpZ)
+            if not dst_vertex:
+                break
+                
+            path = AStar().search(WorldGraph(), src_vertex, dst_vertex)
+            if path is not None:
+                return dst_vertex, path
+            
+            Logger().debug(f"No path found for dest vertex in map {dst_vertex} and src {src_vertex}")
+            rpZ += 1
+            
+        return None, None
+    
 if __name__ == "__main__":
     Logger.logToConsole = True
     r = Localizer.findPathToClosestZaap(startMapId=128452097, onlyKnownZaap=False)

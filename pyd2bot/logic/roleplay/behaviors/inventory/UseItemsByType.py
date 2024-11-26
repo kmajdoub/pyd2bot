@@ -11,7 +11,6 @@ class UseItemsByType(AbstractBehavior):
         self.item = None
 
     def run(self):
-        self._items_to_use = self.has_items(self.item_type)
         self._process_next()
     
     @classmethod
@@ -20,6 +19,7 @@ class UseItemsByType(AbstractBehavior):
         return [item for item in inventory_items if item.typeId == item_type]
         
     def _process_next(self):
+        self._items_to_use = self.has_items(self.item_type)
         if not self._items_to_use:
             return self.finish(0)
         

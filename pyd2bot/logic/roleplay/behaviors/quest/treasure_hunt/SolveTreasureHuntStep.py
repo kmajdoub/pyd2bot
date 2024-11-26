@@ -94,11 +94,15 @@ class SolveTreasureHuntStep(AbstractBehavior):
         elif self.current_step.type == TreasureHuntStepTypeEnum.DIRECTION_TO_POI:
             Logger().debug(f"Current step : {self.current_step}")
             next_map_id = self._get_next_hint_map()
-            dst_vertex, _ = Localizer.findDestVertex(
-                PlayedCharacterManager().currVertex, next_map_id
-            )
-            if next_map_id and not dst_vertex:
-                Logger().warning("Found next hint mapId but its unreachable from current position!")
+            if next_map_id: 
+                dst_vertex, _ = Localizer.findDestVertex(
+                    PlayedCharacterManager().currVertex,
+                    next_map_id
+                )
+                if not dst_vertex:
+                    Logger().warning("Found next hint mapId but its unreachable from current position!")
+            else:
+                dst_vertex = None
 
             if not dst_vertex:
                 mp = MapPosition.getMapPositionById(self.start_map_id)

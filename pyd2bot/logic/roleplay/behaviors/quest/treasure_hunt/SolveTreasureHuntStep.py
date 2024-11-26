@@ -116,6 +116,9 @@ class SolveTreasureHuntStep(AbstractBehavior):
                     return self._dig_treasure()
 
             Logger().debug(f"Next hint map is {next_map_id}, will travel to it.")
+            dst_vertex, _ = Localizer.findDestVertex(
+                PlayedCharacterManager().currVertex, next_map_id
+            )
             self.current_map_destination = next_map_id
 
             self.travel_using_zaap(

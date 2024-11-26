@@ -37,7 +37,7 @@ class AbstractBehavior(BehaviorApi, metaclass=Singleton):
         if self.parent and not self.parent.running.is_set():
             Logger().debug(f"Cancel start for reason : parent {self.parent} behavior died.")
             return
-        KernelEventsManager().send(KernelEvent.ClientStatusUpdate, f"STARTING_{type(self).__name__.upper()}")
+        # KernelEventsManager().send(KernelEvent.ClientStatusUpdate, f"STARTING_{type(self).__name__.upper()}")
 
         self.callback = callback
         if parent and parent != self:
@@ -46,11 +46,11 @@ class AbstractBehavior(BehaviorApi, metaclass=Singleton):
     
         if self.running.is_set():
             error = f"{type(self).__name__} already running by parent {self.parent}."
-            KernelEventsManager().send(
-                KernelEvent.ClientStatusUpdate,
-                f"ERROR_{type(self).__name__.upper()}",
-                { "error": error, "code": self.ALREADY_RUNNING },
-            )
+            # KernelEventsManager().send(
+            #     KernelEvent.ClientStatusUpdate,
+            #     f"ERROR_{type(self).__name__.upper()}",
+            #     { "error": error, "code": self.ALREADY_RUNNING },
+            # )
             if self.callback:
                 Kernel().defer(lambda: self.callback(self.ALREADY_RUNNING, error))
             else:
@@ -83,14 +83,14 @@ class AbstractBehavior(BehaviorApi, metaclass=Singleton):
             Kernel().defer(lambda: callback(code, error, *args, **kwargs))
         else:
             Logger().debug(f"[{type(self).__name__}] Finished with result :: [{code}] - {error}")
-        if error:
-            KernelEventsManager().send(
-                KernelEvent.ClientStatusUpdate,
-                f"ERROR_{type(self).__name__.upper()}",
-                {"error": error, "code": str(code)},
-            )
-        else:
-            KernelEventsManager().send(KernelEvent.ClientStatusUpdate, f"FINISHED_{type(self).__name__.upper()}")
+        # if error:
+        #     KernelEventsManager().send(
+        #         KernelEvent.ClientStatusUpdate,
+        #         f"ERROR_{type(self).__name__.upper()}",
+        #         {"error": error, "code": str(code)},
+        #     )
+        # else:
+        #     KernelEventsManager().send(KernelEvent.ClientStatusUpdate, f"FINISHED_{type(self).__name__.upper()}")
 
     @property
     def listeners(self) -> list[Listener]:

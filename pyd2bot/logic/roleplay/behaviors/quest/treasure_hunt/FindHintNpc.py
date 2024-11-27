@@ -33,9 +33,9 @@ class FindHintNpc(AbstractBehavior):
         found_thnpc = Kernel().roleplayEntitiesFrame.treasureHuntNpc
         if found_thnpc and found_thnpc.npcId == self.npcId:
             # while parsing new map data if the special treasure hunt npc is found it is stored in the treasureHuntNpc attribute
-            # if its found we simply return without ending the behavior because the entities frame it self will send the event treasureHuntNpc that will 
-            # be cought in this same behvior.
-            # but if its not found then we have to move to another map
+            # if it is found we simply return without ending the behavior because the entities frame it self will send the event treasureHuntNpc that will 
+            # be caught in this same behavior.
+            # but if it is not found then we have to move to another map
             return
         currV = PlayedCharacterManager().currVertex
         for edge in WorldGraph().getOutgoingEdgesFromVertex(currV):

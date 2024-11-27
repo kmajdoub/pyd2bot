@@ -13,6 +13,7 @@ from pydofus2.com.ankamagames.dofus.logic.common.managers.PlayerManager import P
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.InactivityManager import InactivityManager
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.InventoryManager import InventoryManager
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import PlayedCharacterManager
+from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.TransitionTypeEnum import TransitionTypeEnum
 from pydofus2.com.ankamagames.dofus.network.messages.game.dialog.LeaveDialogRequestMessage import (
     LeaveDialogRequestMessage,
 )
@@ -25,38 +26,18 @@ if TYPE_CHECKING:
 
 
 __dir__ = os.path.dirname(os.path.abspath(__file__))
-SPECIAL_DESTINATIONS_PATH = os.path.join(__dir__, "special_destinations.json")
-with open(SPECIAL_DESTINATIONS_PATH, "r") as f:
-    SPECIAL_DESTINATIONS = json.load(f)
-# Sort the dictionary items by 'preference' in descending order
-SPECIAL_DESTINATIONS = sorted(SPECIAL_DESTINATIONS.items(), key=lambda x: x[1]["preference"], reverse=True)
 
 
 class BehaviorApi:
-    ANKARNAM_AREAID = 45
-    ASTRUB_AREAID = 95
-    NEW_VALONIA_AREAID = 93
+    ANKARNAM_AREA_ID = 45
+    ASTRUB_AREA_ID = 95
+    NEW_VALONIA_AREA_ID = 93
     SPECIAL_AREA_INFOS_NOT_FOUND_ERROR = 89091
     PLAYER_IN_FIGHT_ERROR = 89090
     CELESTIAL_SUBAREA_ID = 446
 
     def __init__(self) -> None:
         pass
-
-    def getSpecialDestination(self, srcAreaId, dstAreaId):
-        for label, info in SPECIAL_DESTINATIONS:
-            if info["exclude_self"] and srcAreaId == dstAreaId:
-                continue
-            if (info["dstAreaId"] == "*" or dstAreaId in info["dstAreaId"]) and (
-                info["srcAreaId"] == "*" or srcAreaId in info["srcAreaId"]
-            ):
-                info["replies"] = {int(k): v for k, v in info["replies"].items()}
-                Logger().info(
-                    f"Special destination {label} matched for srcAreaId={srcAreaId}, dstAreaId={dstAreaId} :\n{info}"
-                )
-                return info
-        Logger().debug(f"Not a special destination : srcAreaId {srcAreaId}, dstAreaId {dstAreaId}")
-        return None
 
     def travel_using_zaap(
         self,
@@ -71,21 +52,20 @@ class BehaviorApi:
     ):
         from pyd2bot.logic.roleplay.behaviors.movement.AutoTripUseZaap import AutoTripUseZaap
 
+        useZaap = True
         currVertex = PlayedCharacterManager().currVertex
         if currVertex.mapId == dstMapId:
             if dstZoneId is None or currVertex.zoneId == dstZoneId:
                 Logger().info("Player already at the destination!")
                 return callback(0, None)
 
-        if check_special_dest:
-            if self.checkSpecialDestination(dstMapId, dstZoneId, callback=callback):
-                return
-
         if not maxCost:
             maxCost = InventoryManager().inventory.kamas
             Logger().debug(f"Player max teleport cost is {maxCost}")
 
         dst_sub_area = SubArea.getSubAreaByMapId(dstMapId)
+        if PlayedCharacterManager().currentSubArea.areaId == self.ANKARNAM_AREA_ID and dst_sub_area.areaId != self.ANKARNAM_AREA_ID:
+            useZaap = False
 
         if PlayerManager().isBasicAccount() and not dst_sub_area.basicAccountAllowed:
             return callback(1, "Destination map is not allowed for basic accounts!")
@@ -102,6 +82,11 @@ class BehaviorApi:
                 self.travel_using_zaap(dstMapId, dstZoneId, withSaveZaap, maxCost, excludeMaps, callback=callback)
 
             return self.autoTrip(154010883, 1, callback=onOutOfCelestialDim)
+
+        if not useZaap:
+            return self.autoTrip(
+                dstMapId, dstZoneId, farm_resources_on_way=farm_resources_on_way, callback=callback
+            )
 
         from pyd2bot.misc.Localizer import Localizer
 
@@ -201,44 +186,9 @@ class BehaviorApi:
             Logger().error(f"Player is in Fight => Can't auto trip.")
             return callback(self.PLAYER_IN_FIGHT_ERROR, "Player is in Fight")
 
-        if check_special_dest:
-            if self.checkSpecialDestination(dstMapId, dstZoneId, useZaap=False, callback=callback):
-                return
-
         AutoTrip(farm_resources_on_way).start(dstMapId, dstZoneId, path, callback=callback, parent=self)
 
-    def checkSpecialDestination(self, dstMapId, dstZoneId, useZaap=True, farm_resources_on_way=False, callback=None):
-        srcSubArea = SubArea.getSubAreaByMapId(PlayedCharacterManager().currentMap.mapId)
-        srcAreaId = srcSubArea.areaId
-        dstSubArea = SubArea.getSubAreaByMapId(dstMapId)
-        dstAreaId = dstSubArea.areaId
-
-        def onSpecialDestReached(code, err):
-            if err:
-                return callback(code, f"Could not reach special destination {dstSubArea.name} ({dstMapId}) : {err}")
-            if useZaap:
-                self.travel_using_zaap(dstMapId, dstZoneId, callback=callback)
-            else:
-                self.autoTrip(dstMapId, dstZoneId, farm_resources_on_way=farm_resources_on_way, callback=callback)
-
-        infos = self.getSpecialDestination(srcAreaId, dstAreaId)
-        if infos:
-            kamas_cost = infos.get("kamas_cost", 0)
-            if kamas_cost > InventoryManager().inventory.kamas:
-                callback(
-                    0, f"Player does not have enough kamas to go to special destination {dstSubArea.name} ({dstMapId})"
-                )
-                return True
-            self.goToSpecialDestination(
-                infos,
-                useZaap=infos.get("use_zaap", useZaap),
-                callback=onSpecialDestReached,
-                dstSubAreaName=dstSubArea.name,
-            )
-            return True
-        return False
-
-    def goToSpecialDestination(self, infos, useZaap=True, callback=None, dstSubAreaName=""):
+    def travel_with_npc(self, infos, useZaap=True, callback=None, dstSubAreaName=""):
         Logger().info(f"Auto trip to a special destination ({dstSubAreaName}). Using zaap={useZaap}")
 
         def onNpcDialogEnd(code, err):

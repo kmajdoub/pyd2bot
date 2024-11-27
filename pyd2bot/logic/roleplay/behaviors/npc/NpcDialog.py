@@ -81,8 +81,14 @@ class NpcDialog(AbstractBehavior):
     
     def findReply(self, messageId:int, visibleReplies:list[int]) -> int:
         possibleReplies = self.npcQuestionsReplies.get(messageId)
+
+        # If not found, try with str
+        if not possibleReplies:
+            possibleReplies = self.npcQuestionsReplies.get(str(messageId))
+
         if not possibleReplies:
             possibleReplies = self.npcQuestionsReplies.get(-1) # wildcard
+
         if possibleReplies:
             for rep in possibleReplies:
                 if rep in visibleReplies:

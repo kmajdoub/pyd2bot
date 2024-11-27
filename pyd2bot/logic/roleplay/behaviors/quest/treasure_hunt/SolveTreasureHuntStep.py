@@ -84,45 +84,37 @@ class SolveTreasureHuntStep(AbstractBehavior):
         self.on_multiple([(KernelEvent.TreasureHuntFlagRequestAnswer, self._on_flag_request_answer, {})])
         self._try_solve()
 
-    def _try_solve(self):
-        if self.current_step is None:
-            return self._dig_treasure()
+    def _try_solve_direction_to_poi(self):
+        Logger().debug(f"Current step : {self.current_step}")
+        excluded_map_ids = set()  # Keep track of unreachable maps
 
-        if self.current_step.type == TreasureHuntStepTypeEnum.FIGHT:
-            return self._dig_treasure()
-
-        elif self.current_step.type == TreasureHuntStepTypeEnum.DIRECTION_TO_POI:
-            Logger().debug(f"Current step : {self.current_step}")
-            next_map_id = self._get_next_hint_map()
-            if next_map_id: 
-                dst_vertex, _ = Localizer.findDestVertex(
-                    PlayedCharacterManager().currVertex,
-                    next_map_id
-                )
-                if not dst_vertex:
-                    Logger().warning("Found next hint mapId but its unreachable from current position!")
-            else:
-                dst_vertex = None
-
-            if not dst_vertex:
-                mp = MapPosition.getMapPositionById(self.start_map_id)
-                Logger().error(
-                    f"Unable to find Map of poi {self.current_step.poiLabel} from start map {self.start_map_id}:({mp.posX}, {mp.posY})!"
-                )
-                self.guess_mode = True
-                next_map_id = self._get_next_hint_map()
-
-                if not next_map_id:
-                    self.guess_mode = False
+        while True:  # Keep trying until we either find a path or exhaust all possibilities
+            next_map_id = self._get_next_hint_map(excluded_map_ids)
+            if not next_map_id:
+                if self.guess_mode:
                     Logger().error(
-                        f"Unable to find Map of poi {self.current_step.poiLabel} from start map {self.start_map_id} in guess mode!"
+                        f"Unable to find any reachable map for poi {self.current_step.poiLabel} in guess mode!"
                     )
                     return self._dig_treasure()
+                else:
+                    # If normal mode failed, try guess mode
+                    Logger().warning("No more maps to try in normal mode, switching to guess mode")
+                    self.guess_mode = True
+                    excluded_map_ids.clear()  # Clear exclusions for guess mode
+                    continue
 
-            Logger().debug(f"Next hint map is {next_map_id}, will travel to it.")
             dst_vertex, _ = Localizer.findDestVertex(
-                PlayedCharacterManager().currVertex, next_map_id
+                PlayedCharacterManager().currVertex,
+                next_map_id
             )
+
+            if not dst_vertex:
+                Logger().warning(f"Map {next_map_id} is unreachable from current position, excluding it")
+                excluded_map_ids.add(next_map_id)
+                continue
+
+            # If we get here, we found a reachable map
+            Logger().debug(f"Next hint map is {next_map_id}, will travel to it.")
             self.current_map_destination = next_map_id
 
             self.travel_using_zaap(
@@ -132,6 +124,17 @@ class SolveTreasureHuntStep(AbstractBehavior):
                 farm_resources_on_way=self.farm_resources,
                 callback=self._on_next_hint_map_reached,
             )
+            return
+
+    def _try_solve(self):
+        if self.current_step is None:
+            return self._dig_treasure()
+
+        if self.current_step.type == TreasureHuntStepTypeEnum.FIGHT:
+            return self._dig_treasure()
+
+        elif self.current_step.type == TreasureHuntStepTypeEnum.DIRECTION_TO_POI:
+            return self._try_solve_direction_to_poi()
 
         elif self.current_step.type == TreasureHuntStepTypeEnum.DIRECTION_TO_HINT:
             FindHintNpc().start(
@@ -146,13 +149,20 @@ class SolveTreasureHuntStep(AbstractBehavior):
                 self.errors.UNSUPPORTED_HUNT_TYPE, f"Unsupported hunt step type {self.current_step.type}"
             )
 
-    def _get_next_hint_map(self) -> Optional[int]:
+    def _get_next_hint_map(self, excluded_map_ids: Optional[set] = None) -> Optional[int]:
         """Find the next map to check for the hint."""
+        if excluded_map_ids is None:
+            excluded_map_ids = set()
+            
         map_id = self.start_map_id
         for i in range(20):
             map_id = WorldGraph().nextMapInDirection(map_id, self.current_step.direction)
             if not map_id:
                 return None
+            
+            if map_id in excluded_map_ids:
+                Logger().debug(f"Map {map_id} was previously found unreachable, skipping")
+                continue
 
             Logger().debug(f"iter {i + 1}: nextMapId {map_id}.")
 
@@ -175,6 +185,7 @@ class SolveTreasureHuntStep(AbstractBehavior):
                 else:
                     Logger().debug(f"Guess mode enabled, will try to find the poi in this map {map_id}")
                     return map_id
+
         return None
 
     def _dig_treasure(self):
@@ -208,7 +219,9 @@ class SolveTreasureHuntStep(AbstractBehavior):
         dst_vertex, _ = Localizer.findDestVertex(
             PlayedCharacterManager().currVertex, self.current_map_destination
         )
-        
+        if not dst_vertex:
+            Logger().warning("Can't reach hint map from current position, will trigger autotrip to hint map before")
+            
         self.travel_using_zaap(
             dst_vertex.mapId,
             dst_vertex.zoneId,
@@ -219,6 +232,7 @@ class SolveTreasureHuntStep(AbstractBehavior):
 
     def _on_next_hint_map_reached(self, code, error):
         if error:
+            Logger().error(error)
             if code == AutoTrip.NO_PATH_FOUND:
                 if self.use_rappel_potion(
                     lambda *_: self._travel_to_current_target_hint_map()

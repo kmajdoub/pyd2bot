@@ -37,6 +37,8 @@ class AutoTrip(AbstractBehavior):
         self.dstRpZone = None
         self._nbr_follow_edge_fails = 0
         self.farm_resources_on_way = farm_resources_on_way
+        self._iteration = 0
+        self._old_vertex = None
 
     def run(self, dstMapId, dstZoneId=None, path: list[Edge] = None):
         self.dstMapId = dstMapId
@@ -83,8 +85,9 @@ class AutoTrip(AbstractBehavior):
                 MovementFailError.INVALID_TRANSITION,
             ]:
                 Logger().warning(f"Can't reach next step in found path for reason : {code}, {error}")
-                
-                if self._nbr_follow_edge_fails >= 3:
+                self._old_vertex = None
+
+                if self._nbr_follow_edge_fails >= 2:
                     Logger().debug("Exceeded max number of fails, will ignore this edge.")
                     AStar().addForbiddenEdge(nextEdge)
                     return self.findPath(self.dstMapId, self.dstRpZone, self.onPathFindResult)
@@ -92,6 +95,7 @@ class AutoTrip(AbstractBehavior):
                 def retry(code, err):
                     if err:
                         return self.finish(code, err)
+                    
                     self.findPath(self.dstMapId, self.dstRpZone, self.onPathFindResult)
                     
                 self._nbr_follow_edge_fails += 1
@@ -103,13 +107,22 @@ class AutoTrip(AbstractBehavior):
         self.walkToNextStep()
 
     def walkToNextStep(self, event_id=None):
+        if self._old_vertex and self._old_vertex == PlayedCharacterManager().currVertex:
+            raise Exception("It seems we encountered a silent bug, player applied change map with success but stayed on same old vertex!")
+
+        self._iteration += 1
+        if self._iteration > 500:
+            raise Exception("Something bad is happening it seems like we entered an infinite loop!")
+
         if PlayedCharacterManager().currentMap is None:
             Logger().warning("Waiting for Map to be processed...")
-            return KernelEventsManager().onceMapProcessed(self.walkToNextStep, originator=self)
+            return self.once_map_rendered(self.walkToNextStep)
+
         if self.path is not None:
             if len(self.path) == 0:
                 Logger().debug("Player already at the destination nothing to do")
                 return self.finish(0)
+
             self.state = AutoTripState.FOLLOWING_EDGE
             currMapId = PlayedCharacterManager().currentMap.mapId
             currZoneId = PlayedCharacterManager().currentZoneRp
@@ -127,6 +140,7 @@ class AutoTrip(AbstractBehavior):
             Logger().debug(f"\t|- src {nextEdge.src.mapId} -> dst {nextEdge.dst.mapId}")
             for tr in nextEdge.transitions:
                 Logger().debug(f"\t| => {tr}")
+            self._old_vertex = PlayedCharacterManager().currVertex
             self.changeMap(edge=nextEdge, callback=self._on_next_map_processed)
         else:
             self.state = AutoTripState.CALCULATING_PATH

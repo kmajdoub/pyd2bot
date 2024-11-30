@@ -1,3 +1,4 @@
+from enum import Enum
 from typing import Optional, Tuple, Iterable
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
 from pyd2bot.logic.roleplay.behaviors.movement.MapMove import MapMove
@@ -11,9 +12,11 @@ from pydofus2.com.ankamagames.dofus.logic.game.roleplay.types.MovementFailError 
 
 class ActionMapChange(AbstractBehavior):
     MAP_CHANGE_TIMEOUT = 20
-    MAP_ACTION_ALREADY_ON_CELL = 1204
-    MAP_CHANGED_UNEXPECTEDLY = 1556
-    LANDED_ON_WRONG_MAP = 1002
+    
+    class errors(Enum):
+        MAP_ACTION_ALREADY_ON_CELL = 1204
+        MAP_CHANGED_UNEXPECTEDLY = 1556
+        LANDED_ON_WRONG_MAP = 1002
     
     def __init__(self, dst_map_id: int, cell_id: int) -> None:
         super().__init__()
@@ -70,7 +73,7 @@ class ActionMapChange(AbstractBehavior):
             x, y = next(self.current_mp_childs)
         except StopIteration:
             return self.finish(
-                self.MAP_ACTION_ALREADY_ON_CELL,
+                self.errors.MAP_ACTION_ALREADY_ON_CELL,
                 "Already on map action cell and can't move away from it."
             )
 
@@ -88,7 +91,7 @@ class ActionMapChange(AbstractBehavior):
                 x, y = next(self.current_mp_childs)
             except StopIteration:
                 return self.finish(
-                    self.MAP_ACTION_ALREADY_ON_CELL,
+                    self.errors.MAP_ACTION_ALREADY_ON_CELL,
                     "Already on map action cell and can't move away from it."
                 )
             return self.map_move_to_cell(
@@ -116,7 +119,7 @@ class ActionMapChange(AbstractBehavior):
     def on_unexpected_map_change(self, event, map_id: int) -> None:
         """Handler for unexpected map changes"""
         self.finish(
-            self.MAP_CHANGED_UNEXPECTEDLY,
+            self.errors.MAP_CHANGED_UNEXPECTEDLY,
             "Map changed unexpectedly while resolving."
         )
 
@@ -126,7 +129,7 @@ class ActionMapChange(AbstractBehavior):
             callback = lambda *_: self.finish(0)
         else:
             callback = lambda *_: self.finish(
-                self.LANDED_ON_WRONG_MAP,
+                self.errors.LANDED_ON_WRONG_MAP,
                 f"Landed on new map '{map_id}', different from dest '{self.dst_map_id}'."
             )
         self.once_map_rendered(callback=callback, mapId=map_id, timeout=20, ontimeout=self.on_dest_map_rendered_timeout)

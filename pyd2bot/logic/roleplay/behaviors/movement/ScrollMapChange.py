@@ -1,3 +1,4 @@
+from enum import Enum
 from typing import Optional, Iterable
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
 from pyd2bot.logic.roleplay.behaviors.movement.MapMove import MapMove
@@ -14,7 +15,9 @@ from pydofus2.mapTools import MapTools
 
 class ScrollMapChange(AbstractBehavior):
     MAP_CHANGE_TIMEOUT = 20
-    LANDED_ON_WRONG_MAP = 1002
+    
+    class errors(Enum):
+        LANDED_ON_WRONG_MAP = 1002
 
     def __init__(self, dst_map_id: int, tr_mapid:int, cell: int, direction: int) -> None:
         super().__init__()
@@ -111,7 +114,7 @@ class ScrollMapChange(AbstractBehavior):
             callback = lambda: self.finish(0)
         else:
             callback = lambda: self.finish(
-                self.LANDED_ON_WRONG_MAP,
+                self.errors.LANDED_ON_WRONG_MAP,
                 f"Landed on new map '{map_id}', different from dest '{self.dst_map_id}'."
             )
         self.once_map_rendered(callback=callback, mapId=map_id, timeout=20, ontimeout=self.on_dest_map_rendered_timeout)

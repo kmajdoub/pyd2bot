@@ -124,13 +124,13 @@ class AbstractFarmBehavior(AbstractBehavior):
             if code == MovementFailError.PLAYER_IS_DEAD:
                 Logger().error(f"Tried to move to next path vertex while Player is dead!")
                 return self.auto_resurrect(callback=self._on_resurrection)
-            if code == ChangeMap.LANDED_ON_WRONG_MAP:
+            if code == ChangeMap.errors.LANDED_ON_WRONG_MAP:
                 Logger().warning(f"Player landed on the wrong map while moving to next path Vertex!")
             elif code in [
                 UseSkill.USE_ERROR,
                 AutoTrip.NO_PATH_FOUND,
-                ChangeMap.INVALID_TRANSITION,
-                ChangeMap.NEED_QUEST,
+                ChangeMap.errors.INVALID_TRANSITION,
+                ChangeMap.errors.NEED_QUEST,
             ]:
                 Logger().warning(f"Player tried navigating using invalid edge ({error}), edge will be forbidden")
                 self.forbiddenEdges.add(self._currEdge)

@@ -87,7 +87,7 @@ class AutoTrip(AbstractBehavior):
     
     def _next_step(self, code, error):
         if not error and (PlayedCharacterManager().currVertex != self._edge_taken.dst):
-            code = ChangeMap.INVALID_TRANSITION
+            code = ChangeMap.errors.INVALID_TRANSITION
             error = "Player didn't land on the expected edge!"
             if self._taken_transition and TransitionTypeEnum(self._taken_transition.type) in [ TransitionTypeEnum.ZAAP, TransitionTypeEnum.HAVEN_BAG_ZAAP]:
                 Logger().warning("Player may have took a guessed zaap landing vertex!")
@@ -101,7 +101,7 @@ class AutoTrip(AbstractBehavior):
             nextEdge = self.path[currentIndex]
     
             if code in [
-                ChangeMap.INVALID_TRANSITION,
+                ChangeMap.errors.INVALID_TRANSITION,
                 MovementFailError.CANT_REACH_DEST_CELL,
                 MovementFailError.MAP_CHANGE_TIMEOUT,
                 MovementFailError.NO_VALID_SCROLL_CELL,

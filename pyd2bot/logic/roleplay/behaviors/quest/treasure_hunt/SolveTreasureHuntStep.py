@@ -117,10 +117,9 @@ class SolveTreasureHuntStep(AbstractBehavior):
             Logger().debug(f"Next hint map is {next_map_id}, will travel to it.")
             self.current_map_destination = next_map_id
 
-            self.travel_using_zaap(
+            self.autoTrip(
                 dst_vertex.mapId,
                 dst_vertex.zoneId,
-                maxCost=self.max_cost,
                 farm_resources_on_way=self.farm_resources,
                 callback=self._on_next_hint_map_reached,
             )
@@ -241,7 +240,6 @@ class SolveTreasureHuntStep(AbstractBehavior):
                 Logger().error("Bot is stuck and has no rappel potion!")
 
             if code in [FindHintNpc.UNABLE_TO_FIND_HINT, AutoTripUseZaap.NO_PATH_TO_DEST]:
-                Logger().warning(error)
                 return self._dig_treasure()
 
             if code == CollectAllMapResources.errors.FULL_PODS:

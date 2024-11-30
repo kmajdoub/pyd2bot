@@ -4,6 +4,7 @@ from typing import Dict, Optional
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
 from pydofus2.com.ankamagames.dofus.internalDatacenter.items.ItemWrapper import ItemWrapper
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
+from pydofus2.com.ankamagames.dofus.logic.common.managers.PlayerManager import PlayerManager
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.InventoryManager import InventoryManager
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import PlayedCharacterManager
 from pydofus2.com.ankamagames.dofus.types.enums.ItemCategoryEnum import ItemCategoryEnum
@@ -36,10 +37,6 @@ class SellItemsFromBag(AbstractBehavior):
     def run(self) -> None:
         self._current_idx = 0
         self.items_uids = list[int]()
-        
-        # if not self.gid_batch_size and not self.type_batch_size:
-        #     return self._handle_error(self.ERROR_CODES.MISSING_INPUTS, "You need to provide either by type or gid the batch sizes")
-
         if not self._check_inventory():
             return
         
@@ -56,17 +53,17 @@ class SellItemsFromBag(AbstractBehavior):
     def _check_inventory(self):
         self.items_uids = list[int]()
         inventory_items = InventoryManager().inventory.getView("storage").content
+        max_item_level = 60 if PlayerManager().isBasicAccount() else 200
+
         for item in inventory_items:
             if (
                 not item.linked
                 and item.category == ItemCategoryEnum.RESOURCES_CATEGORY
+                and item.level <= max_item_level
                 and Kernel().averagePricesFrame.getItemAveragePrice(item.objectGID)
             ):
                 self.items_uids.append(item.objectUID)
-            # if self.type_batch_size:
-                # if (self.type_batch_size and item.typeId in self.type_batch_size) or \
-                #     (self.gid_batch_size and item.objectGID in self.gid_batch_size):
-                #     self.items_uids.append(item.objectUID)
+
         if not self.items_uids:
             Logger().debug("No item found in inventory to sell!")
             self.finish(self.ERROR_CODES.ITEMS_NOT_FOUND, "No item found in inventory to sell!")
@@ -96,11 +93,21 @@ class SellItemsFromBag(AbstractBehavior):
         
         if self._market_frame._market_type_open == item.category:
             return self._on_market_open(0, None)
-            
+        
+        if PlayerManager().isBasicAccount():
+            item_level = 60
+            if item.level > item_level:
+                Logger().warning("Cant sell items higher level than 60 when not subscribed!")
+                self._current_idx += 1
+                self._process_current_item()
+                return
+        else:
+            item_level = 200
+
         self.open_market(
             from_type=item.category,
             exclude_market_at_maps=self.markets_excluded_for_items[item.objectGID],
-            item_level=item.level,
+            item_level=item_level,
             callback=self._on_market_open
         )
 

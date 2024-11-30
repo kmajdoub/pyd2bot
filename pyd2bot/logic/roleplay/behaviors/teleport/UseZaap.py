@@ -4,12 +4,15 @@ from pydofus2.com.ankamagames.atouin.managers.MapDisplayManager import MapDispla
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
 from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import KernelEventsManager
 from pydofus2.com.ankamagames.berilia.managers.Listener import Listener
+from pydofus2.com.ankamagames.dofus.datacenter.houses.HavenbagTheme import HavenbagTheme
 from pydofus2.com.ankamagames.dofus.datacenter.jobs.Skill import Skill
 from pydofus2.com.ankamagames.dofus.internalDatacenter.taxi.TeleportDestinationWrapper import \
     TeleportDestinationWrapper
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import \
     PlayedCharacterManager
+from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.MapMemoryManager import MapMemoryManager
+from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Vertex import Vertex
 from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.WorldGraph import WorldGraph
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 from pydofus2.com.ankamagames.jerakine.pathfinding.Pathfinding import PathFinding
@@ -60,19 +63,20 @@ class UseZaap(AbstractBehavior):
         self._use_zaap_skill()
     
     def _check_zaap_rp_zone(self):
+        playerMapId = PlayedCharacterManager().currentMap.mapId
         self.zaapSkill = Skill.getSkillById(self.zaapIe.element.enabledSkills[0].skillId)
-        self.nearestCellToZaapIE = self._get_nearest_cell_to_zaap()
+        self.nearestCellToZaapIE = self.get_nearest_cell_to_zaap(self.zaapIe.position)
         zaapIeReachable = self.nearestCellToZaapIE is not None and self.nearestCellToZaapIE.distanceTo(self.zaapIe.position) <= self.zaapSkill.range
         if not zaapIeReachable:
             Logger().error("Zaap is not reachable, maybe its in a different rp zone than the player!")
             zaapLinkedRpZone = MapDisplayManager().dataMap.cells[self.zaapIe.position.cellId].linkedZone
             playerLinkedRpZone = PlayedCharacterManager().currentZoneRp
-            currMapVertices = WorldGraph().getVertices(PlayedCharacterManager().currentMap.mapId)
+            currMapVertices = WorldGraph().getVertices(playerMapId)
             Logger().debug(f"Current map vertices: {currMapVertices}")
             if zaapLinkedRpZone != playerLinkedRpZone:
                 Logger().warning(f"Zaap is in a different rp zone than the player, zaap rp zone: {zaapLinkedRpZone}, player rp zone: {playerLinkedRpZone}")
                 Logger().debug(f"Traveling to the zaap rp zone {zaapLinkedRpZone} ...")
-                self.autoTrip(PlayedCharacterManager().currentMap.mapId, zaapLinkedRpZone, callback=self.onZaapRpZoneReached)
+                self.autoTrip(playerMapId, zaapLinkedRpZone, callback=self.onZaapRpZoneReached)
                 return True
         return False
             
@@ -96,12 +100,13 @@ class UseZaap(AbstractBehavior):
         )
         self._use_zaap_skill()
 
-    def _get_nearest_cell_to_zaap(self):
+    @staticmethod
+    def get_nearest_cell_to_zaap(zaapPosition):
         playerEntity = PlayedCharacterManager().entity
         if playerEntity is None:
             Logger().error("Player entity not found, while trying to find nearest cell to Zaap!")
             return None
-        movePath = PathFinding().findPath(playerEntity.position, self.zaapIe.position)
+        movePath = PathFinding().findPath(playerEntity.position, zaapPosition)
         if movePath is None:
             return None
         return movePath.end
@@ -114,7 +119,11 @@ class UseZaap(AbstractBehavior):
             if self.teleportDestinationListener:
                 self.teleportDestinationListener.delete()
             self._on_zaap_skill_use_error()
-    
+            return
+
+        if not HavenbagTheme.isMapIdInHavenbag(PlayedCharacterManager().currentMap.mapId):
+            MapMemoryManager().register_zaap_vertex(PlayedCharacterManager().currVertex, True)
+
     def _retry_teleport(self, listener=None):
         Logger().debug(f"Retrying teleport attempt {self._teleport_retry_count + 1} of {self.MAX_TELEPORT_RETRIES}")
         self._teleport_retry_count += 1
@@ -181,4 +190,6 @@ class UseZaap(AbstractBehavior):
         KernelEventsManager().send(KernelEvent.ZAAP_TELEPORT)
         if self.bsaveZaap and Kernel().zaapFrame.spawnMapId != PlayedCharacterManager().currentMap.mapId:
             return self.save_zaap(self._on_zaap_saved)
+        
+        MapMemoryManager().register_zaap_vertex(PlayedCharacterManager().currVertex, True)
         return self.finish(0)

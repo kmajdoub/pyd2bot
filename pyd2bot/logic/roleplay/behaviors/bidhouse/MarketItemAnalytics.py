@@ -27,6 +27,25 @@ class MarketStats:
     std_profit_per_hour: float
     p95_profit_per_hour: float
 
+    def __post_init__(self):
+        """Convert any NumPy types to Python native types after initialization"""
+        self.server_id = int(self.server_id)
+        self.object_gid = int(self.object_gid)
+        self.batch_size = int(self.batch_size)
+        self.num_samples = int(self.num_samples)
+        self.mean_time_to_sell = float(self.mean_time_to_sell)
+        self.std_time_to_sell = float(self.std_time_to_sell)
+        self.exp_rate = float(self.exp_rate)
+        self.mean_price = float(self.mean_price)
+        self.std_price = float(self.std_price)
+        self.median_price = float(self.median_price)
+        self.mean_tax = float(self.mean_tax)
+        self.std_tax = float(self.std_tax)
+        self.sales_rate = float(self.sales_rate)
+        self.mean_profit_per_hour = float(self.mean_profit_per_hour)
+        self.std_profit_per_hour = float(self.std_profit_per_hour)
+        self.p95_profit_per_hour = float(self.p95_profit_per_hour)
+        
 class MarketItemAnalytics:
     def __init__(self):
         self.market_db = MarketPersistence()
@@ -35,6 +54,18 @@ class MarketItemAnalytics:
     def calculate_item_stats(self, server_id: int, gid: int, batch_size: int) -> Optional[MarketStats]:
         """Calculate statistics for a specific item."""
         try:
+            def safe_mean(arr):
+                return float(np.mean(arr)) if len(arr) > 0 else 0.0
+                
+            def safe_std(arr):
+                return float(np.std(arr)) if len(arr) > 0 else 0.0
+                
+            def safe_median(arr):
+                return float(np.median(arr)) if len(arr) > 0 else 0.0
+                
+            def safe_percentile(arr, p):
+                return float(np.percentile(arr, p)) if len(arr) > 0 else 0.0
+            
             # Fetch specific sales data
             with self.market_db.get_connection() as conn:
                 with conn.cursor() as cur:
@@ -92,27 +123,29 @@ class MarketItemAnalytics:
                 sales_rate = 0
             
             # Fit exponential distribution to time to sell
-            exp_rate = 1 / np.mean(times_to_sell) if times_to_sell else 0
+                        # Calculate statistics with safe conversions
+            mean_time = safe_mean(times_to_sell)
+            exp_rate = float(1 / mean_time if mean_time > 0 else 0)
             
             return MarketStats(
-                server_id=server_id,
-                object_gid=gid,
-                batch_size=batch_size,
-                item_name=item_name,
+                server_id=int(server_id),
+                object_gid=int(gid),
+                batch_size=int(batch_size),
+                item_name=str(item_name),
                 calculated_at=datetime.now(),
-                num_samples=len(sales),
-                mean_time_to_sell=np.mean(times_to_sell),
-                std_time_to_sell=np.std(times_to_sell),
+                num_samples=int(len(sales)),
+                mean_time_to_sell=safe_mean(times_to_sell),
+                std_time_to_sell=safe_std(times_to_sell),
                 exp_rate=exp_rate,
-                mean_price=np.mean(prices),
-                std_price=np.std(prices),
-                median_price=np.median(prices),
-                mean_tax=avg_tax,
-                std_tax=0,
-                sales_rate=sales_rate,
-                mean_profit_per_hour=np.mean(profits_per_hour) if profits_per_hour else 0,
-                std_profit_per_hour=np.std(profits_per_hour) if profits_per_hour else 0,
-                p95_profit_per_hour=np.percentile(profits_per_hour, 95) if profits_per_hour else 0
+                mean_price=safe_mean(prices),
+                std_price=safe_std(prices),
+                median_price=safe_median(prices),
+                mean_tax=float(avg_tax),
+                std_tax=0.0,
+                sales_rate=float(sales_rate),
+                mean_profit_per_hour=safe_mean(profits_per_hour),
+                std_profit_per_hour=safe_std(profits_per_hour),
+                p95_profit_per_hour=safe_percentile(profits_per_hour, 95)
             )
                     
         except Exception as e:

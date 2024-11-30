@@ -104,7 +104,7 @@ class UseSkill(AbstractBehavior):
             if self.waitForSkillUsed:
                 self.on(KernelEvent.IElemBeingUsed, self.onUsingInteractive,)
                 self.on(KernelEvent.InteractiveElementUsed, self.onUsedInteractive)
-            self.mapMove(destCell=self._curr_skill_mp.cellId, exactDestination=False, callback=self.onUseSkillCellReached)
+            self.map_move_to_cell(destCell=self._curr_skill_mp.cellId, exact_destination=False, callback=self.onUseSkillCellReached)
         else:
             self.finish(self.NO_ENABLED_SKILLS, f"Interactive element has no enabled skills!")
 
@@ -167,7 +167,7 @@ class UseSkill(AbstractBehavior):
             if self._reach_skill_cell_fails > 3:
                 return self.finish(self.USE_ERROR, f"Use Error for element {elementId} - Server refuses to move player to skill cell")
             Logger().debug(f"retrying for {self._reach_skill_cell_fails} time")
-            return self.mapMove(destCell=self._curr_skill_mp.cellId, exactDestination=False, callback=self.onUseSkillCellReached, cellsblacklist=self._cells_blacklist)
+            return self.map_move_to_cell(destCell=self._curr_skill_mp.cellId, exact_destination=False, callback=self.onUseSkillCellReached, cellsblacklist=self._cells_blacklist)
         self.finish(self.USE_ERROR, f"Use Error for element {elementId}!")
         
     def onUseError(self, event, elementId):

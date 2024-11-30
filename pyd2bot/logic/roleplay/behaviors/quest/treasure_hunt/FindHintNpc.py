@@ -20,16 +20,17 @@ class FindHintNpc(AbstractBehavior):
         self.npcId = npcId
         self.direction = direction
         self.on(KernelEvent.TreasureHintInformation, self.onTreasureHintInfos)
-        self.onNewMap(True, None)
+        self._on_trip_finished(True, None)
 
     def onTreasureHintInfos(self, event, npcId):
         if npcId == self.npcId:
             Logger().debug(f"Hint npc found!!")
             return self.finish(0)
 
-    def onNewMap(self, code, err):
+    def _on_trip_finished(self, code, err, transition=None):
         if err:
             return self.finish(code, err)
+    
         found_thnpc = Kernel().roleplayEntitiesFrame.treasureHuntNpc
         if found_thnpc and found_thnpc.npcId == self.npcId:
             # while parsing new map data if the special treasure hunt npc is found it is stored in the treasureHuntNpc attribute
@@ -37,9 +38,15 @@ class FindHintNpc(AbstractBehavior):
             # be caught in this same behavior.
             # but if it is not found then we have to move to another map
             return
-        currV = PlayedCharacterManager().currVertex
-        for edge in WorldGraph().getOutgoingEdgesFromVertex(currV):
-            for transition in edge.transitions:
-                if transition.direction != -1 and transition.direction == self.direction:
-                    return self.changeMap(transition=transition, dstMapId=edge.dst.mapId, callback=self.onNewMap)
-        self.finish(self.UNABLE_TO_FIND_HINT, f"Couldn't find NPC hint in the given direction")
+
+        map_id = WorldGraph().nextMapInDirection(PlayedCharacterManager().currVertex.mapId, self.direction)
+        if not map_id:
+            return self.finish(self.UNABLE_TO_FIND_HINT, f"Couldn't find NPC hint in the given direction")
+    
+        self.autoTrip(
+            map_id,
+            callback=self._on_trip_finished
+        )
+        
+    
+        

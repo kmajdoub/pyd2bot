@@ -76,7 +76,7 @@ class AttackMonsters(AbstractBehavior):
         if not cellId:
             return self.finish(self.ENTITY_VANISHED, "Fight with entity taken by another player!")
         Logger().info(f"Moving to monster {self.entityId} cell {cellId}")
-        self.mapMove(MapPoint.fromCellId(cellId), callback=self.onTargetMonsterReached)
+        self.map_move_to_cell(MapPoint.fromCellId(cellId), callback=self.onTargetMonsterReached)
 
     def onFightWithEntityTaken(self):
         if MapMove().isRunning():

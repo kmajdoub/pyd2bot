@@ -25,7 +25,7 @@ from pydofus2.com.ankamagames.jerakine.types.positions.MovementPath import \
 class MapMove(AbstractBehavior):
     CONSECUTIVE_MOVEMENT_DELAY = 0.25
     MOVE_REQ_TIMEOUT = 7
-    ALREADY_ONCELL = 7001
+    ALREADY_ON_CELL = 7001
     PLAYER_STOPPED = 7002
 
     def __init__(self) -> None:
@@ -100,7 +100,7 @@ class MapMove(AbstractBehavior):
         
         if currentCellId == self.dstCell.cellId:
             Logger().info(f"Destination cell {self.dstCell.cellId} is the same as the current player cell")
-            return self.finish(self.ALREADY_ONCELL, None, self.dstCell)
+            return self.finish(self.ALREADY_ON_CELL, None, self.dstCell)
         
         if PlayedCharacterManager().player_life_status == PlayerLifeStatusEnum.STATUS_TOMBSTONE:
             return self.fail(MovementFailError.PLAYER_IS_DEAD)

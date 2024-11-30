@@ -157,3 +157,4 @@ class AbstractBehavior(BehaviorApi, metaclass=Singleton):
         while self.children:
             child = self.children.pop()
             child.stop(clear_callbacks)
+    

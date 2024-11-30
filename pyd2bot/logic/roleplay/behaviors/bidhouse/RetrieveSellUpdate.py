@@ -11,14 +11,6 @@ from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 
 
 class RetrieveSellUpdate(AbstractBehavior):
-    """
-    Behavior that continuously retrieves items from bank and sells them on the market
-    until bank is depleted of the specified item.
-    """
-
-    ERROR_NO_ITEMS = 87656454
-    ERROR_BANK_ACCESS = 89987
-    ERROR_MARKET_ACCESS = 89988
 
     def __init__(self, gid_batch_size: Dict[int, int] = None, type_batch_size: Dict[int, int] = None, items_gid_to_keep: List[int] = None):
         super().__init__()
@@ -31,7 +23,6 @@ class RetrieveSellUpdate(AbstractBehavior):
         self.items_gid_to_keep = items_gid_to_keep
 
     def run(self) -> bool:
-        # Store starting position
         self._start_map_id = PlayedCharacterManager().currentMap.mapId
         self._start_zone = PlayedCharacterManager().currentZoneRp
         if PlayerManager().isBasicAccount():
@@ -49,7 +40,7 @@ class RetrieveSellUpdate(AbstractBehavior):
         self.retrieve_items_from_bank(
             type_batch_size=self.type_batch_size,
             gid_batch_size=self.gid_batch_size,
-            return_to_start=False,  # Don't return since we'll be selling
+            return_to_start=False,
             max_item_level=self._max_item_level,
             callback=self._on_items_retrieved,
         )

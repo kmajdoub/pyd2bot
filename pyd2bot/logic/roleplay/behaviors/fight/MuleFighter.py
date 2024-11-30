@@ -250,7 +250,7 @@ class MuleFighter(AbstractBehavior):
                     return
                 self._attempt_join_fight()
 
-            self.mapMove(
+            self.map_move_to_cell(
                 target_cell.cellId,
                 callback=on_move_complete
             )

@@ -22,11 +22,13 @@ class UseTeleportItem(AbstractBehavior):
 
     def run(self, iw: ItemWrapper):
         self.once_map_rendered(
-            lambda: self.finish(0), timeout=20, ontimeout=self.onTimeout
+            lambda *_: self.finish(0),
+            timeout=20, 
+            ontimeout=self.onTimeout
         )
         self.on(KernelEvent.ServerTextInfo, self.onServerInfo)
-        Kernel().inventoryManagementFrame.useItem(iw)
-        self.onNewMap(0)
+        if not Kernel().inventoryManagementFrame.useItem(iw):
+            return self.finish(1, "Couldn't send use teleport item request")
         
     def onServerInfo(self, event, msgId, msgType, textId, msgContent, params):
         if textId == 4641:
@@ -41,8 +43,5 @@ class UseTeleportItem(AbstractBehavior):
             self.nbr_tries += 1
         else:
             self.finish(self.errors.TIME_OUT, "Use teleport item timedout!")
-            
-    def onNewMap(self, code, err=None):
-        if err:
-            return self.finish(code, err)
+
     

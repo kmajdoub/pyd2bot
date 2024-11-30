@@ -47,8 +47,7 @@ class ClassicTreasureHunt(AbstractBehavior):
         DataEnum.MAP_FRAGMENT_TYPE_ID: 1
     }
     
-    Rose_of_the_Sands_GUID = 15263
-    FARM_RESOURCES = True
+    FARM_RESOURCES = False
 
     _poi_db = TreasureHuntPoiDatabase(HINTS_FILE, WRONG_ANSWERS_FILE)
 
@@ -108,6 +107,12 @@ class ClassicTreasureHunt(AbstractBehavior):
         else:
             if PlayedCharacterManager().is_dead():
                 return self.auto_resurrect(callback=lambda *_: self.take_treasure_hunt_quest(callback=self._on_quest_taken))
+            if PlayedCharacterManager().isPodsFull():
+                return self.retrieve_sell(
+                    self.RESOURCES_TO_COLLECT_SELL,
+                    items_gid_to_keep=[DataEnum.RAPPEL_POTION_GUID],
+                    callback=lambda *_: self.take_treasure_hunt_quest(callback=self._on_quest_taken)
+                )
             self.take_treasure_hunt_quest(callback=self._on_quest_taken)
 
     def _on_subscription_limitation(self, event, mods, text):
@@ -166,24 +171,27 @@ class ClassicTreasureHunt(AbstractBehavior):
                 self._poi_db.memorize_hint(answerMapId, poiId)
             self.guessedAnswers.clear()
 
+        self._hunts_done += 1
+
         if PlayedCharacterManager().is_dead():
             Logger().warning(f"Player is dead in treasure hunt fight!")
             return self.auto_resurrect(callback=lambda *_: self.onHuntFinished(event, questType))
 
-        self._hunts_done += 1
+        self.check_usable_boxes()
 
+    def check_usable_boxes(self):
         if UseItemsByType.has_items(DataEnum.CHEST_TYPE_ID):
             Logger().debug("Found some chests to open in inventory")
-            self.use_items_of_type(DataEnum.CHEST_TYPE_ID, lambda *_: self.take_treasure_hunt_quest(callback=self._on_quest_taken))
-            return
+            self.use_items_of_type(DataEnum.CHEST_TYPE_ID, lambda *_: self.check_usable_boxes())
+            return True
 
         if UseItemsByType.has_items(DataEnum.TREASURE_MAX_FRAG_BOX_TYPE_ID):
             Logger().debug("Found some map fragment boxes to open in inventory")
-            self.use_items_of_type(DataEnum.TREASURE_MAX_FRAG_BOX_TYPE_ID, lambda *_: self.take_treasure_hunt_quest(callback=self._on_quest_taken))
-            return
-
+            self.use_items_of_type(DataEnum.TREASURE_MAX_FRAG_BOX_TYPE_ID, lambda *_: self.check_usable_boxes())
+            return True
+        
         self.take_treasure_hunt_quest(callback=self._on_quest_taken)
-
+        
     @property
     def currentMapId(self):
         return PlayedCharacterManager().currentMap.mapId
@@ -205,14 +213,13 @@ class ClassicTreasureHunt(AbstractBehavior):
     def solve_next_step(self, ignoreSame=False):
         Logger().debug("Treasure hunt solve step called")        
         if self._stop_sig.is_set():
-            self.stop_children()
             return self.finish(self.STOPPED, None)
 
         if Kernel().fightContextFrame:
             Logger().debug(f"Waiting for fight to end")
             return self.once(
                 KernelEvent.RoleplayStarted, 
-                lambda e: self.once_map_rendered(lambda: self.solve_next_step(ignoreSame))
+                lambda *_: self.once_map_rendered(lambda: self.solve_next_step(ignoreSame))
             )
 
         if PlayedCharacterManager().is_dead():
@@ -222,7 +229,7 @@ class ClassicTreasureHunt(AbstractBehavior):
         if not PlayedCharacterManager().isPetsMounting:
             Logger().debug("player is not pet mounting")
             if PutPetsMount.has_items():
-                Logger().debug("player has available non equiped pet mounts")
+                Logger().debug("player has available non equipped pet mounts")
                 self.put_pet_mount(callback=lambda *_: self.solve_next_step(ignoreSame))
                 return
 
@@ -233,6 +240,13 @@ class ClassicTreasureHunt(AbstractBehavior):
                     callback=lambda e, m: self.onPlayerRidingMount(e, m, ignoreSame)
                 )
 
+        if PlayedCharacterManager().isPodsFull():
+            return self.retrieve_sell(
+                self.RESOURCES_TO_COLLECT_SELL,
+                items_gid_to_keep=[DataEnum.RAPPEL_POTION_GUID],
+                callback=lambda *_: self.solve_next_step(ignoreSame)
+            )
+    
         self.infos = Kernel().questFrame.getTreasureHunt(TreasureHuntTypeEnum.TREASURE_HUNT_CLASSIC)
 
         if not self.infos:
@@ -252,9 +266,8 @@ class ClassicTreasureHunt(AbstractBehavior):
         if self.currentStep is not None:
             if self.currentStep.type != TreasureHuntStepTypeEnum.DIRECTION_TO_POI:
                 Logger().debug(f"AutoTraveling to treasure hunt step {idx}, start map {self.startMapId}")
-                self.travel_using_zaap(
+                self.autoTrip(
                     self.startMapId, 
-                    maxCost=self.maxCost,
                     callback=self._on_start_map_reached
                 )
             else:
@@ -282,9 +295,9 @@ class ClassicTreasureHunt(AbstractBehavior):
         elif code == TreasureHuntDigRequestEnum.TREASURE_HUNT_DIG_WRONG_AND_YOU_KNOW_IT:
             return self.finish(code, error)
             
-        elif code == 0:  # Success code from solver
+        elif code == 0:
             self.infos = Kernel().questFrame.getTreasureHunt(TreasureHuntTypeEnum.TREASURE_HUNT_CLASSIC)
-            if self.infos: # quest not ended
+            if self.infos:
                 return self.solve_next_step()
 
     def _on_selling_over(self, code, err):
@@ -330,7 +343,6 @@ class ClassicTreasureHunt(AbstractBehavior):
                 Logger().warning(
                     f"Inventory is almost full => will trigger retrieve sell and update items workflow ..."
                 )
-                # After unload and selling workflow we should again restart hint map traveling
                 return self.retrieve_sell(
                     self.RESOURCES_TO_COLLECT_SELL,
                     items_gid_to_keep=[DataEnum.RAPPEL_POTION_GUID],
@@ -348,6 +360,7 @@ class ClassicTreasureHunt(AbstractBehavior):
             if code == CollectAllMapResources.errors.PLAYER_DEAD:
                 Logger().warning(f"Player died while farming resources, will resurrect and retry...")
                 return self.auto_resurrect(callback=self._on_resurrection_over)
+
             return self.finish(code, error)
         
         SolveTreasureHuntStep(

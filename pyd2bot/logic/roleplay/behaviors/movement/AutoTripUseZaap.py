@@ -13,6 +13,7 @@ from pydofus2.com.ankamagames.dofus.logic.common.managers.PlayerManager import P
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import PlayedCharacterManager
 from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.astar.AStar import AStar
 from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Edge import Edge
+from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.MapMemoryManager import MapMemoryManager
 from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Vertex import Vertex
 from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.WorldGraph import WorldGraph
 from pydofus2.com.ankamagames.dofus.uiApi.PlayedCharacterApi import PlayedCharacterApi
@@ -99,7 +100,11 @@ class AutoTripUseZaap(AbstractBehavior):
 
         # Look for a suitable teleport point along the path
         for i, edge in enumerate(direct_path_plan.direct_path):
-            if not MapPosition.getMapPositionById(edge.src.mapId).allowTeleportFrom:
+            is_allowed = MapMemoryManager().is_havenbag_allowed(edge.src.mapId)
+            if is_allowed is None:
+                is_allowed = MapPosition.getMapPositionById(edge.src.mapId).allowTeleportFrom
+
+            if not is_allowed:
                 continue
 
             teleport_cost = 10 * MapTools.distL2Maps(edge.src.mapId, self.dstZaapMapId)

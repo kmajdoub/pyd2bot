@@ -115,7 +115,7 @@ class AbstractFarmBehavior(AbstractBehavior):
         Logger().debug(f"Player got back inside farm area")
         self.main()
 
-    def onNextVertexReached(self, code, error):
+    def onNextVertexReached(self, code, error, transition=None):
         if not self._moving_to_next_step:
             Logger().warning("Next vertex reached called but farmer is not waiting for vertex change!")
             return

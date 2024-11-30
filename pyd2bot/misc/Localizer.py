@@ -9,6 +9,7 @@ from pydofus2.com.ankamagames.dofus.datacenter.world.Hint import Hint
 from pydofus2.com.ankamagames.dofus.datacenter.world.MapPosition import \
     MapPosition
 from pydofus2.com.ankamagames.dofus.datacenter.world.SubArea import SubArea
+from pydofus2.com.ankamagames.dofus.internalDatacenter.DataEnum import DataEnum
 from pydofus2.com.ankamagames.dofus.logic.common.managers.PlayerManager import PlayerManager
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import \
     PlayedCharacterManager
@@ -48,8 +49,6 @@ class BankInfos:
 
 
 class Localizer:
-
-    ZAAP_GFX = 410
     BANK_GFX = 401
 
     _phenixByAreaId = dict[int, list]()
@@ -322,7 +321,7 @@ class Localizer:
         for hint in Hint.getHints():
             if hint.mapId in excludeMaps:
                 continue
-            if hint.gfx != cls.ZAAP_GFX:
+            if hint.gfx != DataEnum.ZAAP_GFX:
                 continue
             if onlyKnownZaap and not PlayedCharacterManager().isZaapKnown(hint.mapId):
                 continue

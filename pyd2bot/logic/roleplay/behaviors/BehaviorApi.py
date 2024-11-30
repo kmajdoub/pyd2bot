@@ -13,7 +13,6 @@ from pydofus2.com.ankamagames.dofus.logic.common.managers.PlayerManager import P
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.InactivityManager import InactivityManager
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.InventoryManager import InventoryManager
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import PlayedCharacterManager
-from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.TransitionTypeEnum import TransitionTypeEnum
 from pydofus2.com.ankamagames.dofus.network.messages.game.dialog.LeaveDialogRequestMessage import (
     LeaveDialogRequestMessage,
 )
@@ -29,12 +28,8 @@ __dir__ = os.path.dirname(os.path.abspath(__file__))
 
 
 class BehaviorApi:
-    ANKARNAM_AREA_ID = 45
-    ASTRUB_AREA_ID = 95
-    NEW_VALONIA_AREA_ID = 93
     SPECIAL_AREA_INFOS_NOT_FOUND_ERROR = 89091
     PLAYER_IN_FIGHT_ERROR = 89090
-    CELESTIAL_SUBAREA_ID = 446
 
     def __init__(self) -> None:
         pass
@@ -46,7 +41,6 @@ class BehaviorApi:
         withSaveZaap=False,
         maxCost=None,
         excludeMaps=[],
-        check_special_dest=True,
         farm_resources_on_way=False,
         callback=None,
     ):
@@ -64,15 +58,18 @@ class BehaviorApi:
             Logger().debug(f"Player max teleport cost is {maxCost}")
 
         dst_sub_area = SubArea.getSubAreaByMapId(dstMapId)
-        if PlayedCharacterManager().currentSubArea.areaId == self.ANKARNAM_AREA_ID and dst_sub_area.areaId != self.ANKARNAM_AREA_ID:
+        if (
+            PlayedCharacterManager().currentSubArea.areaId == DataEnum.ANKARNAM_AREA_ID
+            and dst_sub_area.areaId != DataEnum.ANKARNAM_AREA_ID
+        ):
             useZaap = False
 
         if PlayerManager().isBasicAccount() and not dst_sub_area.basicAccountAllowed:
             return callback(1, "Destination map is not allowed for basic accounts!")
 
         if (
-            PlayedCharacterManager().currentSubArea.id == self.CELESTIAL_SUBAREA_ID
-            and dst_sub_area.id != self.CELESTIAL_SUBAREA_ID
+            PlayedCharacterManager().currentSubArea.id == DataEnum.CELESTIAL_SUBAREA_ID
+            and dst_sub_area.id != DataEnum.CELESTIAL_SUBAREA_ID
         ):
             Logger().info(f"Player is in celestial dimension, and wants to get out of there.")
 
@@ -84,9 +81,7 @@ class BehaviorApi:
             return self.autoTrip(154010883, 1, callback=onOutOfCelestialDim)
 
         if not useZaap:
-            return self.autoTrip(
-                dstMapId, dstZoneId, farm_resources_on_way=farm_resources_on_way, callback=callback
-            )
+            return self.autoTrip(dstMapId, dstZoneId, farm_resources_on_way=farm_resources_on_way, callback=callback)
 
         from pyd2bot.misc.Localizer import Localizer
 
@@ -145,10 +140,7 @@ class BehaviorApi:
                     Logger().error(err)
                     Logger().info("Trying to reach the destination with classic auto trip as last resort.")
                     return self.autoTrip(
-                        dstMapId, 
-                        dstZoneId, 
-                        farm_resources_on_way=farm_resources_on_way, 
-                        callback=callback
+                        dstMapId, dstZoneId, farm_resources_on_way=farm_resources_on_way, callback=callback
                     )
                 elif code == UseZaap.DST_ZAAP_NOT_KNOWN:
                     if PlayerManager().inHavenBag():
@@ -174,7 +166,6 @@ class BehaviorApi:
         dstMapId,
         dstZoneId=None,
         path: list["Edge"] = None,
-        check_special_dest=True,
         farm_resources_on_way=False,
         callback=None,
     ):
@@ -223,10 +214,10 @@ class BehaviorApi:
 
         ToggleRideMount().start(wanted_ride_state=wanted_ride_state, callback=callback, parent=self)
 
-    def mapMove(
+    def map_move_to_cell(
         self,
         destCell,
-        exactDestination=True,
+        exact_destination=True,
         forMapChange=False,
         mapChangeDirection=-1,
         callback=None,
@@ -236,7 +227,7 @@ class BehaviorApi:
 
         MapMove().start(
             destCell,
-            exactDestination=exactDestination,
+            exactDestination=exact_destination,
             forMapChange=forMapChange,
             mapChangeDirection=mapChangeDirection,
             callback=callback,
@@ -262,16 +253,12 @@ class BehaviorApi:
     def use_items_of_type(self, type_id, callback=None):
         from pyd2bot.logic.roleplay.behaviors.inventory.UseItemsByType import UseItemsByType
 
-        b = UseItemsByType(type_id)
-        b.start(callback=callback)
-        return b
+        UseItemsByType(type_id).start(callback=callback)
 
     def use_item(self, item: "ItemWrapper", qty: int, callback=None):
         from pyd2bot.logic.roleplay.behaviors.inventory.UseItem import UseItem
 
-        b = UseItem(item, qty)
-        b.start(callback=callback, parent=self)
-        return b
+        UseItem(item, qty).start(callback=callback, parent=self)
 
     def requestMapData(self, mapId=None, callback=None):
         from pyd2bot.logic.roleplay.behaviors.movement.RequestMapData import RequestMapData
@@ -281,9 +268,7 @@ class BehaviorApi:
     def auto_resurrect(self, callback=None):
         from pyd2bot.logic.roleplay.behaviors.misc.Resurrect import Resurrect
 
-        b = Resurrect()
-        b.start(callback=callback, parent=self)
-        return b
+        Resurrect().start(callback=callback, parent=self)
 
     def attackMonsters(self, entityId, callback=None):
         from pyd2bot.logic.roleplay.behaviors.fight.AttackMonsters import AttackMonsters
@@ -310,6 +295,11 @@ class BehaviorApi:
 
         UseZaap().start(dstMapId, saveZaap, callback=callback, parent=self)
 
+    def teleport_using_havenbag(self, destMapId, callback):
+        from pyd2bot.logic.roleplay.behaviors.teleport.TeleportUsingHavenBag import TeleportUsingHavenbag
+
+        TeleportUsingHavenbag(destMapId).start(callback=callback, parent=self)
+
     def use_rappel_potion(self, callback):
         for iw in InventoryManager().inventory.getView("storageConsumables").content:
             if iw.objectGID == DataEnum.RAPPEL_POTION_GUID:
@@ -317,12 +307,20 @@ class BehaviorApi:
                 return True
         return False
 
+    def action_map_change(self, dst_mapId, transition_cell, callback):
+        from pyd2bot.logic.roleplay.behaviors.movement.ActionMapChange import ActionMapChange
+
+        ActionMapChange(dst_mapId, transition_cell).start(callback=callback, parent=self)
+
+    def scroll_map_change(self, dst, tr_mapid, cell, direction, callback):
+        from pyd2bot.logic.roleplay.behaviors.movement.ScrollMapChange import ScrollMapChange
+
+        ScrollMapChange(dst, tr_mapid, cell, direction).start(callback=callback, parent=self)
+
     def put_pet_mount(self, callback):
         from pyd2bot.logic.roleplay.behaviors.mount.PutPetsMount import PutPetsMount
 
-        b = PutPetsMount()
-        b.start(callback=callback, parent=self)
-        return b
+        PutPetsMount().start(callback=callback, parent=self)
 
     def use_skill(
         self,
@@ -363,7 +361,7 @@ class BehaviorApi:
         from pyd2bot.logic.roleplay.behaviors.quest.treasure_hunt.TakeTreasureHuntQuest import TakeTreasureHuntQuest
 
         TakeTreasureHuntQuest().start(callback=callback, parent=self)
-    
+
     def waitForMembersIdle(self, members, leader, callback=None):
         from pyd2bot.logic.roleplay.behaviors.party.WaitForMembersIdle import WaitForMembersIdle
 
@@ -381,7 +379,6 @@ class BehaviorApi:
         npcOpenDialogId,
         npcQuestionsReplies,
         useZaap=True,
-        check_special_dest=True,
         farm_resources_on_way=False,
         callback=None,
     ):
@@ -398,7 +395,6 @@ class BehaviorApi:
         else:
             self.autoTrip(
                 npcMapId,
-                check_special_dest=check_special_dest,
                 farm_resources_on_way=farm_resources_on_way,
                 callback=onNPCMapReached,
             )
@@ -448,46 +444,44 @@ class BehaviorApi:
 
         RetrieveRecipeFromBank().start(recipe, return_to_start, bankInfos, callback=callback, parent=self)
 
-    def unload_in_bank(self, return_to_start=True, bankInfos=None, leave_bank_open=False, items_gid_to_keep=None, callback=None):
+    def unload_in_bank(
+        self, return_to_start=True, bankInfos=None, leave_bank_open=False, items_gid_to_keep=None, callback=None
+    ):
         from pyd2bot.logic.roleplay.behaviors.bank.UnloadInBank import UnloadInBank
 
-        UnloadInBank().start(return_to_start, bankInfos, leave_bank_open, items_gid_to_keep, callback=callback, parent=self)
+        UnloadInBank().start(
+            return_to_start, bankInfos, leave_bank_open, items_gid_to_keep, callback=callback, parent=self
+        )
 
     def retrieve_sell(self, type_batch_size, items_gid_to_keep=None, callback=None):
         from pyd2bot.logic.roleplay.behaviors.bidhouse.RetrieveSellUpdate import RetrieveSellUpdate
 
-        b = RetrieveSellUpdate(type_batch_size=type_batch_size, items_gid_to_keep=items_gid_to_keep)
-        b.start(callback=callback, parent=self)
-        return b
+        RetrieveSellUpdate(type_batch_size=type_batch_size, items_gid_to_keep=items_gid_to_keep).start(
+            callback=callback, parent=self
+        )
 
     def edit_bid_price(self, bid: MarketBid, new_price: int, callback=None):
         from pyd2bot.logic.roleplay.behaviors.bidhouse.EditBidPrice import EditBidPrice
 
-        b = EditBidPrice(bid, new_price)
-        b.start(callback=callback, parent=self)
-        return b
+        EditBidPrice(bid, new_price).start(callback=callback, parent=self)
 
     def place_bid(self, object_gid: int, quantity: int, price: int, callback=None):
         from pyd2bot.logic.roleplay.behaviors.bidhouse.PlaceBid import PlaceBid
 
-        b = PlaceBid(object_gid, quantity, price)
-        b.start(callback=callback, parent=self)
-        return b
+        PlaceBid(object_gid, quantity, price).start(callback=callback, parent=self)
 
     def open_market(
         self, from_gid=None, from_type=None, exclude_market_at_maps=None, mode="sell", item_level=200, callback=None
     ):
         from pyd2bot.logic.roleplay.behaviors.bidhouse.OpenMarket import OpenMarket
 
-        b = OpenMarket(
+        OpenMarket(
             from_gid=from_gid,
             from_object_category=from_type,
             mode=mode,
             exclude_market_at_maps=exclude_market_at_maps,
             item_level=item_level,
-        )
-        b.start(callback=callback, parent=self)
-        return b
+        ).start(callback=callback, parent=self)
 
     def close_market(self, callback):
         if Kernel().marketFrame._market_type_open is None:
@@ -505,9 +499,9 @@ class BehaviorApi:
     def close_dialog(self, handler, timeout=10):
         self.once(
             event_id=KernelEvent.LeaveDialog,
-            callback=lambda _: handler(0, None),
+            callback=lambda *_: handler(0, None),
             timeout=timeout,
-            ontimeout=lambda _: handler(1, "close dialog timed out!"),
+            ontimeout=lambda *_: handler(1, "close dialog timed out!"),
         )
         ConnectionsHandler().send(LeaveDialogRequestMessage())
         InactivityManager().activity()
@@ -515,9 +509,12 @@ class BehaviorApi:
     def goto_market(self, market_gfx_id, exclude_market_at_maps=None, item_level=200, callback=None):
         from pyd2bot.logic.roleplay.behaviors.bidhouse.GoToMarket import GoToMarket
 
-        b = GoToMarket(market_gfx_id, exclude_market_at_maps, item_level)
-        b.start(callback=callback, parent=self)
-        return b
+        GoToMarket(market_gfx_id, exclude_market_at_maps, item_level).start(callback=callback, parent=self)
+
+    def interactive_map_change(self, dst_map_id: int, ie_elem_id: int, skill_id: int, cell_id: int, callback):
+        from pyd2bot.logic.roleplay.behaviors.movement.InteractiveMapChange import InteractiveMapChange
+
+        InteractiveMapChange(dst_map_id, ie_elem_id, skill_id, cell_id).start(callback=callback, parent=self)
 
     def retrieve_items_from_bank(
         self,
@@ -530,9 +527,9 @@ class BehaviorApi:
     ):
         from pyd2bot.logic.roleplay.behaviors.bank.RetrieveFromBank import RetrieveFromBank
 
-        b = RetrieveFromBank(type_batch_size, gid_batch_size, return_to_start, bank_infos, max_item_level)
-        b.start(callback=callback, parent=self)
-        return b
+        RetrieveFromBank(type_batch_size, gid_batch_size, return_to_start, bank_infos, max_item_level).start(
+            callback=callback, parent=self
+        )
 
     def pull_bank_items(self, items_uids, quantities, callback):
         self.once(KernelEvent.InventoryWeightUpdate, lambda *_: callback())
@@ -550,26 +547,14 @@ class BehaviorApi:
         CollectAllMapResources(job_filters).start(callback=callback, parent=self)
 
     def sell_items(self, gid_batch_size: Dict[int, int] = None, type_batch_size: Dict[int, int] = None, callback=None):
-        """
-        Sell items from inventory in the marketplace.
-        Automatically travels to marketplace and lists items at competitive prices.
-
-        Args:
-            items_to_sell: List of tuples (object_gid, quantity)
-            callback: Completion callback function
-        """
         from pyd2bot.logic.roleplay.behaviors.bidhouse.SellItemsFromBag import SellItemsFromBag
 
-        behavior = SellItemsFromBag(gid_batch_size, type_batch_size)
-        behavior.start(callback=callback, parent=self)
-        return behavior
+        SellItemsFromBag(gid_batch_size, type_batch_size).start(callback=callback, parent=self)
 
     def update_market_bids(self, resource_type, callback=None):
         from pyd2bot.logic.roleplay.behaviors.bidhouse.UpdateMarketBids import UpdateMarketBids
 
-        b = UpdateMarketBids(market_type=resource_type)
-        b.start(callback=callback, parent=self)
-        return b
+        UpdateMarketBids(market_type=resource_type).start(callback=callback, parent=self)
 
     def on(self, event_id, callback, timeout=None, ontimeout=None, retryNbr=None, retryAction=None, once=False):
         return KernelEventsManager().on(
@@ -619,3 +604,6 @@ class BehaviorApi:
 
     def onceFightSword(self, entityId, entityCell, callback, args=[]):
         return KernelEventsManager().onceFightSword(entityId, entityCell, callback, args=args, originator=self)
+
+    def clearListeners(self):
+        KernelEventsManager().clear_all_by_origin(self)

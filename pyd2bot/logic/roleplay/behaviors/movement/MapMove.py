@@ -28,16 +28,12 @@ class MapMove(AbstractBehavior):
     ALREADY_ON_CELL = 7001
     PLAYER_STOPPED = 7002
 
-    def __init__(self) -> None:
+    def __init__(self, destCell, exactDestination=True, forMapChange=False, mapChangeDirection=-1, cellsblacklist=[]) -> None:
         super().__init__()
         self._landingCell = None
         self.waiting_move_request_accept = False
         self.delayed_stop = False
         self.move_request_accepted = False
-
-    def run(self, destCell, exactDestination=True, forMapChange=False, mapChangeDirection=-1, cellsblacklist=[]) -> None:
-        Logger().info(f"Move from {PlayedCharacterManager().currentCellId} to {destCell} started")
-        
         self.forMapChange = forMapChange
         self.mapChangeDirection = mapChangeDirection
         self.exactDestination = exactDestination
@@ -47,7 +43,10 @@ class MapMove(AbstractBehavior):
         elif isinstance(destCell, MapPoint):
             self.dstCell = destCell
         else:
-            self.finish(False, f"Invalid destination cell param : {destCell}!")
+            raise Exception(f"Invalid destination cell param : {destCell}!")
+
+    def run(self) -> None:
+        Logger().info(f"Move from {PlayedCharacterManager().currentCellId} to {self.dstCell} started")
         self.countMoveFail = 0
         self.move_request_accepted = False
         self.move()
@@ -73,8 +72,7 @@ class MapMove(AbstractBehavior):
                 elif self.move_request_accepted:
                     Logger().warning("Player not moving but its move request already executed nothing to stop.")
                     return False
-        KernelEventsManager().clear_all_by_origin(self)
-        # MapMove.clear()
+        self.clearListeners()
         return True
         
     def move(self) -> bool:

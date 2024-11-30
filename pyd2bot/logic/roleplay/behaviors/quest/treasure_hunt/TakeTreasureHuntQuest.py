@@ -39,10 +39,8 @@ class TakeTreasureHuntQuest(AbstractBehavior):
         """Navigate to the treasure hunt ATM."""
         Logger().debug("AutoTraveling to treasure hunt ATM")
             
-        self.travel_using_zaap(
+        self.autoTrip(
             self.TAKE_QUEST_MAPID,
-            withSaveZaap=True,
-            maxCost=self.maxCost,
             farm_resources_on_way=self.FARM_RESOURCES,
             callback=self.on_take_quest_map_reached
         )
@@ -50,10 +48,8 @@ class TakeTreasureHuntQuest(AbstractBehavior):
     def onTeleportToDistributorNearestZaap(self, code, err):
         """Handle teleport results."""
         if code == UseTeleportItem.errors.CANT_USE_ITEM_IN_MAP:
-            self.travel_using_zaap(
+            self.autoTrip(
                 self.TAKE_QUEST_MAPID,
-                withSaveZaap=True,
-                maxCost=self.maxCost,
                 farm_resources_on_way=self.FARM_RESOURCES,
                 callback=self.on_take_quest_map_reached
             )

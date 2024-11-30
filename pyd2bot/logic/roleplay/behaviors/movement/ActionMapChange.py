@@ -143,7 +143,7 @@ class ActionMapChange(AbstractBehavior):
 
     def on_request_timeout(self, listener) -> None:
         """Handler for map change request timeout"""
-        if MapMove().isRunning():
+        if MapMove.getInstance():
             listener.armTimer()
             return
             

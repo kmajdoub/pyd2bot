@@ -40,10 +40,9 @@ class GoToMarket(AbstractBehavior):
             self.hdv_vertex != PlayedCharacterManager().currVertex
             or PlayedCharacterManager().currVertex.mapId in self.exclude_market_at_maps
         ):
-            self.travel_using_zaap(
+            self.autoTrip(
                 self.hdv_vertex.mapId,
                 self.hdv_vertex.zoneId,
-                excludeMaps=self.exclude_market_at_maps,
                 callback=self._on_market_map_reached,
             )
         else:

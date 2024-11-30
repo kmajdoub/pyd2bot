@@ -106,7 +106,7 @@ class RetrieveSellUpdate(AbstractBehavior):
         
         # Return to start point before finishing
         self._logger.info(f"Returning to start point")
-        self.travel_using_zaap(
+        self.autoTrip(
             self._start_map_id, 
             dstZoneId=self._start_zone, 
             callback=lambda *_: self.finish(self._finish_code, self._finish_error)

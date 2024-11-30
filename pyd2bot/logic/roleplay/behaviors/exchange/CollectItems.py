@@ -38,7 +38,7 @@ class CollectItems(AbstractBehavior):
         self.items = items
         self.state = CollectState.GOING_TO_BANK
         self.guestDisconnectedListener = BotEventsManager().onceBotDisconnected(self.guest.accountId, self.onGuestDisconnected, originator=self)
-        self.travel_using_zaap(self.bankInfos.npcMapId, callback=self.onTripEnded)
+        self.autoTrip(self.bankInfos.npcMapId, callback=self.onTripEnded)
 
     def onGuestDisconnected(self):
         Logger().error("[CollectFromGuest] Guest disconnected!")

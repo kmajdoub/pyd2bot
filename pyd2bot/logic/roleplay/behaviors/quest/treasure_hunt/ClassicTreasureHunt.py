@@ -307,9 +307,8 @@ class ClassicTreasureHunt(AbstractBehavior):
 
         Logger().info("Selling complete, resuming travel to hint map...")
         # Resume travel to hint map
-        self.travel_using_zaap(
+        self.autoTrip(
             self.startMapId, 
-            maxCost=self.maxCost,
             callback=self._on_start_map_reached
         )
 
@@ -320,9 +319,8 @@ class ClassicTreasureHunt(AbstractBehavior):
         Logger().info("Resurrection complete, resuming travel to hint map...")
 
         # Resume travel to hint map after resurrection
-        self.travel_using_zaap(
+        self.autoTrip(
             self.startMapId, 
-            maxCost=self.maxCost,
             callback=self._on_start_map_reached
         )
 
@@ -331,9 +329,8 @@ class ClassicTreasureHunt(AbstractBehavior):
         if error:
             if code == AutoTrip.NO_PATH_FOUND:
                 if self.use_rappel_potion(
-                    lambda *_: self.travel_using_zaap(
+                    lambda *_: self.autoTrip(
                         self.startMapId,
-                        maxCost=self.maxCost,
                         callback=self._on_start_map_reached
                     )
                 ):
@@ -351,9 +348,8 @@ class ClassicTreasureHunt(AbstractBehavior):
 
             if code == CollectAllMapResources.errors.MAP_CHANGED:
                 Logger().warning(f"Map changed during resource collection, retrying travel to hint map...")
-                return self.travel_using_zaap(
+                return self.autoTrip(
                     self.startMapId, 
-                    maxCost=self.maxCost,
                     callback=self._on_start_map_reached
                 )
 

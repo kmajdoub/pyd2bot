@@ -183,10 +183,9 @@ class AbstractFarmBehavior(AbstractBehavior):
             Logger().warning("Bot vertex not loaded yet!, delaying return to path after Map is processed...")
             return self.once_map_rendered(callback=self._on_out_of_path)
 
-        self.travel_using_zaap(
+        self.autoTrip(
             self.path.startVertex.mapId,
             self.path.startVertex.zoneId,
-            withSaveZaap=False,
             callback=self._on_back_to_farm_path,
         )
 
@@ -216,10 +215,9 @@ class AbstractFarmBehavior(AbstractBehavior):
             return self.finish(code, f"Error [{code}] while auto-reviving player: {error}")
         Logger().debug(f"Bot back on form, traveling to last memorized vertex {self.currentVertex}")
         if self.initialized:
-            self.travel_using_zaap(
+            self.autoTrip(
                 self.currentVertex.mapId,
                 self.currentVertex.zoneId,
-                True,
                 callback=self._on_back_to_previous_position,
             )
         else:
@@ -291,7 +289,7 @@ class AbstractFarmBehavior(AbstractBehavior):
             self.initialized = True
             if self.currentVertex:
                 Logger().debug(f"Traveling to the memorized current vertex...")
-                return self.travel_using_zaap(
+                return self.autoTrip(
                     self.currentVertex.mapId, self.currentVertex.zoneId, True, callback=self.onReturnToLastVertex
                 )
             else:

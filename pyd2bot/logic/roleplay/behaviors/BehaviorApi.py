@@ -34,133 +34,6 @@ class BehaviorApi:
     def __init__(self) -> None:
         pass
 
-    def travel_using_zaap(
-        self,
-        dstMapId,
-        dstZoneId=None,
-        withSaveZaap=False,
-        maxCost=None,
-        excludeMaps=[],
-        farm_resources_on_way=False,
-        callback=None,
-    ):
-        from pyd2bot.logic.roleplay.behaviors.movement.AutoTripUseZaap import AutoTripUseZaap
-
-        useZaap = True
-        currVertex = PlayedCharacterManager().currVertex
-        if currVertex.mapId == dstMapId:
-            if dstZoneId is None or currVertex.zoneId == dstZoneId:
-                Logger().info("Player already at the destination!")
-                return callback(0, None)
-
-        if not maxCost:
-            maxCost = InventoryManager().inventory.kamas
-            Logger().debug(f"Player max teleport cost is {maxCost}")
-
-        dst_sub_area = SubArea.getSubAreaByMapId(dstMapId)
-        if (
-            PlayedCharacterManager().currentSubArea.areaId == DataEnum.ANKARNAM_AREA_ID
-            and dst_sub_area.areaId != DataEnum.ANKARNAM_AREA_ID
-        ):
-            useZaap = False
-
-        if PlayerManager().isBasicAccount() and not dst_sub_area.basicAccountAllowed:
-            return callback(1, "Destination map is not allowed for basic accounts!")
-
-        if (
-            PlayedCharacterManager().currentSubArea.id == DataEnum.CELESTIAL_SUBAREA_ID
-            and dst_sub_area.id != DataEnum.CELESTIAL_SUBAREA_ID
-        ):
-            Logger().info(f"Player is in celestial dimension, and wants to get out of there.")
-
-            def onOutOfCelestialDim(code, err):
-                if err:
-                    return callback(code, f"Could not get player out of celestial dimension : {err}")
-                self.travel_using_zaap(dstMapId, dstZoneId, withSaveZaap, maxCost, excludeMaps, callback=callback)
-
-            return self.autoTrip(154010883, 1, callback=onOutOfCelestialDim)
-
-        if not useZaap:
-            return self.autoTrip(dstMapId, dstZoneId, farm_resources_on_way=farm_resources_on_way, callback=callback)
-
-        from pyd2bot.misc.Localizer import Localizer
-
-        path_to_dest_zaap = Localizer.findPathToClosestZaap(
-            dstMapId, maxCost, excludeMaps=excludeMaps, onlyKnownZaap=False
-        )
-        if path_to_dest_zaap is None:
-            Logger().warning(f"No dest zaap found for cost {maxCost} and map {dstMapId}!")
-            return self.autoTrip(dstMapId, dstZoneId, farm_resources_on_way=farm_resources_on_way, callback=callback)
-
-        if len(path_to_dest_zaap) == 0:
-            dstZaapVertex = currVertex = PlayedCharacterManager().currVertex
-        else:
-            dstZaapVertex = path_to_dest_zaap[-1].dst
-
-        def on_dst_zaap_unknown():
-            Logger().debug(f"Dest zaap at vertex {dstZaapVertex} is not known ==> We need to travel to register it.")
-
-            def onDstZaapTrip(code, err):
-                if err:
-                    Logger().error(f"Can't reach the dest zaap at {dstZaapVertex} : {err}")
-                    return self.autoTrip(
-                        dstMapId, dstZoneId, farm_resources_on_way=farm_resources_on_way, callback=callback
-                    )
-                if withSaveZaap:
-
-                    def onDstZaapSaved(code, err):
-                        if err:
-                            return callback(code, err)
-                        self.autoTrip(
-                            dstMapId, dstZoneId, farm_resources_on_way=farm_resources_on_way, callback=callback
-                        )
-
-                    return self.save_zaap(onDstZaapSaved)
-                self.autoTrip(dstMapId, dstZoneId, farm_resources_on_way=farm_resources_on_way, callback=callback)
-
-            self.travel_using_zaap(
-                dstZaapVertex.mapId,
-                dstZaapVertex.zoneId,
-                excludeMaps=excludeMaps + [dstZaapVertex.mapId],
-                callback=onDstZaapTrip,
-            )
-
-        if not PlayedCharacterManager().isZaapKnown(dstZaapVertex.mapId):
-            return on_dst_zaap_unknown()
-
-        Logger().debug(
-            f"Dst zaap at {dstZaapVertex} is found in known ZAAPS, traveling with zaaps to {dstMapId}, zoneId={dstZoneId}"
-        )
-
-        def onAutoTripUseZaapEnd(code, err):
-            from pyd2bot.logic.roleplay.behaviors.teleport.UseZaap import UseZaap
-
-            if err:
-                if code == AutoTripUseZaap.NO_PATH_TO_DEST:
-                    Logger().error(err)
-                    Logger().info("Trying to reach the destination with classic auto trip as last resort.")
-                    return self.autoTrip(
-                        dstMapId, dstZoneId, farm_resources_on_way=farm_resources_on_way, callback=callback
-                    )
-                elif code == UseZaap.DST_ZAAP_NOT_KNOWN:
-                    if PlayerManager().inHavenBag():
-                        Logger().debug(f"Player is inside haven bag, we need to exit it before traveling!")
-                        return self.toggle_haven_bag(False, lambda *_: on_dst_zaap_unknown())
-                    return on_dst_zaap_unknown()
-
-            return callback(code, err)
-
-        AutoTripUseZaap().start(
-            dstMapId,
-            dstZoneId,
-            dstZaapVertex.mapId,
-            withSaveZaap=withSaveZaap,
-            maxCost=maxCost,
-            farm_resources_on_way=farm_resources_on_way,
-            callback=onAutoTripUseZaapEnd,
-            parent=self,
-        )
-
     def autoTrip(
         self,
         dstMapId,
@@ -179,8 +52,8 @@ class BehaviorApi:
 
         AutoTrip(farm_resources_on_way).start(dstMapId, dstZoneId, path, callback=callback, parent=self)
 
-    def travel_with_npc(self, infos, useZaap=True, callback=None, dstSubAreaName=""):
-        Logger().info(f"Auto trip to a special destination ({dstSubAreaName}). Using zaap={useZaap}")
+    def travel_with_npc(self, infos, callback=None, dstSubAreaName=""):
+        Logger().info(f"Auto trip to a special destination ({dstSubAreaName}).")
 
         def onNpcDialogEnd(code, err):
             if err:
@@ -195,7 +68,6 @@ class BehaviorApi:
             infos["npcId"],
             infos["openDialogActionId"],
             infos["replies"],
-            useZaap=useZaap,
             callback=onNpcDialogEnd,
         )
 
@@ -225,13 +97,14 @@ class BehaviorApi:
     ):
         from pyd2bot.logic.roleplay.behaviors.movement.MapMove import MapMove
 
-        MapMove().start(
+        MapMove(
             destCell,
             exactDestination=exact_destination,
             forMapChange=forMapChange,
             mapChangeDirection=mapChangeDirection,
-            callback=callback,
             cellsblacklist=cellsblacklist,
+        ).start(
+            callback=callback,
             parent=self,
         )
 
@@ -378,26 +251,22 @@ class BehaviorApi:
         npcId,
         npcOpenDialogId,
         npcQuestionsReplies,
-        useZaap=True,
         farm_resources_on_way=False,
         callback=None,
     ):
         from pyd2bot.logic.roleplay.behaviors.npc.NpcDialog import NpcDialog
 
-        def onNPCMapReached(code, err):
+        def on_npc_reached(code, err):
             Logger().info(f"NPC Map reached with error : {err}")
             if err:
                 return callback(code, err)
             NpcDialog().start(npcMapId, npcId, npcOpenDialogId, npcQuestionsReplies, callback=callback, parent=self)
 
-        if useZaap:
-            self.travel_using_zaap(npcMapId, callback=onNPCMapReached)
-        else:
-            self.autoTrip(
-                npcMapId,
-                farm_resources_on_way=farm_resources_on_way,
-                callback=onNPCMapReached,
-            )
+        self.autoTrip(
+            npcMapId,
+            farm_resources_on_way=farm_resources_on_way,
+            callback=on_npc_reached,
+        )
 
     def getOutOfAnkarnam(self, callback=None):
         from pyd2bot.logic.roleplay.behaviors.movement.GetOutOfAnkarnam import GetOutOfAnkarnam
@@ -482,6 +351,11 @@ class BehaviorApi:
             exclude_market_at_maps=exclude_market_at_maps,
             item_level=item_level,
         ).start(callback=callback, parent=self)
+
+    def astar_find_path(self, dst_map_id, linked_zone=None, callback=None):
+        from pyd2bot.logic.roleplay.behaviors.movement.AstarPathFinder import AstarPathFinder
+
+        AstarPathFinder(dst_map_id, linked_zone=linked_zone).start(callback=callback, parent=self)
 
     def close_market(self, callback):
         if Kernel().marketFrame._market_type_open is None:

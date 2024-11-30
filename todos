@@ -1,0 +1,5 @@
+*)
+make auto trip take a save zaap flag
+when its true bot will reach destination and before ending will 
+look for nearest zaap to its current vertex and walk to it to save it 
+then finish

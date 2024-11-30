@@ -111,27 +111,27 @@ class UseSkill(AbstractBehavior):
     def onUsingInteractive(self, event, entityId, usingElementId):
         if self.elementId == usingElementId:
             if entityId != PlayedCharacterManager().id:
-                if MapMove().isRunning():
+                if MapMove.getInstance():
                     self._stop_message = "Someone else is using this element while we are moving to it!"
                     Logger().warning(self._stop_message)
                     self._wanted_player_stop = True
                     self._stop_code = self.ELEM_BEING_USED
-                    MapMove().stop()
+                    MapMove.getInstance().stop()
                 else:
                     self.finish(self.ELEM_BEING_USED, "Someone else is using this element")
-            elif MapMove().isRunning():
+            elif MapMove.getInstance():
                 Logger().debug(f"/!\ Impossible thing happened : Player is using the element, while we are moving to it!!")
                     
     def onUsedInteractive(self, event, entityId, usedElementId):
         if self.elementId == usedElementId:
             if entityId != PlayedCharacterManager().id:
                 if self.elementId in Kernel().interactiveFrame._statedElm:
-                    if MapMove().isRunning():
+                    if MapMove.getInstance():
                         self._wanted_player_stop = True
                         self._stop_code = self.ELEM_TAKEN
                         self._stop_message = "Someone else is using this element while we are moving to it!"
                         Logger().warning(self._stop_message)
-                        MapMove().stop()
+                        MapMove.getInstance().stop()
             else:            
                 if self.useErrorListener:
                     self.useErrorListener.delete()
@@ -173,8 +173,8 @@ class UseSkill(AbstractBehavior):
     def onUseError(self, event, elementId):
         if not self.running.is_set():
             return
-        if MapMove().isRunning():
-            MapMove().stop()
+        if MapMove.getInstance():
+            MapMove.getInstance().stop()
         Logger().error(f"Use Error for element {elementId}")
         self.requestMapData(callback=lambda code, err: self.onMapDataRefreshedAfterUseError(code, err, elementId))
 

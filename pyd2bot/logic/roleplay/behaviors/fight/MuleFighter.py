@@ -300,7 +300,7 @@ class MuleFighter(AbstractBehavior):
             self.is_moving = False
             return
 
-        self.travel_using_zaap(
+        self.autoTrip(
             vertex.mapId,
             vertex.zoneId,
             callback=self._on_movement_complete

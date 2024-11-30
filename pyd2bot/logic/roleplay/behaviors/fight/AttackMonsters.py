@@ -79,13 +79,13 @@ class AttackMonsters(AbstractBehavior):
         self.map_move_to_cell(MapPoint.fromCellId(cellId), callback=self.onTargetMonsterReached)
 
     def onFightWithEntityTaken(self):
-        if MapMove().isRunning():
+        if MapMove.getInstance():
             error = "Entity vanished while moving towards it!"
             Logger().warning(error)
             self._wanted_player_stop = True
             self._stop_code = self.ENTITY_VANISHED
             self._stop_message = error
-            MapMove().stop()
+            MapMove.getInstance().stop()
         elif self.attackMonsterListener:
             return self.finish(self.ENTITY_VANISHED, "Entity vanished while attacking it!")
 
@@ -111,10 +111,10 @@ class AttackMonsters(AbstractBehavior):
 
     def onTargetMonsterMoved(self, event: Event, movePath: MovementPath):
         Logger().warning(f"Entity moved to cell {movePath.end.cellId}")
-        if MapMove().isRunning():
+        if MapMove.getInstance():
             self._wanted_player_stop = True
             self._stop_code = self.ENTITY_MOVED
-            MapMove().stop()
+            MapMove.getInstance().stop()
         elif self.attackMonsterListener:
             Logger().warning("Entity moved but we already asked server for attack")
             return

@@ -127,7 +127,7 @@ class ScrollMapChange(AbstractBehavior):
         self.finish(222, "Request Map data timeout")
         
     def on_request_timeout(self, listener) -> None:
-        if MapMove().isRunning():
+        if MapMove.getInstance():
             listener.armTimer()
             return
             

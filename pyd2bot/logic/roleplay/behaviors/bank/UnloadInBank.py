@@ -90,7 +90,7 @@ class UnloadInBank(AbstractBehavior):
         
         if self.return_to_start:
             self._logger.info(f"Returning to start point")
-            self.travel_using_zaap(self._start_map_id, dstZoneId=self._start_zone, callback=self.finish)
+            self.autoTrip(self._start_map_id, self._start_zone, callback=self.finish)
         else:
             self.finish(0, None)
 

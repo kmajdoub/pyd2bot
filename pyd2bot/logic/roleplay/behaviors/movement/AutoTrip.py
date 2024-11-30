@@ -113,11 +113,11 @@ class AutoTrip(AbstractBehavior):
                 if self._nbr_follow_edge_fails >= self.MAX_RETIES_COUNT:
                     Logger().debug("Exceeded max number of fails, will ignore this edge.")
                     AStar().addForbiddenEdge(nextEdge)
-                    return self.findPath(self.dstMapId, self.dstRpZone, self.onPathFindResult)
+                    return self.astar_find_path(self.dstMapId, self.dstRpZone, self.onPathFindResult)
 
                 self._nbr_follow_edge_fails += 1
                 Logger().warning(f"Attempt {self._nbr_follow_edge_fails}/{self.MAX_RETIES_COUNT} auto trip to dest")
-                return self.findPath(self.dstMapId, self.dstRpZone, self.onPathFindResult)
+                return self.astar_find_path(self.dstMapId, self.dstRpZone, self.onPathFindResult)
             else:
                 Logger().debug(f"Error while auto traveling : {error}")
                 return self.finish(code, error)
@@ -148,26 +148,31 @@ class AutoTrip(AbstractBehavior):
             currZoneId = PlayedCharacterManager().currentZoneRp
             dstMapId = self.path[-1].dst.mapId
             dstZoneId = self.path[-1].dst.zoneId
+
             if (not self.dstRpZone and currMapId == dstMapId) or (self.dstRpZone and currMapId == dstMapId and currZoneId == dstZoneId):
                 Logger().info(f"Trip reached destination Map : {dstMapId}")
                 return self.finish(0)
+
             currentIndex = self.currentEdgeIndex()
             if currentIndex is None:
                 self._previous_vertex = None
-                return self.findPath(self.dstMapId, self.dstRpZone, self.onPathFindResult)
-            Logger().debug(f"Current step index: {currentIndex + 1}/{len(self.path)}")
+                return self.astar_find_path(self.dstMapId, self.dstRpZone, self.onPathFindResult)
+            
             nextEdge = self.path[currentIndex]
+            
+            Logger().debug(f"Current step index: {currentIndex + 1}/{len(self.path)}")
             Logger().debug(f"Moving using next edge :")
             Logger().debug(f"\t|- src {nextEdge.src} -> dst {nextEdge.dst}")
             for tr in nextEdge.transitions:
                 Logger().debug(f"\t| => {tr}")
+
             self._edge_taken = nextEdge
             self._previous_vertex = PlayedCharacterManager().currVertex.copy()
             Logger().debug(f"Saved previous vertex : {self._previous_vertex}")
             self.changeMap(edge=nextEdge, callback=self._on_transition_executed)
         else:
             self.state = AutoTripState.CALCULATING_PATH
-            self.findPath(self.dstMapId, self.dstRpZone, self.onPathFindResult)
+            self.astar_find_path(self.dstMapId, self.dstRpZone, self.onPathFindResult)
 
     def onPathFindResult(self, code, error, path):
         if error:
@@ -190,26 +195,6 @@ class AutoTrip(AbstractBehavior):
             
         self.path = path
         self.walkToNextStep()
-
-    def findPath(self, dstMapId, linkedZone, callback) -> None:
-        src = PlayedCharacterManager().currVertex
-        if src is None:
-            return self.once_map_rendered(self.findPath, [dstMapId, linkedZone, callback])
-        Logger().info(f"Start searching path from {src} to destMapId {dstMapId}, linkedZone {linkedZone}")
-        if linkedZone is None and PlayedCharacterManager().currentMap.mapId == dstMapId:
-            return callback(0, None, [])
-        if linkedZone is None:
-            vertices = WorldGraph().getVertices(dstMapId).values()
-        else:
-            vertices = [WorldGraph().getVertex(dstMapId, linkedZone)]
-        for dest_vertex in vertices:
-            start = perf_counter()
-            path = AStar().search(WorldGraph(), src, dest_vertex)
-            if path is not None:
-                Logger().info(f"Path to map {str(dstMapId)} found in {perf_counter() - start}s")
-                callback(0, None, path)
-                return
-        callback(self.NO_PATH_FOUND, f"Unable to find path to dest map", None)
 
     def getState(self):
         return self.state.name

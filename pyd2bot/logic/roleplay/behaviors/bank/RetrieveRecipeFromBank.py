@@ -1,9 +1,5 @@
-from enum import Enum
 
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
-from pyd2bot.logic.roleplay.behaviors.bank.OpenBank import OpenBank
-from pyd2bot.logic.roleplay.behaviors.movement.AutoTripUseZaap import \
-    AutoTripUseZaap
 from pyd2bot.misc.Localizer import Localizer
 from pydofus2.Ankama_Common.ui.Recipes import Recipes
 from pydofus2.Ankama_storage.ui.enum.StorageState import StorageState
@@ -63,7 +59,7 @@ class RetrieveRecipeFromBank(AbstractBehavior):
         Logger().info("Bank storage closed")
         if self.return_to_start:
             Logger().info(f"Returning to start point")
-            self.travel_using_zaap(self._startMapId, self._startRpZone, callback=self.finish)
+            self.autoTrip(self._startMapId, self._startRpZone, callback=self.finish)
         else:
             self.finish(0)
 

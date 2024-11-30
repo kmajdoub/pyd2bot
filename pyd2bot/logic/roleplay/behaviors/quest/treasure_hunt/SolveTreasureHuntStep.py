@@ -2,13 +2,11 @@ from typing import Optional
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
 from pyd2bot.logic.roleplay.behaviors.farm.CollectAllMapResources import CollectAllMapResources
 from pyd2bot.logic.roleplay.behaviors.movement.AutoTrip import AutoTrip
-from pyd2bot.logic.roleplay.behaviors.movement.AutoTripUseZaap import AutoTripUseZaap
 from pyd2bot.logic.roleplay.behaviors.quest.treasure_hunt.FindHintNpc import FindHintNpc
 from pyd2bot.logic.roleplay.behaviors.quest.treasure_hunt.TreasureHuntPoiDatabase import TreasureHuntPoiDatabase
 from pyd2bot.misc.Localizer import Localizer
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
 from pydofus2.com.ankamagames.dofus.datacenter.quest.treasureHunt.PointOfInterest import PointOfInterest
-from pydofus2.com.ankamagames.dofus.datacenter.world.MapPosition import MapPosition
 from pydofus2.com.ankamagames.dofus.internalDatacenter.DataEnum import DataEnum
 from pydofus2.com.ankamagames.dofus.internalDatacenter.quests.TreasureHuntStepWrapper import TreasureHuntStepWrapper
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
@@ -219,12 +217,11 @@ class SolveTreasureHuntStep(AbstractBehavior):
             PlayedCharacterManager().currVertex, self.current_map_destination
         )
         if not dst_vertex:
-            Logger().warning("Can't reach hint map from current position, will trigger autotrip to hint map before")
+            Logger().warning("Can't reach hint map from current position, will trigger auto travel to hint map before")
             
-        self.travel_using_zaap(
+        self.autoTrip(
             dst_vertex.mapId,
             dst_vertex.zoneId,
-            maxCost=self.max_cost,
             farm_resources_on_way=self.farm_resources,
             callback=self._on_next_hint_map_reached,
         )
@@ -239,7 +236,7 @@ class SolveTreasureHuntStep(AbstractBehavior):
                     return
                 Logger().error("Bot is stuck and has no rappel potion!")
 
-            if code in [FindHintNpc.UNABLE_TO_FIND_HINT, AutoTripUseZaap.NO_PATH_TO_DEST]:
+            if code in [FindHintNpc.UNABLE_TO_FIND_HINT, AutoTrip.NO_PATH_FOUND]:
                 return self._dig_treasure()
 
             if code == CollectAllMapResources.errors.FULL_PODS:

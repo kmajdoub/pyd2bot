@@ -37,17 +37,29 @@ class ChangeMap(AbstractBehavior):
         self._tr_fails_details = {}
 
     def run(self, transition: Transition = None, edge: Edge = None, dstMapId=None):
+        if not (edge or transition):
+            return self.finish(1, "No transition or edge provided!")
+        
+        if transition and not dstMapId:
+            return self.finish(1, "dstMapId must be provided when you only give a transition to follow!")
+
+        if (edge and edge.dst == PlayedCharacterManager().currVertex) or (
+            not edge and dstMapId == PlayedCharacterManager().currentMap.mapId
+        ):
+            Logger().warning("calling change map with an edge that leads to current player exact position!")
+            return self.finish(0)
+        
         self.on(KernelEvent.ServerTextInfo, self.onServerTextInfo)
+
         if transition:
             self.dstMapId = dstMapId
             self.transition = transition
-            self.followTransition()
+            
         elif edge:
             self.dstMapId = edge.dst.mapId
             self.edge = edge
-            self.followEdge()
-        else:
-            self.finish(1, "No transition or edge provided")
+        
+        self.followTransition()
 
     def onServerTextInfo(self, event, msgId, msgType, textId, text, params):
         if textId == 4908:
@@ -79,15 +91,6 @@ class ChangeMap(AbstractBehavior):
 
         return iter(sorted_transitions)
 
-    def followEdge(self):
-        if (self.edge.dst == PlayedCharacterManager().currVertex) or (
-            not self.edge and self.dstMapId == PlayedCharacterManager().currentMap.mapId
-        ):
-            Logger().warning("calling change map with an edge that leads to current player exact vertex!")
-            return self.finish(0)
-
-        self.followTransition()
-
     def onTransitionExecFinished(self, code, error):
         if error:
             Logger().error(f"Transition {self.transition} failed for reason [{code}] : {error}")
@@ -101,19 +104,18 @@ class ChangeMap(AbstractBehavior):
             return
 
         if PlayedCharacterManager().isInFight:
-            self.stop(0)
-            return
+            return self.stop(True)
 
         try:
             self.transition: Transition = next(self.transitions)
         except StopIteration:
             return self.finish(
                 self.INVALID_TRANSITION,
-                "No valid transition found!, available transitions: " + str(self._tr_fails_details),
+                "No valid transition found!, checked transitions results: " + str(self._tr_fails_details),
             )
     
         if not self.transition.isValid:
-            return self.finish(self.INVALID_TRANSITION, "Trying to follow a non valid transition")
+            return self.finish(self.INVALID_TRANSITION, "Trying to follow a non valid transition!", self.transition)
 
         self.transition_type = TransitionTypeEnum(self.transition.type)
 
@@ -153,4 +155,5 @@ class ChangeMap(AbstractBehavior):
             self.use_rappel_potion(callback=self.onTransitionExecFinished)
 
         else:
-            self.finish(self.INVALID_TRANSITION, f"Unsupported transition type {self.transition_type.name}")
+            Logger().warning(f"Unsupported transition type {self.transition_type.name}")
+            self.followTransition()

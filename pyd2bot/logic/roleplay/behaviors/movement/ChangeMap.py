@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Iterable
+from typing import Iterable, Optional
 
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
@@ -13,11 +13,11 @@ from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 
 
 class ChangeMap(AbstractBehavior):
-    dst_mapId: int | None
-    transition: Transition | None
-    transition_type: TransitionTypeEnum | None
-    edge: Edge | None
-    _transitions: Iterable[Transition] | None
+    dst_mapId: Optional[int]
+    transition: Optional[Transition]
+    transition_type: TransitionTypeEnum
+    edge: Optional[Edge]
+    _transitions: Iterable[Transition]
     _tr_fails_details: dict[Transition, str]
 
     class errors(Enum):

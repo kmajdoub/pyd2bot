@@ -16,11 +16,22 @@ class ChangeMap(AbstractBehavior):
     NEED_QUEST = 879908
     LANDED_ON_WRONG_MAP = 1002
 
+    TRANSITION_PREFERENCES = {
+        TransitionTypeEnum.MAP_ACTION: 1,      # Highest priority - basic map change
+        TransitionTypeEnum.SCROLL: 2,          # Walking between maps
+        TransitionTypeEnum.SCROLL_ACTION: 2,   # Same priority as SCROLL
+        TransitionTypeEnum.INTERACTIVE: 3,     # Interactive elements
+        TransitionTypeEnum.ITEM_TELEPORT: 6,   # Recall potions
+        TransitionTypeEnum.NPC_TRAVEL: 4,      # NPC transportation
+        TransitionTypeEnum.ZAAP: 5,            # Zaap transportation
+        TransitionTypeEnum.HAVEN_BAG_ZAAP: 7,  # Lowest priority - haven bag
+    }
+
     def __init__(self) -> None:
         super().__init__()
         self.dstMapId = None
         self.transition = None
-        self.trType = None
+        self.transition_type = None
         self.edge = None
         self._transitions = None
         self._tr_fails_details = {}
@@ -50,24 +61,23 @@ class ChangeMap(AbstractBehavior):
         return self._transitions
 
     def transitionsGen(self) -> Iterable[Transition]:
-        mapAction_trs = []
-        scroll_trs = []
-        other_trs = []
+        if not self.edge and not self.transition:
+            return iter([])
 
         transitions_to_check = [self.transition] if not self.edge else self.edge.transitions
+        valid_transitions = [tr for tr in transitions_to_check if tr.isValid]
         
-        for tr in transitions_to_check:
-            if not tr.isValid:
-                Logger().warning(f"Skipping non valid transition {tr}!")
-                continue
-            if TransitionTypeEnum(tr.type) == TransitionTypeEnum.MAP_ACTION:
-                mapAction_trs.append(tr)
-            elif TransitionTypeEnum(tr.type) in [TransitionTypeEnum.SCROLL, TransitionTypeEnum.SCROLL_ACTION]:
-                scroll_trs.append(tr)
-            else:
-                other_trs.append(tr)
-        all_trs = mapAction_trs + scroll_trs + other_trs
-        return iter(all_trs)
+        if not valid_transitions:
+            Logger().warning("No valid transitions found!")
+            return iter([])
+
+        # Sort transitions based on preference map
+        sorted_transitions = sorted(
+            valid_transitions,
+            key=lambda tr: self.TRANSITION_PREFERENCES.get(TransitionTypeEnum(tr.type), 999)
+        )
+
+        return iter(sorted_transitions)
 
     def followEdge(self):
         if (self.edge.dst == PlayedCharacterManager().currVertex) or (
@@ -105,11 +115,11 @@ class ChangeMap(AbstractBehavior):
         if not self.transition.isValid:
             return self.finish(self.INVALID_TRANSITION, "Trying to follow a non valid transition")
 
-        self.trType = TransitionTypeEnum(self.transition.type)
+        self.transition_type = TransitionTypeEnum(self.transition.type)
 
-        Logger().info(f"{self.trType.name} map change to {self.dstMapId}")
+        Logger().info(f"{self.transition_type.name} map change to {self.dstMapId}")
 
-        if self.trType == TransitionTypeEnum.INTERACTIVE:
+        if self.transition_type == TransitionTypeEnum.INTERACTIVE:
             self.interactive_map_change(
                 self.dstMapId,
                 self.transition.ieElemId,
@@ -118,7 +128,7 @@ class ChangeMap(AbstractBehavior):
                 callback=self.onTransitionExecFinished,
             )
 
-        elif self.trType in [TransitionTypeEnum.SCROLL, TransitionTypeEnum.SCROLL_ACTION]:
+        elif self.transition_type in [TransitionTypeEnum.SCROLL, TransitionTypeEnum.SCROLL_ACTION]:
             self.scroll_map_change(
                 self.dstMapId,
                 self.transition.transitionMapId,
@@ -127,20 +137,20 @@ class ChangeMap(AbstractBehavior):
                 callback=self.onTransitionExecFinished
             )
 
-        elif self.trType == TransitionTypeEnum.MAP_ACTION:
+        elif self.transition_type == TransitionTypeEnum.MAP_ACTION:
             self.action_map_change(self.dstMapId, self.transition.cell, callback=self.onTransitionExecFinished)
 
-        elif self.trType == TransitionTypeEnum.NPC_TRAVEL:
+        elif self.transition_type == TransitionTypeEnum.NPC_TRAVEL:
             self.travel_with_npc(self.transition._npc_travel_infos, callback=self.onTransitionExecFinished)
 
-        elif self.trType == TransitionTypeEnum.ZAAP:
+        elif self.transition_type == TransitionTypeEnum.ZAAP:
             self.useZaap(self.dstMapId, callback=self.onTransitionExecFinished)
 
-        elif self.trType == TransitionTypeEnum.HAVEN_BAG_ZAAP:
+        elif self.transition_type == TransitionTypeEnum.HAVEN_BAG_ZAAP:
             self.teleport_using_havenbag(self.dstMapId, callback=self.onTransitionExecFinished)
 
-        elif self.trType == TransitionTypeEnum.ITEM_TELEPORT and self.transition.itemGID == DataEnum.RAPPEL_POTION_GUID:
+        elif self.transition_type == TransitionTypeEnum.ITEM_TELEPORT and self.transition.itemGID == DataEnum.RAPPEL_POTION_GUID:
             self.use_rappel_potion(callback=self.onTransitionExecFinished)
 
         else:
-            self.finish(self.INVALID_TRANSITION, f"Unsupported transition type {self.trType.name}")
+            self.finish(self.INVALID_TRANSITION, f"Unsupported transition type {self.transition_type.name}")

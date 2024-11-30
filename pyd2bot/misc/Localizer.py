@@ -191,86 +191,31 @@ class Localizer:
     @classmethod
     def findClosestHintMapByGfx(
         cls,
-        startMapId,
         gfx,
-        maxCost=float("inf"),
         excludeMaps=None,
-        dstMapId=None
     ) -> list["Edge"]:
-        """
-        Find path to closest map containing a hint with specified GFX.
-        Handles account restrictions for basic/subscriber areas.
-        
-        Args:
-            startMapId: Starting map ID
-            gfx: Target hint GFX to find
-            maxCost: Maximum path cost to consider (default: infinite)
-            excludeMaps: List of map IDs to exclude from search
-            dstMapId: Optional target map ID to calculate costs against
-            
-        Returns:
-            List of edges (path), or None if no path found
-        """
         if not excludeMaps:
             excludeMaps = []
 
-        Logger().debug(f"Searching closest hint with GFX {gfx} from map {startMapId}")
-        # if excludeMaps:
-        #     Logger().debug(f"Excluding map ids : {excludeMaps}")
+        Logger().debug(f"Searching closest hint with GFX {gfx} from {PlayedCharacterManager().currVertex}")
 
-        if not startMapId:
-            raise ValueError(f"Invalid mapId value {startMapId}")
-
-        # Get destination map position if specified (for cost calculations)
-        dst_map_pos = None
-        if dstMapId:
-            dst_map_pos = MapPosition.getMapPositionById(dstMapId)
-
-        # Get all possible starting vertices
-        possible_start_vertices = WorldGraph().getVertices(startMapId).values()
-        if not possible_start_vertices:
-            Logger().warning(f"Could not find any vertex for map {startMapId}")
-            return None
-
-        Logger().debug(f"Found {len(possible_start_vertices)} vertices for map {startMapId}")
-
-        # Collect all valid candidates first
         is_basic_account = PlayerManager().isBasicAccount()
         candidates = []
         
         for hint in Hint.getHints():
-            # Skip excluded maps
             if int(hint.mapId) in list(map(int, excludeMaps)):
-                # Logger().debug(f"Skipping excluded hint mapId {hint.mapId}")
                 continue
             
-            # Skip hints with wrong GFX
             if hint.gfx != gfx:
                 continue
                 
-            # Check account restrictions for the hint map
             if is_basic_account:
                 hint_subarea = SubArea.getSubAreaByMapId(hint.mapId)
                 if hint_subarea and not hint_subarea.basicAccountAllowed:
                     continue
-                    
-            # If we have a destination map, calculate cost based on manhattan distance
-            if dstMapId:
-                current_map_pos = MapPosition.getMapPositionById(hint.mapId)
-                cost = 10 * int(math.sqrt(
-                    (dst_map_pos.posX - current_map_pos.posX) ** 2 + 
-                    (dst_map_pos.posY - current_map_pos.posY) ** 2
-                ))
-                if cost > min(PlayedCharacterManager().characteristics.kamas, maxCost):
-                    continue
-                    
-            # Get and filter vertices based on account type
+
             hint_vertices = WorldGraph().getVertices(hint.mapId).values()
             for vertex in hint_vertices:
-                if is_basic_account:
-                    dst_subarea = SubArea.getSubAreaByMapId(vertex.mapId)
-                    if dst_subarea and not dst_subarea.basicAccountAllowed:
-                        continue
                 candidates.append(vertex)
 
         if not candidates:
@@ -278,18 +223,9 @@ class Localizer:
             return None
 
         Logger().debug(f"Found {len(candidates)} accessible candidate maps for hint GFX {gfx}")
-        
-        # Find shortest path from any start vertex
-        shortest_path = None
-        shortest_distance = float('inf')
-        
-        for startVertex in possible_start_vertices:
-            path = cls.findPathToClosestVertexCandidate(startVertex, candidates)
-            if path is not None and (shortest_path is None or len(path) < shortest_distance):
-                shortest_path = path
-                shortest_distance = len(path)
                 
-        return shortest_path
+        return cls.findPathToClosestVertexCandidate(PlayedCharacterManager().currVertex, candidates)
+
 
     @classmethod
     def findPathToClosestZaap(
@@ -316,11 +252,10 @@ class Localizer:
         
         # Collect all valid zaap candidates first
         candidates = []
-        for hint in Hint.getHints():
+        for hint in Hint.getZaapMapIds():
             if hint.mapId in excludeMaps:
                 continue
-            if hint.gfx != DataEnum.ZAAP_GFX:
-                continue
+
             if onlyKnownZaap and not PlayedCharacterManager().isZaapKnown(hint.mapId):
                 continue
                 

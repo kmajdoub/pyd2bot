@@ -64,7 +64,7 @@ class FightStateManager(metaclass=Singleton):
             return
         CurrentPlayedFighterManager().playerManager = PlayedCharacterManager.getInstance(str(self.current_player.accountId))
         CurrentPlayedFighterManager().currentFighterId = self.current_player.id
-        CurrentPlayedFighterManager().conn = self.connection
+        CurrentPlayedFighterManager().conn = self.curr_player_connection
         CurrentPlayedFighterManager().resetPlayerSpellList()
         SpellWrapper.refreshAllPlayerSpellHolder(self.current_player.id)
         SpellInventoryManagementFrame().applySpellGlobalCoolDownInfo(self.current_player.id)
@@ -127,11 +127,35 @@ class FightStateManager(metaclass=Singleton):
             Logger().error(f"No player manager found for {self.current_player.name}")
 
     @property
-    def spellId(self) -> int:
+    def primary_spellId(self) -> int:
         """Get current spell ID based on session type"""
         if self.fight_frame.session.isTreasureHuntSession:
             return self.current_player.treasureHuntFightSpellId
         return self.current_player.primarySpellId
+
+    @property
+    def primary_spellw(self) -> SpellWrapper:
+        """Get spell wrapper for current spell"""
+        return get_player_spellw(
+            self.player_manager,
+            self.primary_spellId,
+            self.current_player
+        )
+        
+    @property
+    def secondary_spellw(self) -> SpellWrapper:
+        """Get spell wrapper for current spell"""
+        if self.fight_frame.session.isTreasureHuntSession:
+            return None
+        
+        if not self.current_player.secondarySpellId:
+            return None
+
+        return get_player_spellw(
+            self.player_manager,
+            self.current_player.secondarySpellId,
+            self.current_player
+        )
 
     @property
     def player_manager(self) -> "PlayedCharacterManager":
@@ -143,15 +167,6 @@ class FightStateManager(metaclass=Singleton):
             Logger().error("Unable to find the current player manager instance for accountId: " + str(self.current_player.accountId))
             Logger().info(PlayedCharacterManager.getInstances())
         return playerManager
-
-    @property
-    def spellw(self) -> SpellWrapper:
-        """Get spell wrapper for current spell"""
-        return get_player_spellw(
-            self.player_manager,
-            self.spellId,
-            self.current_player
-        )
 
     @property
     def player_stats(self) -> EntityStats:
@@ -185,7 +200,7 @@ class FightStateManager(metaclass=Singleton):
         return entity.position if entity else None
 
     @property
-    def connection(self) -> ConnectionsHandler:
+    def curr_player_connection(self) -> ConnectionsHandler:
         """Get current connection handler"""
         return ConnectionsHandler.getInstance(self.current_player.accountId)
 
@@ -213,8 +228,8 @@ class FightStateManager(metaclass=Singleton):
             f"HP: {self.hitpoints}"
         )
         Logger().info(
-            f"Current attack spell: {self.spellw.spell.name}, "
-            f"range: {self.spellw.maxRange}"
+            f"Current attack spell: {self.primary_spellw.spell.name}, "
+            f"range: {self.primary_spellw.maxRange}"
         )
 
     def refresh_turn_state(self, msg: GameFightTurnStartMessage):

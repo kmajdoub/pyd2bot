@@ -80,7 +80,6 @@ class GoToMarket(AbstractBehavior):
                         self.exclude_market_at_maps.append(hint.mapId)
 
         self.path_to_hdv = Localizer.findClosestHintMapByGfx(
-            current_map, 
             self.marketplace_gfx_id, 
             excludeMaps=self.exclude_market_at_maps
         )

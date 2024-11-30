@@ -14,6 +14,7 @@ from pyd2bot.data.models import JobFilter
 from pyd2bot.logic.roleplay.behaviors.updates.CollectStats import CollectStats
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
 
+from pydofus2.com.ankamagames.dofus.internalDatacenter.DataEnum import DataEnum
 from pydofus2.com.ankamagames.dofus.internalDatacenter.items.ItemWrapper import \
     ItemWrapper
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
@@ -30,7 +31,6 @@ from pydofus2.com.ankamagames.jerakine.benchmark.BenchmarkTimer import \
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 
 class ResourceFarm(AbstractFarmBehavior):
-    RESOURCE_BAGS_TYPE_ID = 100
     
     def __init__(self, path: AbstractFarmPath, jobFilters: List[JobFilter], timeout=None):
         super().__init__(timeout)
@@ -75,18 +75,18 @@ class ResourceFarm(AbstractFarmBehavior):
         return False
 
     def _check_has_resources_bags(self):
-        if UseItemsByType.has_items(self.RESOURCE_BAGS_TYPE_ID):
-            self.use_items_of_type(self.RESOURCE_BAGS_TYPE_ID, lambda *_: self.main())
+        if UseItemsByType.has_items(DataEnum.RESOURCE_BAGS_TYPE_ID):
+            self.use_items_of_type(DataEnum.RESOURCE_BAGS_TYPE_ID, lambda *_: self.main())
             return True
         return False
         
-    def _on_full_pods(self):
+    def _on_full_pods(self, return_to_start=True):
         # Pause session timing during inventory management
         if self.current_session_id is not None:
             self.session_paused = True
             self.resource_tracker.pause_session(self.current_session_id)
 
-        self.retrieve_sell({39: 100}, callback=self._on_selling_over)
+        self.retrieve_sell(return_to_start=return_to_start, callback=self._on_selling_over)
     
     def _on_selling_over(self, code, error):
         # Resume session timing after inventory management

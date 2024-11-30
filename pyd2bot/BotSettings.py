@@ -22,6 +22,7 @@ class BotSettings:
     defaultBreedConfig = {
         BreedEnum.Sadida: {
             "primarySpellId": 13516, # Ronce
+            "secondarySpellId": 13527,
             "treasureHuntFightSpellId": 13577,
             "primaryStat": StatIds.STRENGTH,
         },

@@ -124,6 +124,10 @@ class Character(BaseModel):
         return BotSettings.defaultBreedConfig[self.breedId]["primarySpellId"]
 
     @property
+    def secondarySpellId(self) -> int:
+        return BotSettings.defaultBreedConfig[self.breedId].get("secondarySpellId")
+    
+    @property
     def primaryStatId(self) -> int:
         return BotSettings.defaultBreedConfig[self.breedId]["primaryStat"]
 

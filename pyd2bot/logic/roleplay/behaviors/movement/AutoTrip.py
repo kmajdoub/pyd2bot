@@ -1,12 +1,15 @@
 from enum import Enum
-from time import perf_counter
 
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
 from pyd2bot.logic.roleplay.behaviors.movement.ChangeMap import ChangeMap
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
 from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import \
     KernelEventsManager
+from pydofus2.com.ankamagames.dofus.datacenter.interactives.Interactive import Interactive
+from pydofus2.com.ankamagames.dofus.datacenter.world.SubArea import SubArea
+from pydofus2.com.ankamagames.dofus.internalDatacenter.DataEnum import DataEnum
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
+from pydofus2.com.ankamagames.dofus.logic.common.managers.PlayerManager import PlayerManager
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import \
     PlayedCharacterManager
 from pydofus2.com.ankamagames.dofus.logic.game.roleplay.types.MovementFailError import \
@@ -48,14 +51,23 @@ class AutoTrip(AbstractBehavior):
         self._taken_transition: Transition = None
 
     def run(self, dstMapId, dstZoneId=None, path: list[Edge] = None):
+        Logger().info(f"Basic auto trip to map {dstMapId}, rpzone {dstZoneId} called.")
+        if Kernel().fightContextFrame:
+            Logger().error(f"Player is in Fight => Can't auto trip.")
+            return self.finish(self.PLAYER_IN_FIGHT_ERROR, "Player is in Fight")
+
         self.dstMapId = dstMapId
         self.dstRpZone = dstZoneId
         if self.dstRpZone is not None:
             self.destVertex = WorldGraph().getVertex(self.dstMapId, self.dstRpZone)
             if self.destVertex is None:
                 Logger().warning(f"Destination vertex not found for map {self.dstMapId} and zone {self.dstRpZone}")
+
+        dst_sub_area = SubArea.getSubAreaByMapId(dstMapId)
+        if PlayerManager().isBasicAccount() and not dst_sub_area.basicAccountAllowed:
+            return self.finish(self.NO_PATH_FOUND, "Destination map is not allowed for basic accounts!")
+
         self.path = path
-        AStar().resetForbiddenEdges()
         self.walkToNextStep()
 
     def currentEdgeIndex(self):
@@ -112,7 +124,7 @@ class AutoTrip(AbstractBehavior):
 
                 if self._nbr_follow_edge_fails >= self.MAX_RETIES_COUNT:
                     Logger().debug("Exceeded max number of fails, will ignore this edge.")
-                    AStar().addForbiddenEdge(nextEdge)
+                    AStar().addForbiddenEdge(nextEdge, error)
                     return self.astar_find_path(self.dstMapId, self.dstRpZone, self.onPathFindResult)
 
                 self._nbr_follow_edge_fails += 1
@@ -169,6 +181,21 @@ class AutoTrip(AbstractBehavior):
             self._edge_taken = nextEdge
             self._previous_vertex = PlayedCharacterManager().currVertex.copy()
             Logger().debug(f"Saved previous vertex : {self._previous_vertex}")
+            
+            src_sub_area = SubArea.getSubAreaByMapId(nextEdge.src.mapId)
+            dst_sub_area = SubArea.getSubAreaByMapId(nextEdge.dst.mapId)
+            allowed_zaaps = (src_sub_area.areaId == DataEnum.ANKARNAM_AREA_ID) == (dst_sub_area.areaId == DataEnum.ANKARNAM_AREA_ID)
+            if not allowed_zaaps:
+                for tr in nextEdge.transitions:
+                    if tr.type == TransitionTypeEnum.INTERACTIVE.value:
+                        map_change_ie = Kernel().interactiveFrame._ie.get(tr.ieElemId)
+                        if map_change_ie.element.elementTypeId == DataEnum.ZAAP_TYPEID:
+                            nextEdge.transitions.remove(tr)
+                if not nextEdge.transitions:
+                    self._previous_vertex = None
+                    AStar().addForbiddenEdge(nextEdge, "Edge contains only impossible zaap usage from/to ankarnam")
+                    return self.astar_find_path(self.dstMapId, self.dstRpZone, self.onPathFindResult)
+
             self.changeMap(edge=nextEdge, callback=self._on_transition_executed)
         else:
             self.state = AutoTripState.CALCULATING_PATH
@@ -177,6 +204,9 @@ class AutoTrip(AbstractBehavior):
     def onPathFindResult(self, code, error, path):
         if error:
             return self.finish(code, error)
+
+        if path is None:
+            return self.finish(self.NO_PATH_FOUND, "No path found to destination!")
 
         if len(path) == 0:
             Logger().debug("Empty path found")
@@ -191,7 +221,7 @@ class AutoTrip(AbstractBehavior):
                 Logger().debug("  Transitions:")
                 for tr in edge.transitions:
                     Logger().debug(f"    - {tr}")
-            Logger().debug("")  # Empty line between steps
+            Logger().debug("")
             
         self.path = path
         self.walkToNextStep()

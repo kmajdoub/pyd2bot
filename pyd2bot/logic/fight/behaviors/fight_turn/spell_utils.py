@@ -8,9 +8,9 @@ from pydofus2.com.ankamagames.jerakine.types.zones.Cross import Cross
 from pydofus2.com.ankamagames.jerakine.types.zones.Lozenge import Lozenge
 from pydofus2.com.ankamagames.jerakine.utils.display.spellZone.SpellShapeEnum import SpellShapeEnum
 from pydofus2.mapTools import MapTools
+from pydofus2.com.ankamagames.dofus.internalDatacenter.spells.SpellWrapper import SpellWrapper
 
 if TYPE_CHECKING:
-    from pydofus2.com.ankamagames.dofus.internalDatacenter.spells.SpellWrapper import SpellWrapper
     from pydofus2.com.ankamagames.jerakine.types.zones.DisplayZone import DisplayZone
     from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import PlayedCharacterManager
     from pyd2bot.data.models import Character
@@ -66,20 +66,8 @@ def check_line_of_sight(start_cell_id: int, end_cell_id: int) -> tuple[bool, str
             
     return True, ""
 
-def can_cast_spell_on_cell(spell_id: int, spell_level: int, target_cell: int=0) -> tuple[bool, str]:
-    """Check if a spell can be cast on a specific cell.
-    
-    Args:
-        spell_id: ID of the spell to cast
-        spell_level: Level of the spell
-        caster_id: ID of the casting entity
-        target_cell: Target cell ID
-        
-    Returns:
-        Tuple of (can_cast, reason) where can_cast is True if spell can be cast,
-        and reason explains why if it cannot
-    """
-    return CurrentPlayedFighterManager().canCastThisSpell(spell_id, spell_level, target_cell)
+def can_cast_spell_on_cell(spellw: "SpellWrapper", target_cell: int=0) -> tuple[bool, str]:
+    return CurrentPlayedFighterManager().canCastThisSpell(spellw.spellId, spellw.spellLevel, target_cell)
 
 def get_player_spellw(playerManager: "PlayedCharacterManager", spellId: int, player: "Character") -> "SpellWrapper":
     if not playerManager:

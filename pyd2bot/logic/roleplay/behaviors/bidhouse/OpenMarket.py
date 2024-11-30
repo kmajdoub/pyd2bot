@@ -3,6 +3,8 @@ from enum import Enum, auto
 from typing import Optional
 
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
+from pydofus2.com.ankamagames.dofus.logic.common.managers.PlayerManager import PlayerManager
+from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import PlayedCharacterManager
 from pydofus2.com.ankamagames.dofus.types.enums.ItemCategoryEnum import ItemCategoryEnum
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 
@@ -41,7 +43,7 @@ class OpenMarket(AbstractBehavior):
         from_object_category: Optional[int] = None,
         exclude_market_at_maps: list[int] = None,
         mode="sell",
-        item_level=200,
+        item_level=None,
     ):
         super().__init__()
         if not from_gid and not from_object_category:
@@ -52,6 +54,8 @@ class OpenMarket(AbstractBehavior):
         self._market_type = None
         self._market_frame = Kernel().marketFrame
         self.exclude_market_at_maps = exclude_market_at_maps
+        if not item_level:
+            item_level = 60 if PlayerManager().isBasicAccount() else 200
         self.item_level = item_level
         self.market_ie = None
 

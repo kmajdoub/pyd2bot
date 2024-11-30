@@ -12,7 +12,13 @@ from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 
 class RetrieveSellUpdate(AbstractBehavior):
 
-    def __init__(self, gid_batch_size: Dict[int, int] = None, type_batch_size: Dict[int, int] = None, items_gid_to_keep: List[int] = None):
+    def __init__(
+        self,
+        gid_batch_size: Dict[int, int] = None,
+        type_batch_size: Dict[int, int] = None,
+        items_gid_to_keep: List[int] = None,
+        return_to_start: bool = True
+    ):
         super().__init__()
         self._logger = Logger()
         self.gid_batch_size = gid_batch_size
@@ -21,6 +27,7 @@ class RetrieveSellUpdate(AbstractBehavior):
         self._finish_code: Optional[int] = None
         self._finish_error: Optional[str] = None
         self.items_gid_to_keep = items_gid_to_keep
+        self.return_to_start = return_to_start
 
     def run(self) -> bool:
         self._start_map_id = PlayedCharacterManager().currentMap.mapId
@@ -84,30 +91,31 @@ class RetrieveSellUpdate(AbstractBehavior):
         """Store finish parameters and unload bank before completing"""
         self._finish_code = code
         self._finish_error = error
-        
+
         # Unload in bank before finishing
         self.unload_in_bank(
-            return_to_start=False,
-            items_gid_to_keep=self.items_gid_to_keep,
-            callback=self._on_storage_open
+            return_to_start=False, items_gid_to_keep=self.items_gid_to_keep, callback=self._on_storage_open
         )
-        
+
     def has_items_in_bag(self):
         bag_items = InventoryManager().inventory.getView("storage").content
         for item in bag_items:
             if not item.linked:
                 return True
         return False
-    
+
     def _on_storage_open(self, code: int, error: Optional[str]) -> None:
         """Final callback after unloading bank"""
         if error:
             self._logger.warning(f"Error unloading bank: {error}")
-        
-        # Return to start point before finishing
-        self._logger.info(f"Returning to start point")
-        self.autoTrip(
-            self._start_map_id, 
-            dstZoneId=self._start_zone, 
-            callback=lambda *_: self.finish(self._finish_code, self._finish_error)
-        )
+
+        if self.return_to_start:
+            # Return to start point before finishing
+            self._logger.info(f"Returning to start point")
+            self.autoTrip(
+                self._start_map_id,
+                dstZoneId=self._start_zone,
+                callback=lambda *_: self.finish(self._finish_code, self._finish_error),
+            )
+        else:
+            self.finish(self._finish_code, self._finish_error)

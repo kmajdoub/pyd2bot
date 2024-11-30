@@ -18,12 +18,6 @@ from pydofus2.com.ankamagames.jerakine.messages.Message import Message
 from pydofus2.com.ankamagames.jerakine.types.enums.Priority import Priority
 
 class FightAIFrame(Frame):
-    """
-    Main fight manager frame handling:
-    - Turn detection & synchronization
-    - Ready state management
-    - Delegating turn execution to FightPlayTurn
-    """
     def __init__(self, session: Session):
         self.session = session
         self.state_manager = FightStateManager()

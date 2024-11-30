@@ -1,15 +1,12 @@
-import json
 import os
-from typing import TYPE_CHECKING, Dict, List
+from typing import TYPE_CHECKING
 
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
 from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import KernelEventsManager
-from pydofus2.com.ankamagames.dofus.datacenter.world.SubArea import SubArea
 from pydofus2.com.ankamagames.dofus.internalDatacenter.DataEnum import DataEnum
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
 from pydofus2.com.ankamagames.dofus.kernel.net.ConnectionsHandler import ConnectionsHandler
 from pydofus2.com.ankamagames.dofus.logic.common.managers.MarketBid import MarketBid
-from pydofus2.com.ankamagames.dofus.logic.common.managers.PlayerManager import PlayerManager
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.InactivityManager import InactivityManager
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.InventoryManager import InventoryManager
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import PlayedCharacterManager
@@ -22,6 +19,7 @@ if TYPE_CHECKING:
     from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Edge import Edge
     from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Transition import Transition
     from pydofus2.com.ankamagames.dofus.internalDatacenter.items.ItemWrapper import ItemWrapper
+    from pydofus2.com.ankamagames.dofus.internalDatacenter.spells.SpellWrapper import SpellWrapper
 
 
 __dir__ = os.path.dirname(os.path.abspath(__file__))
@@ -43,12 +41,6 @@ class BehaviorApi:
         callback=None,
     ):
         from pyd2bot.logic.roleplay.behaviors.movement.AutoTrip import AutoTrip
-        from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
-
-        Logger().info(f"Basic auto trip to map {dstMapId}, rpzone {dstZoneId} called.")
-        if Kernel().fightContextFrame:
-            Logger().error(f"Player is in Fight => Can't auto trip.")
-            return callback(self.PLAYER_IN_FIGHT_ERROR, "Player is in Fight")
 
         AutoTrip(farm_resources_on_way).start(dstMapId, dstZoneId, path, callback=callback, parent=self)
 
@@ -63,12 +55,14 @@ class BehaviorApi:
                 mapId=infos["landingMapId"],
             )
 
+        self._on_npc_dialog_end_callback = onNpcDialogEnd
+
         self.npc_dialog(
             infos["npcMapId"],
             infos["npcId"],
             infos["openDialogActionId"],
             infos["replies"],
-            callback=onNpcDialogEnd,
+            callback=self._on_npc_dialog_end_callback,
         )
 
     def changeMap(self, transition: "Transition" = None, edge: "Edge" = None, dstMapId=None, callback=None):
@@ -113,15 +107,15 @@ class BehaviorApi:
 
         WatchFightSequence().start(parent=self, callback=callback)
 
-    def fight_move(self, path_cellIds: List[int], callback=None):
+    def fight_move(self, path_cellIds: list[int], callback=None):
         from pyd2bot.logic.fight.behaviors.fight_turn.FightMove import FightMoveBehavior
 
         FightMoveBehavior(path_cellIds).start(callback=callback, parent=self)
 
-    def cast_spell(self, target_cellId: int, callback=None):
+    def cast_spell(self, spellw: "SpellWrapper", target_cellId: int, callback=None):
         from pyd2bot.logic.fight.behaviors.fight_turn.CastSpell import CastSpell
 
-        CastSpell(target_cellId).start(callback=callback, parent=self)
+        CastSpell(spellw, target_cellId).start(callback=callback, parent=self)
 
     def use_items_of_type(self, type_id, callback=None):
         from pyd2bot.logic.roleplay.behaviors.inventory.UseItemsByType import UseItemsByType
@@ -256,17 +250,22 @@ class BehaviorApi:
     ):
         from pyd2bot.logic.roleplay.behaviors.npc.NpcDialog import NpcDialog
 
-        def on_npc_reached(code, err):
-            Logger().info(f"NPC Map reached with error : {err}")
-            if err:
-                return callback(code, err)
+        if PlayedCharacterManager().currentMap.mapId == npcMapId:
             NpcDialog().start(npcMapId, npcId, npcOpenDialogId, npcQuestionsReplies, callback=callback, parent=self)
-
-        self.autoTrip(
-            npcMapId,
-            farm_resources_on_way=farm_resources_on_way,
-            callback=on_npc_reached,
-        )
+        else:
+            def _on_npc_reached(code, err):
+                Logger().info(f"NPC Map reached with result : {err}")
+                if err:
+                    return callback(code, err)
+                NpcDialog().start(npcMapId, npcId, npcOpenDialogId, npcQuestionsReplies, callback=callback, parent=self)
+            
+            self._on_npc_reached_callback = _on_npc_reached
+            
+            self.autoTrip(
+                npcMapId,
+                farm_resources_on_way=farm_resources_on_way,
+                callback=self._on_npc_reached_callback,
+            )
 
     def getOutOfAnkarnam(self, callback=None):
         from pyd2bot.logic.roleplay.behaviors.movement.GetOutOfAnkarnam import GetOutOfAnkarnam
@@ -322,10 +321,10 @@ class BehaviorApi:
             return_to_start, bankInfos, leave_bank_open, items_gid_to_keep, callback=callback, parent=self
         )
 
-    def retrieve_sell(self, type_batch_size, items_gid_to_keep=None, callback=None):
+    def retrieve_sell(self, type_batch_size=None, items_gid_to_keep=None, return_to_start=True, callback=None):
         from pyd2bot.logic.roleplay.behaviors.bidhouse.RetrieveSellUpdate import RetrieveSellUpdate
 
-        RetrieveSellUpdate(type_batch_size=type_batch_size, items_gid_to_keep=items_gid_to_keep).start(
+        RetrieveSellUpdate(type_batch_size=type_batch_size, items_gid_to_keep=items_gid_to_keep, return_to_start=return_to_start).start(
             callback=callback, parent=self
         )
 
@@ -340,7 +339,7 @@ class BehaviorApi:
         PlaceBid(object_gid, quantity, price).start(callback=callback, parent=self)
 
     def open_market(
-        self, from_gid=None, from_type=None, exclude_market_at_maps=None, mode="sell", item_level=200, callback=None
+        self, from_gid=None, from_type=None, exclude_market_at_maps=None, mode="sell", item_level=None, callback=None
     ):
         from pyd2bot.logic.roleplay.behaviors.bidhouse.OpenMarket import OpenMarket
 
@@ -392,8 +391,8 @@ class BehaviorApi:
 
     def retrieve_items_from_bank(
         self,
-        type_batch_size: Dict[int, int],
-        gid_batch_size: Dict[int, int],
+        type_batch_size: dict[int, int],
+        gid_batch_size: dict[int, int],
         return_to_start: bool = False,
         bank_infos=None,
         max_item_level=200,
@@ -420,7 +419,7 @@ class BehaviorApi:
 
         CollectAllMapResources(job_filters).start(callback=callback, parent=self)
 
-    def sell_items(self, gid_batch_size: Dict[int, int] = None, type_batch_size: Dict[int, int] = None, callback=None):
+    def sell_items(self, gid_batch_size: dict[int, int] = None, type_batch_size: dict[int, int] = None, callback=None):
         from pyd2bot.logic.roleplay.behaviors.bidhouse.SellItemsFromBag import SellItemsFromBag
 
         SellItemsFromBag(gid_batch_size, type_batch_size).start(callback=callback, parent=self)

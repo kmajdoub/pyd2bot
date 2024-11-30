@@ -51,6 +51,7 @@ class AbstractFarmBehavior(AbstractBehavior):
         self.inFight = False
         self.initialized = False
         self.startTime = perf_counter()
+        self.firstIter = True
         self.init(*args, **kwargs)
         self.main()
 
@@ -247,8 +248,8 @@ class AbstractFarmBehavior(AbstractBehavior):
 
         self.once_map_rendered(on_map_loaded)
 
-    def _on_full_pods(self):
-        self.unload_in_bank(callback=self._on_inventory_unloaded)
+    def _on_full_pods(self, return_to_start=True):
+        self.unload_in_bank(return_to_start=return_to_start, callback=self._on_inventory_unloaded)
     
     def main(self, event_code=None, error=None):
         Logger().debug(f"Farmer main loop called")
@@ -277,9 +278,11 @@ class AbstractFarmBehavior(AbstractBehavior):
             Logger().info(f"Mounting {PlayedCharacterManager().mount.name} ...")
             return self.toggle_ride_mount(wanted_ride_state=True, callback=self._on_riding_mount)
 
-        if PlayedCharacterManager().isPodsFull():
+        if self.firstIter or PlayedCharacterManager().isPodsFull():
+            was_first_iter = self.firstIter
+            self.firstIter = False
             Logger().warning(f"Inventory is almost full will trigger retrieve sell and update items workflow ...")
-            return self._on_full_pods()
+            return self._on_full_pods(not was_first_iter)
 
         if self._specific_checks():
             return

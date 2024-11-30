@@ -13,6 +13,7 @@ from pyd2bot.logic.fight.behaviors.fight_turn.spell_utils import can_cast_spell_
 from pyd2bot.logic.roleplay.behaviors.farm.CollectAllMapResources import CollectAllMapResources
 from pyd2bot.misc.BotEventsManager import BotEventsManager
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
+from pydofus2.com.ankamagames.dofus.internalDatacenter.spells.SpellWrapper import SpellWrapper
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.InactivityManager import InactivityManager
 from pydofus2.com.ankamagames.dofus.network.messages.game.context.fight.GameFightTurnFinishMessage import (
@@ -90,18 +91,30 @@ class FightPlayTurn(AbstractBehavior):
             Logger().debug("All enemies are dead, fight will end")
             return self._end_turn()
 
-        if not self._can_cast_spells():
-            return self._end_turn(TurnResult.CANNOT_CAST, "Unable to cast spells")
-
         if not self.state_manager.session.isTreasureHuntSession or CollectAllMapResources().isRunning():
             filters = [(False, None), (True, None)]
         else:
             filters = [(True, 2672), (True, 91)]
 
-        # Try each filter until we find valid targets and path
+        # Try primary spell
+        if self._can_cast_spell(self.state_manager.primary_spellw):
+            if self._try_cast_spell(self.state_manager.primary_spellw, filters):
+                return
+
+        # If primary failed and we have secondary, try it
+        if self.state_manager.secondary_spellw:
+            if self._can_cast_spell(self.state_manager.secondary_spellw):
+                if self._try_cast_spell(self.state_manager.secondary_spellw, filters):
+                    return
+
+        # No valid targets/paths found with any filter
+        return self._end_turn(TurnResult.NO_TARGETS, "No valid targets found")
+
+    def _try_cast_spell(self, spell, filters) -> bool:
+        """Attempt to cast a spell with the given filters. Returns True if successful."""
         for target_filter in filters:
             targets = get_targetable_entities(
-                self.state_manager.spellw,
+                spell,
                 self.state_manager.fighter_infos,
                 *target_filter
             )
@@ -110,7 +123,7 @@ class FightPlayTurn(AbstractBehavior):
 
             self.state_manager.log_turn_stats()
             target, path = find_path_to_target(
-                self.state_manager.spellw,
+                spell,
                 targets,
                 self.state_manager.fighter_pos,
                 self.state_manager.fighter_infos,
@@ -122,9 +135,9 @@ class FightPlayTurn(AbstractBehavior):
                 Logger().info(f"Found path {path} to target {target}")
                 if not path:  # Empty path means we can hit from current position
                     Logger().info("Can hit target from current position")
-                    self._queue_actions(True, [], target)
-                    self.next_action()  # Call next_action() here too
-                    return
+                    self._queue_actions(True, [], target, spell)
+                    self.next_action()
+                    return True
 
                 can_hit_target, current_path, _ = analyze_tackle_path(
                     path=path,
@@ -132,23 +145,22 @@ class FightPlayTurn(AbstractBehavior):
                     fighter_infos=self.state_manager.fighter_infos,
                     total_mp=self.state_manager.movement_points,
                     total_ap=self.state_manager.action_points,
-                    spell_ap_cost=self.state_manager.spellw["apCost"],
+                    spell_ap_cost=spell["apCost"],
                 )
 
-                self._queue_actions(can_hit_target, current_path, target)
+                self._queue_actions(can_hit_target, current_path, target, spell)
                 self.next_action()
-                return
+                return True
 
-        # No valid targets/paths found with any filter
-        return self._end_turn(TurnResult.NO_TARGETS, "No valid targets found")
+        return False
 
-    def _queue_actions(self, can_hit_target: bool, path: List[int], target: "Target") -> None:
+    def _queue_actions(self, can_hit_target: bool, path: List[int], target: "Target", spellw: SpellWrapper) -> None:
         """Queue movement and attack actions"""
         if len(path) > 1:
             self.add_action(lambda: self.fight_move(path, lambda *args: handle_move_result(self, *args)))
 
         if can_hit_target:
-            self.add_action(lambda: self.cast_spell(target.pos.cellId, lambda *args: handle_spell_result(self, *args)))
+            self.add_action(lambda: self.cast_spell(spellw, target.pos.cellId, lambda *args: handle_spell_result(self, *args)))
             return  # Don't queue end_turn - let next_action() flow back to main()
 
         # Only queue end_turn if we found a path but can't hit target
@@ -194,10 +206,10 @@ class FightPlayTurn(AbstractBehavior):
             error_msg = "No fighter information available"
 
         # Send turn end message if possible
-        if self.state_manager.connection and self.state_manager.connection.inGameServer():
+        if self.state_manager.curr_player_connection and self.state_manager.curr_player_connection.inGameServer():
             message = GameFightTurnFinishMessage()
             message.init(False)
-            self.state_manager.connection.send(message)
+            self.state_manager.curr_player_connection.send(message)
             InactivityManager().activity()
             self._end_turn_sent = True
         else:
@@ -206,9 +218,9 @@ class FightPlayTurn(AbstractBehavior):
         # Finish immediately with result code
         self.finish(result_code, error_msg)
 
-    def _can_cast_spells(self) -> bool:
+    def _can_cast_spell(self, spellw: SpellWrapper) -> bool:
         """Check spell casting ability"""
-        can_cast, reason = can_cast_spell_on_cell(self.state_manager.spellId, self.state_manager.spellw.spellLevel)
+        can_cast, reason = can_cast_spell_on_cell(spellw)
         if not can_cast:
             Logger().info(f"Unable to cast spells: {reason}")
         return can_cast

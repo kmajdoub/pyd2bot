@@ -85,7 +85,7 @@ class FightMoveBehavior(AbstractBehavior):
             
         message = GameMapMovementRequestMessage()
         message.init(self.path.keyMoves(), PlayedCharacterManager().currentMap.mapId)
-        self.state_manager.connection.send(message)
+        self.state_manager.curr_player_connection.send(message)
         InactivityManager().activity()
         self._movement_request_sent = True
         

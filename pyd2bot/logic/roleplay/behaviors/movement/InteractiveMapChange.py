@@ -11,10 +11,8 @@ from pydofus2.com.ankamagames.dofus.logic.game.roleplay.frames.InteractiveElemen
 from pydofus2.com.ankamagames.dofus.logic.game.roleplay.types.MovementFailError import MovementFailError
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 
-class InteractiveMapChange(AbstractBehavior):
-    
+class InteractiveMapChange(AbstractBehavior):    
     class errors(Enum):
-        MAP_CHANGE_TIMEOUT = 20
         LANDED_ON_WRONG_MAP = 1002
         IE_NOT_FOUND = 1003
         WRONG_IE_TYPE = 1004
@@ -49,7 +47,7 @@ class InteractiveMapChange(AbstractBehavior):
         self.on(
             KernelEvent.CurrentMap,
             self.on_current_map,
-            timeout=self.errors.MAP_CHANGE_TIMEOUT,
+            timeout=20,
             ontimeout=self.on_request_timeout
         )
 

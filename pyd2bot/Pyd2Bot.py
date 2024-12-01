@@ -92,10 +92,6 @@ class Pyd2Bot(DofusClient):
     def startMainBehavior(self): 
         mainBehavior = None
         
-        # if self.session.character.accountId == 178805104:
-        #     InactivityManager.INACTIVITY_DELAY = 60 * 30
-        #     mainBehavior = SmartSpammerBehavior()
-        
         if self.session.isFarmSession:
             Logger().info(f"Starting farm behavior for {self.name}")
             mainBehavior = ResourceFarm(self.session.getPathFromDto(), self.session.jobFilters)

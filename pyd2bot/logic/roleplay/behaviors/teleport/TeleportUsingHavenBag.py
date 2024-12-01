@@ -56,7 +56,7 @@ class TeleportUsingHavenbag(AbstractBehavior):
 
                     self.finish(code, err)
 
-                return self.toggle_haven_bag(wanted_state=True, callback=onHavenbagClosed)
+                return self.toggle_haven_bag(wanted_state=False, callback=onHavenbagClosed)
 
             return self.finish(code, err)
         

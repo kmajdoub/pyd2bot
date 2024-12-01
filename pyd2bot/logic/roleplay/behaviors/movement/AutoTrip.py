@@ -5,7 +5,6 @@ from pyd2bot.logic.roleplay.behaviors.movement.ChangeMap import ChangeMap
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
 from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import \
     KernelEventsManager
-from pydofus2.com.ankamagames.dofus.datacenter.interactives.Interactive import Interactive
 from pydofus2.com.ankamagames.dofus.datacenter.world.SubArea import SubArea
 from pydofus2.com.ankamagames.dofus.internalDatacenter.DataEnum import DataEnum
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
@@ -108,7 +107,7 @@ class AutoTrip(AbstractBehavior):
         if not error and (PlayedCharacterManager().currVertex != self._edge_taken.dst):
             code = ChangeMap.errors.INVALID_TRANSITION
             error = "Player didn't land on the expected edge!"
-            if self._taken_transition and TransitionTypeEnum(self._taken_transition.type) in [ TransitionTypeEnum.ZAAP, TransitionTypeEnum.HAVEN_BAG_ZAAP]:
+            if self._taken_transition and TransitionTypeEnum(self._taken_transition.type) in [ TransitionTypeEnum.ZAAP, TransitionTypeEnum.HAVEN_BAG_ZAAP ]:
                 Logger().warning("Player may have took a guessed zaap landing vertex!")
 
         if error:

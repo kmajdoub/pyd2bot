@@ -30,6 +30,7 @@ class CollectStats(AbstractBehavior):
         if listeners is None:
             listeners = []
         self.update_listeners = listeners
+        self._last_fight_outcome_ts = None
 
     def run(self) -> bool:
         self.on_multiple(
@@ -65,6 +66,17 @@ class CollectStats(AbstractBehavior):
         self.onPlayerUpdate(event)
 
     def onFightOutcome(self, event, outcome: FightOutcomeEnum):
+        current_time = time.time()
+        
+        # Guard condition: Skip if less than 20 seconds since last fight outcome
+        if self._last_fight_outcome_ts is not None:
+            time_since_last = current_time - self._last_fight_outcome_ts
+            if time_since_last < 20:  # 20 seconds minimum between fight outcomes
+                Logger().warning(f"Ignoring fight outcome, only {time_since_last:.2f} seconds since last one")
+                return
+        
+        self._last_fight_outcome_ts = current_time
+        
         if outcome == FightOutcomeEnum.RESULT_LOST:
             self.sessionStats.nbrFightsLost += 1
             self.onPlayerUpdate(event)

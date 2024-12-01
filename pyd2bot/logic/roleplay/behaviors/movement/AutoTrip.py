@@ -101,7 +101,7 @@ class AutoTrip(AbstractBehavior):
         if not error and (PlayedCharacterManager().currVertex != self._edge_taken.dst):
             code = ChangeMap.errors.INVALID_TRANSITION
             error = "Player didn't land on the expected edge!"
-            if self._taken_transition and TransitionTypeEnum(self._taken_transition.type) in [ TransitionTypeEnum.ZAAP, TransitionTypeEnum.HAVEN_BAG_ZAAP]:
+            if self._taken_transition and TransitionTypeEnum(self._taken_transition.type) in [ TransitionTypeEnum.ZAAP, TransitionTypeEnum.HAVEN_BAG_ZAAP ]:
                 Logger().warning("Player may have took a guessed zaap landing vertex!")
 
         if error:
@@ -109,8 +109,6 @@ class AutoTrip(AbstractBehavior):
             if currentIndex is None:
                 KernelEventsManager().send(KernelEvent.ClientRestart, "restart cause couldn't find the player current index in the current path!")
                 return
-
-            nextEdge = self.path[currentIndex]
     
             if code in [
                 ChangeMap.errors.INVALID_TRANSITION,
@@ -119,16 +117,9 @@ class AutoTrip(AbstractBehavior):
                 MovementFailError.NO_VALID_SCROLL_CELL,
                 MovementFailError.INVALID_TRANSITION,
             ]:
-                Logger().warning(f"Can't reach next step in found path for reason : {code}, {error}")
+                Logger().warning(f"Failed to take edge {self._edge_taken} reach next step in found path for reason : {code}, {error}")
                 self._previous_vertex = None
-
-                if self._nbr_follow_edge_fails >= self.MAX_RETIES_COUNT:
-                    Logger().debug("Exceeded max number of fails, will ignore this edge.")
-                    AStar().addForbiddenEdge(nextEdge, error)
-                    return self.astar_find_path(self.dstMapId, self.dstRpZone, self.onPathFindResult)
-
-                self._nbr_follow_edge_fails += 1
-                Logger().warning(f"Attempt {self._nbr_follow_edge_fails}/{self.MAX_RETIES_COUNT} auto trip to dest")
+                AStar()._forbiddenEdges.append(self._edge_taken)
                 return self.astar_find_path(self.dstMapId, self.dstRpZone, self.onPathFindResult)
             else:
                 Logger().debug(f"Error while auto traveling : {error}")

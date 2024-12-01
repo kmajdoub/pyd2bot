@@ -196,14 +196,14 @@ class Localizer:
     ) -> list["Edge"]:
         if not excludeMaps:
             excludeMaps = []
-
+        excludeMaps = list(map(int, excludeMaps))
         Logger().debug(f"Searching closest hint with GFX {gfx} from {PlayedCharacterManager().currVertex}")
 
         is_basic_account = PlayerManager().isBasicAccount()
         candidates = []
         
         for hint in Hint.getHints():
-            if int(hint.mapId) in list(map(int, excludeMaps)):
+            if int(hint.mapId) in excludeMaps:
                 continue
             
             if hint.gfx != gfx:
@@ -288,7 +288,7 @@ class Localizer:
         if not candidates:
             Logger().warning(f"No candidates to search path to!")
             return None
-        path = AStar().search(WorldGraph(), vertex, candidates)
+        path = AStar().search(vertex, candidates)
         if path is None:
             Logger().warning(f"Could not find a path to any of the candidates!")
             return None
@@ -316,7 +316,7 @@ class Localizer:
                 src_vertex = WorldGraph().getVertex(src_mapId, rpZ)
                 if not src_vertex:
                     break
-                path = AStar().search(WorldGraph(), src_vertex, dst_vertex, maxPathLength=min(maxLen, minDist))
+                path = AStar().search(src_vertex, dst_vertex, maxPathLength=min(maxLen, minDist))
                 if path is not None:
                     dist = len(path)
                     if dist < minDist:
@@ -330,7 +330,7 @@ class Localizer:
             if src_vertex.mapId == dst_vertex.mapId:
                 return src_vertex, []
                 
-            path = AStar().search(WorldGraph(), src_vertex, dst_vertex, maxPathLength=maxLen)
+            path = AStar().search(src_vertex, dst_vertex, maxPathLength=maxLen)
             if path is None:
                 return None, None
                 
@@ -346,7 +346,7 @@ class Localizer:
             if not dst_vertex:
                 break
                 
-            path = AStar().search(WorldGraph(), src_vertex, dst_vertex)
+            path = AStar().search(src_vertex, dst_vertex)
             if path is not None:
                 return dst_vertex, path
             

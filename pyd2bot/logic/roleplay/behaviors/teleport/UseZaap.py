@@ -35,9 +35,7 @@ class UseZaap(AbstractBehavior):
         self.dst_mapId = dstMapId
         self.bsaveZaap = bsaveZaap
         self.teleportDestinationListener: Listener = None
-        known_zaaps = PlayedCharacterManager()._knownZaapMapIds
-        if known_zaaps is not None and dstMapId not in known_zaaps:
-            return self.finish(self.DST_ZAAP_NOT_KNOWN, "Destination zaap is not a known zaap!")
+
         if Kernel().interactiveFrame:
             self._open_current_map_zaap_dialog()
         else:

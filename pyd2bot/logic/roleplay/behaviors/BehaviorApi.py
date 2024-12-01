@@ -34,7 +34,7 @@ class BehaviorApi:
 
     def autoTrip(
         self,
-        dstMapId,
+        dstMapId=None,
         dstZoneId=None,
         path: list["Edge"] = None,
         farm_resources_on_way=False,
@@ -357,6 +357,10 @@ class BehaviorApi:
         AstarPathFinder(dst_map_id, linked_zone=linked_zone).start(callback=callback, parent=self)
 
     def close_market(self, callback):
+        if not Kernel().marketFrame:
+            Logger().warning("No market frame found!")
+            return
+
         if Kernel().marketFrame._market_type_open is None:
             Logger().warning("No market is open!")
             return callback(0, None)

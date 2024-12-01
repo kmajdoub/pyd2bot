@@ -4,6 +4,7 @@ from time import perf_counter
 from typing import Any, TYPE_CHECKING
 
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
+from pyd2bot.logic.roleplay.behaviors.mount.PutPetsMount import PutPetsMount
 from pyd2bot.logic.roleplay.behaviors.movement.AutoTrip import AutoTrip
 from pyd2bot.logic.roleplay.behaviors.movement.ChangeMap import ChangeMap
 from pyd2bot.logic.roleplay.behaviors.skill.UseSkill import UseSkill
@@ -16,6 +17,7 @@ from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import PlayedCharacterManager
 from pydofus2.com.ankamagames.dofus.logic.game.roleplay.types.MovementFailError import MovementFailError
 from pydofus2.com.ankamagames.dofus.modules.utils.pathFinding.world.Vertex import Vertex
+from pydofus2.com.ankamagames.dofus.network.enums.PlayerStatusEnum import PlayerStatusEnum
 from pydofus2.com.ankamagames.dofus.network.types.game.context.roleplay.GuildInformations import GuildInformations
 from pydofus2.com.ankamagames.dofus.network.types.game.context.roleplay.job.JobExperience import JobExperience
 from pydofus2.com.ankamagames.dofus.uiApi.PlayedCharacterApi import PlayedCharacterApi
@@ -41,6 +43,7 @@ class AbstractFarmBehavior(AbstractBehavior):
         self._deactivate_riding = False
         self._stop_sig = threading.Event()
         self._moving_to_next_step = False
+        self._skip_check_solo_mod = False
         super().__init__()
 
     def stop(self, clear_callback=False):
@@ -250,7 +253,20 @@ class AbstractFarmBehavior(AbstractBehavior):
 
     def _on_full_pods(self, return_to_start=True):
         self.unload_in_bank(return_to_start=return_to_start, callback=self._on_inventory_unloaded)
-    
+
+    def _on_player_solo_mod(self, code, error):
+        if error:
+            Logger().error(error)
+            
+        self._skip_check_solo_mod = True
+        self.main()
+
+    def _check_solo_mod(self):
+        if Kernel().socialFrame._current_mod != PlayerStatusEnum.PLAYER_STATUS_SOLO:
+            Kernel().socialFrame.updateStatus(PlayerStatusEnum.PLAYER_STATUS_SOLO, self._on_player_solo_mod)
+            return True
+        return False
+
     def main(self, event_code=None, error=None):
         Logger().debug(f"Farmer main loop called")
 
@@ -269,6 +285,14 @@ class AbstractFarmBehavior(AbstractBehavior):
         if self.inFight:
             Logger().warning("Stopping farm loop because the farmer entered a fight!")
             return
+
+        if not self._skip_check_solo_mod and self._check_solo_mod():
+            return True
+        
+        if not PlayedCharacterManager().isPetsMounting and PutPetsMount.has_items():
+            Logger().debug("player has available non equipped pet mount")
+            PutPetsMount().start(callback=lambda *_: self.main())
+            return True
 
         if PlayedCharacterManager().is_dead():
             Logger().warning(f"Player is dead.")

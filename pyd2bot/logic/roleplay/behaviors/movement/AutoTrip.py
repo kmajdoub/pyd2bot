@@ -43,31 +43,36 @@ class AutoTrip(AbstractBehavior):
         self.state = AutoTripState.IDLE
         self.dstMapId = None
         self.dstRpZone = None
-        self._nbr_follow_edge_fails = 0
         self.farm_resources_on_way = farm_resources_on_way
         self._iteration = 0
         self._previous_vertex: Vertex = None
         self._edge_taken: Edge = None
         self._taken_transition: Transition = None
 
-    def run(self, dstMapId, dstZoneId=None, path: list[Edge] = None):
-        Logger().info(f"Basic auto trip to map {dstMapId}, rpzone {dstZoneId} called.")
+    def run(self, dstMapId=None, dstZoneId=None, path: list[Edge] = None):
         if Kernel().fightContextFrame:
             Logger().error(f"Player is in Fight => Can't auto trip.")
             return self.finish(self.PLAYER_IN_FIGHT_ERROR, "Player is in Fight")
 
+        self.path = path
+        if self.path:
+            dstMapId = self.path[-1].dst.mapId
+            dstZoneId = self.path[-1].dst.zoneId
+        
+        Logger().info(f"Auto trip to map {dstMapId}, rpzone {dstZoneId} called.")
+
         self.dstMapId = dstMapId
         self.dstRpZone = dstZoneId
-        if self.dstRpZone is not None:
+
+        if not self.path and self.dstRpZone is not None:
             self.destVertex = WorldGraph().getVertex(self.dstMapId, self.dstRpZone)
             if self.destVertex is None:
-                Logger().warning(f"Destination vertex not found for map {self.dstMapId} and zone {self.dstRpZone}")
+                return self.finish(1, f"Destination vertex not found for map {self.dstMapId} and zone {self.dstRpZone}")
 
         dst_sub_area = SubArea.getSubAreaByMapId(dstMapId)
         if PlayerManager().isBasicAccount() and not dst_sub_area.basicAccountAllowed:
             return self.finish(self.NO_PATH_FOUND, "Destination map is not allowed for basic accounts!")
 
-        self.path = path
         self.walkToNextStep()
 
     def currentEdgeIndex(self):
@@ -76,6 +81,8 @@ class AutoTrip(AbstractBehavior):
             return None
 
         for i, step in enumerate(self.path):
+            if step is None:
+                raise Exception("Found a None edge step, should never happen!")
             if step.src.UID == v.UID:
                 return i
 
@@ -109,8 +116,6 @@ class AutoTrip(AbstractBehavior):
             if currentIndex is None:
                 KernelEventsManager().send(KernelEvent.ClientRestart, "restart cause couldn't find the player current index in the current path!")
                 return
-
-            nextEdge = self.path[currentIndex]
     
             if code in [
                 ChangeMap.errors.INVALID_TRANSITION,
@@ -119,22 +124,14 @@ class AutoTrip(AbstractBehavior):
                 MovementFailError.NO_VALID_SCROLL_CELL,
                 MovementFailError.INVALID_TRANSITION,
             ]:
-                Logger().warning(f"Can't reach next step in found path for reason : {code}, {error}")
+                Logger().warning(f"Failed to take edge {self._edge_taken} reach next step in found path for reason : {code}, {error}")
                 self._previous_vertex = None
-
-                if self._nbr_follow_edge_fails >= self.MAX_RETIES_COUNT:
-                    Logger().debug("Exceeded max number of fails, will ignore this edge.")
-                    AStar().addForbiddenEdge(nextEdge, error)
-                    return self.astar_find_path(self.dstMapId, self.dstRpZone, self.onPathFindResult)
-
-                self._nbr_follow_edge_fails += 1
-                Logger().warning(f"Attempt {self._nbr_follow_edge_fails}/{self.MAX_RETIES_COUNT} auto trip to dest")
+                AStar().forbiddenEdges.append(self._edge_taken)
                 return self.astar_find_path(self.dstMapId, self.dstRpZone, self.onPathFindResult)
             else:
                 Logger().debug(f"Error while auto traveling : {error}")
                 return self.finish(code, error)
             
-        self._nbr_follow_edge_fails = 0
         self.walkToNextStep()
 
     def walkToNextStep(self, event_id=None):

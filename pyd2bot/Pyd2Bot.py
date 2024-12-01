@@ -21,6 +21,7 @@ from pyd2bot.misc.NapManager import NapManager
 from pydofus2.com.ankamagames.dofus.kernel.Kernel import Kernel
 from pydofus2.com.ankamagames.dofus.kernel.net.DisconnectionReasonEnum import DisconnectionReasonEnum
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.InactivityManager import InactivityManager
+from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import PlayedCharacterManager
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
 from pydofus2.com.DofusClient import DofusClient
 
@@ -69,6 +70,8 @@ class Pyd2Bot(DofusClient):
         Logger().info(f"Character {self.name} is now in game.")
         if self.session.isSeller:
             BotSettings.SELLER_VACANT.set()
+            
+        Logger().debug(f"Player known zaaps : {PlayedCharacterManager().knownZaapMapIds}")
         self.notifyOtherBots()
         self.startMainBehavior()
 

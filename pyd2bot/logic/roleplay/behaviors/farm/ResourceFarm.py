@@ -6,7 +6,6 @@ from pyd2bot.logic.roleplay.behaviors.farm.AbstractFarmBehavior import \
 from pyd2bot.logic.roleplay.behaviors.farm.CollectableResource import \
     CollectableResource
 from pyd2bot.logic.roleplay.behaviors.farm.ResourcesTracker import ResourceTracker
-from pyd2bot.logic.roleplay.behaviors.mount.PutPetsMount import PutPetsMount
 from pyd2bot.logic.roleplay.behaviors.inventory.UseItemsByType import UseItemsByType
 from pyd2bot.logic.roleplay.behaviors.skill.UseSkill import UseSkill
 from pyd2bot.farmPaths.AbstractFarmPath import AbstractFarmPath
@@ -22,8 +21,6 @@ from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterMa
     PlayedCharacterManager
 from pydofus2.com.ankamagames.dofus.logic.game.roleplay.types.MovementFailError import \
     MovementFailError
-from pydofus2.com.ankamagames.dofus.network.enums.PlayerStatusEnum import \
-    PlayerStatusEnum
 from pydofus2.com.ankamagames.dofus.network.types.game.context.roleplay.GuildInformations import \
     GuildInformations
 from pydofus2.com.ankamagames.jerakine.benchmark.BenchmarkTimer import \
@@ -39,7 +36,6 @@ class ResourceFarm(AbstractFarmBehavior):
         self.deadEnds = set()
         self.resource_tracker = ResourceTracker(expiration_days=30)
         self.session_paused = False  # Track session pause state locally
-        self._skip_check_solo_mod = False
 
     def init(self):
         self.path.init()
@@ -53,27 +49,15 @@ class ResourceFarm(AbstractFarmBehavior):
         Logger().warning(f"Player invited to party {partyId} by {fromName}")
         Kernel().partyFrame.sendPartyInviteCancel(fromId)
 
-    def onGuildInvited(self, event, guildInfo: GuildInformations, recruterName):
-        Logger().warning(f"Player invited to guild {guildInfo.guildName} by {recruterName}")
+    def onGuildInvited(self, event, guildInfo: GuildInformations, recruiterName):
+        Logger().warning(f"Player invited to guild {guildInfo.guildName} by {recruiterName}")
         Kernel().guildDialogFrame.guildInvitationAnswer(False)
 
     def _specific_checks(self):
         if self._check_has_resources_bags():
             return True
-        if not self._skip_check_solo_mod and self._check_solo_mod():
-            return True
-        if not PlayedCharacterManager().isPetsMounting and PutPetsMount.has_items():
-            Logger().debug("player has available non equiped pet mount")
-            PutPetsMount().start(callback=lambda *_: self.main())
-            return True
         return False
     
-    def _check_solo_mod(self):
-        if Kernel().socialFrame._current_mod != PlayerStatusEnum.PLAYER_STATUS_SOLO:
-            Kernel().socialFrame.updateStatus(PlayerStatusEnum.PLAYER_STATUS_SOLO, self._on_player_solo_mod)
-            return True
-        return False
-
     def _check_has_resources_bags(self):
         if UseItemsByType.has_items(DataEnum.RESOURCE_BAGS_TYPE_ID):
             self.use_items_of_type(DataEnum.RESOURCE_BAGS_TYPE_ID, lambda *_: self.main())
@@ -96,12 +80,6 @@ class ResourceFarm(AbstractFarmBehavior):
             
         if error:
             return self.finish(code, error)
-        self.main()  # Continue farming
-    
-    def _on_player_solo_mod(self, code, error):
-        if error:
-            Logger().error(error)
-        self._skip_check_solo_mod = True
         self.main()  # Continue farming
     
     def finish(self, code, error=None):

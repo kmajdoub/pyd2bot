@@ -41,8 +41,7 @@ class GoToMarket(AbstractBehavior):
             or PlayedCharacterManager().currVertex.mapId in self.exclude_market_at_maps
         ):
             self.autoTrip(
-                self.hdv_vertex.mapId,
-                self.hdv_vertex.zoneId,
+                path=self.path_to_hdv,
                 callback=self._on_market_map_reached,
             )
         else:
@@ -66,18 +65,20 @@ class GoToMarket(AbstractBehavior):
                     "Basic accounts can't sell higher than lvl 60 items!"
                 )
 
+            self.exclude_market_at_maps = list(map(int, self.exclude_market_at_maps))
+
             for hint in Hint.getHints():
-                if int(hint.mapId) != self.marketplace_gfx_id:
+                if int(hint.gfx) != self.marketplace_gfx_id:
                     continue
 
-                if int(hint.mapId) not in list(map(int, self.exclude_market_at_maps)):
+                if int(hint.mapId) not in self.exclude_market_at_maps:
                     map_sub_area = SubArea.getSubAreaByMapId(hint.mapId)
                     if map_sub_area.areaId in [
                         DataEnum.ANKARNAM_AREA_ID,
                         DataEnum.ASTRUB_AREA_ID,
                     ]:  # exclude ankarnam and astrub markets for items with level higher than 60 !
                         Logger().debug(f"Exclude market at mapId {hint.mapId} because it is in area {map_sub_area.area.name}")
-                        self.exclude_market_at_maps.append(hint.mapId)
+                        self.exclude_market_at_maps.append(int(hint.mapId))
 
         self.path_to_hdv = Localizer.findClosestHintMapByGfx(
             self.marketplace_gfx_id, 
@@ -87,11 +88,12 @@ class GoToMarket(AbstractBehavior):
         if self.path_to_hdv is None:
             return self.finish(self.ERROR_HDV_NOT_FOUND, "No accessible marketplace found")
 
-        Logger().debug(f"Found market {len(self.path_to_hdv)} maps away")
         if len(self.path_to_hdv) == 0:
             self.hdv_vertex = PlayedCharacterManager().currVertex
         else:
             self.hdv_vertex = self.path_to_hdv[-1].dst
+
+        Logger().debug(f"Found market {len(self.path_to_hdv)} maps away at vertex {self.hdv_vertex}")
 
         return True
 

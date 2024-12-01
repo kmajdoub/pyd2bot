@@ -37,24 +37,16 @@ class AstarPathFinder(AbstractBehavior):
         if not vertices:
             return self.finish(self.NO_PATH_FOUND, "No valid destination vertices found", None)
 
+        self.vertices = vertices
         self._start_time = perf_counter()
-        self._try_next_vertex(src, vertices)
+        src = PlayedCharacterManager().currVertex
+        AStar().search_async(src, self.vertices, self._on_path_found_callback)
 
-    def _try_next_vertex(self, src, vertices: list):
-        dest_vertex = vertices[0]
-        is_last = len(vertices) == 1
-        
-        def on_path_found(code, exc, path):
-            if code == 0:
-                search_time = perf_counter() - self._start_time
-                Logger().info(f"Path found in {search_time}s")
-                self.finish(0, None, path)
-            else:
-                Logger().error(f"Path search failed", exc_info=exc)
-                if not is_last:
-                    vertices.pop(0)
-                    self._try_next_vertex(src, vertices)
-                else:
-                    self.finish(self.NO_PATH_FOUND, "Unable to find path to dest map", None)
+    def _on_path_found_callback(self, code, exc, path):
+        search_time = perf_counter() - self._start_time
+        Logger().info(f"Result found in {search_time}s")
 
-        AStar().search_async(WorldGraph(), src, dest_vertex, on_path_found)
+        if code == 0:
+            self.finish(0, None, path)
+        else:
+            self.finish(self.NO_PATH_FOUND, "Unable to find path to dest map", None)

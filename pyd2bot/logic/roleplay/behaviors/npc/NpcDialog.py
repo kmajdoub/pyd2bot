@@ -56,7 +56,7 @@ class NpcDialog(AbstractBehavior):
         
     def onServerTextInfo(self, event, msgId, msgType, textId, text, params):
         if textId == 309584: # The conditions for validating this response haven't been met.
-            self.finish(self.MISSING_CONDITION, text)
+            self.close_dialog(lambda *_: self.finish(self.MISSING_CONDITION, text))
             
     def getTextWithParams(textId:int, params:list, replace:str = "%") -> str:
         msgContent:str = I18n.getText(textId)
@@ -102,7 +102,8 @@ class NpcDialog(AbstractBehavior):
         replyId = self.findReply(messageId, visibleReplies)
         
         if not replyId:
-            return self.finish(self.NO_PROGRAMMED_REPLY, f"No programmed Reply found for NPC question {messageId} in {self.npcQuestionsReplies}")
+            self.close_dialog(lambda *_: self.finish(self.NO_PROGRAMMED_REPLY, f"No programmed Reply found for NPC question {messageId} in {self.npcQuestionsReplies}"))
+            return 
         
         self.npc = Npc.getNpcById(self.npcId)
         if self.npc:

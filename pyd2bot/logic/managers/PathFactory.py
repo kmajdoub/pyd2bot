@@ -1,4 +1,5 @@
 from pyd2bot.farmPaths.CustomRandomFarmPath import CustomRandomFarmPath
+from pyd2bot.farmPaths.CyclicFarmPath import CyclicFarmPath
 from pyd2bot.farmPaths.RandomAreaFarmPath import RandomAreaFarmPath
 from pyd2bot.farmPaths.RandomSubAreaFarmPath import \
     RandomSubAreaFarmPath
@@ -38,4 +39,11 @@ class PathFactory:
                 name=obj.id,
                 mapIds=obj.mapIds,
             )
+            
+        if obj.type == PathTypeEnum.CyclicFarmPath:
+            return CyclicFarmPath(
+                name=obj.id,
+                mapIds=obj.mapIds,
+            )
+
         raise ValueError("Unknown path type: " + str(obj.type))

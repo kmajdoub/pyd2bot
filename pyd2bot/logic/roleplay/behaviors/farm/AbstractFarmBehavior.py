@@ -3,6 +3,7 @@ import threading
 from time import perf_counter
 from typing import Any, TYPE_CHECKING
 
+from pyd2bot.farmPaths.CyclicFarmPath import CyclicFarmPath
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
 from pyd2bot.logic.roleplay.behaviors.mount.PutPetsMount import PutPetsMount
 from pyd2bot.logic.roleplay.behaviors.movement.AutoTrip import AutoTrip
@@ -44,6 +45,7 @@ class AbstractFarmBehavior(AbstractBehavior):
         self._stop_sig = threading.Event()
         self._moving_to_next_step = False
         self._skip_check_solo_mod = False
+        self.visit_bank_at_start = False
         super().__init__()
 
     def stop(self, clear_callback=False):
@@ -157,29 +159,36 @@ class AbstractFarmBehavior(AbstractBehavior):
     def _move_to_next_step(self):
         if not self.running.is_set():
             return
-        try:
-            self._currEdge = self.path.getNextEdge(self.forbiddenEdges, onlyNonRecent=True)
-        except NoTransitionFound:
-            Logger().error(f"No next vertex found in path, player is stuck!")
-            if PlayedCharacterManager().currVertex in self.path:
-                self.finish(self.PLAYER_STUCK, "Player is stuck in farm path without next vertex!")
-            else:
-                self._on_out_of_path()
-            return None
-        Logger().debug("Will move to next vertex in farm path")
 
-        if ChangeMap().isRunning():
-            Logger().warning("Farmer found change map behavior already running!")
-            self._moving_to_next_step = False
-            ChangeMap().stop(True)
+        if isinstance(self.path, CyclicFarmPath):
+            vertex = self.path.getNextVertex()
+            self._moving_to_next_step = True
+            self.autoTrip(vertex.mapId, vertex.zoneId, farm_resources_on_way=True, callback=self.onNextVertexReached)
+        else:
+            try:
+                self._currEdge = self.path.getNextEdge(self.forbiddenEdges, onlyNonRecent=True)
+            except NoTransitionFound:
+                Logger().error(f"No next vertex found in path, player is stuck!")
+                if PlayedCharacterManager().currVertex in self.path:
+                    self.finish(self.PLAYER_STUCK, "Player is stuck in farm path without next vertex!")
+                else:
+                    self._on_out_of_path()
+                return None
+    
+            Logger().debug("Will move to next vertex in farm path")
 
-        self._moving_to_next_step = True
-        self.changeMap(
-            edge=self._currEdge,
-            dstMapId=self._currEdge.dst.mapId,
-            callback=self.onNextVertexReached,
-        )
-        return self._currEdge
+            if ChangeMap().isRunning():
+                Logger().warning("Farmer found change map behavior already running!")
+                self._moving_to_next_step = False
+                ChangeMap().stop(True)
+
+            self._moving_to_next_step = True
+            self.changeMap(
+                edge=self._currEdge,
+                dstMapId=self._currEdge.dst.mapId,
+                callback=self.onNextVertexReached,
+            )
+            return self._currEdge
 
     def _on_out_of_path(self):
         Logger().warning(f"Bot is out of farm path, searching path to previous vertex...")
@@ -302,7 +311,7 @@ class AbstractFarmBehavior(AbstractBehavior):
             Logger().info(f"Mounting {PlayedCharacterManager().mount.name} ...")
             return self.toggle_ride_mount(wanted_ride_state=True, callback=self._on_riding_mount)
 
-        if self.firstIter or PlayedCharacterManager().isPodsFull():
+        if (self.firstIter and self.visit_bank_at_start) or PlayedCharacterManager().isPodsFull():
             was_first_iter = self.firstIter
             self.firstIter = False
             Logger().warning(f"Inventory is almost full will trigger retrieve sell and update items workflow ...")

@@ -33,5 +33,19 @@
         "npcActionId": 3,
         "npcId": -20000,
         "openBankReplyId": 64367
+    },
+    "Frighost": {
+        "name": "Frifri_bank",
+        "npcMapId": 54534165.0,
+        "npcActionId": 3,
+        "npcId": -20000,
+        "openBankReplyId": 64367
+    },
+    "Koalak": {
+        "name": "Koalak_bank",
+        "npcMapId": 84935175.0,
+        "npcActionId": 3,
+        "npcId": -20000,
+        "openBankReplyId": 64367
     }
 }

@@ -246,6 +246,7 @@ class BehaviorApi:
         npcOpenDialogId,
         npcQuestionsReplies,
         farm_resources_on_way=False,
+        path_to_npc=None,
         callback=None,
     ):
         from pyd2bot.logic.roleplay.behaviors.npc.NpcDialog import NpcDialog
@@ -264,6 +265,7 @@ class BehaviorApi:
             self.autoTrip(
                 npcMapId,
                 farm_resources_on_way=farm_resources_on_way,
+                path=path_to_npc,
                 callback=self._on_npc_reached_callback,
             )
 

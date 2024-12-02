@@ -1,6 +1,7 @@
 from typing import List
 from prettytable import PrettyTable
 
+from pyd2bot.farmPaths.CyclicFarmPath import CyclicFarmPath
 from pyd2bot.logic.roleplay.behaviors.farm.AbstractFarmBehavior import \
     AbstractFarmBehavior
 from pyd2bot.logic.roleplay.behaviors.farm.CollectableResource import \
@@ -97,12 +98,14 @@ class ResourceFarm(AbstractFarmBehavior):
         It will select the next resource to farm and move to it.
         '''
         available_resources = self.getAvailableResources()
-        possibleOutgoingEdges = [e for e in self.path.outgoingEdges() if e not in self.deadEnds]
-        if len(available_resources) == 0 and len(possibleOutgoingEdges) == 1:
-            Logger().warning("Farmer found dead end")
-            self.deadEnds.add(self._currEdge)
-            self._move_to_next_step()
-            return
+        if not isinstance(self.path, CyclicFarmPath):
+            possibleOutgoingEdges = [e for e in self.path.outgoingEdges() if e not in self.deadEnds]
+            if len(available_resources) == 0 and len(possibleOutgoingEdges) == 1:
+                Logger().warning("Farmer found dead end")
+                self.deadEnds.add(self._currEdge)
+                self._move_to_next_step()
+                return
+    
         farmable_resources = [r for r in available_resources if r.canFarm(self.jobFilters)]
         nonForbiddenResources = [r for r in farmable_resources if r.uid not in self.forbiddenActions]
         nonForbiddenResources.sort(key=lambda r: r.distance)

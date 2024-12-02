@@ -20,20 +20,23 @@ class OpenBank(AbstractBehavior):
         self.return_to_start = None
         self.callback = None
     
-    def run(self, bankInfos=None) -> bool:
+    def run(self, bankInfos=None, path_to_bank=None) -> bool:
         if bankInfos is None:
-            self.infos = Localizer.getBankInfos()
+            self.path_to_bank, self.infos = Localizer.findClosestBank()
         else:
             self.infos = bankInfos
+            self.path_to_bank = path_to_bank
         Logger().debug("Bank infos: %s", self.infos.__dict__)
         self._startMapId = PlayedCharacterManager().currentMap.mapId
         self._startRpZone = PlayedCharacterManager().currentZoneRp
         self.on(KernelEvent.ServerTextInfo, self.onTextInformation)
+        
         self.npc_dialog(
             self.infos.npcMapId, 
             self.infos.npcId, 
             self.infos.npcActionId, 
-            self.infos.questionsReplies, 
+            self.infos.questionsReplies,
+            path_to_npc=self.path_to_bank,
             callback=self.onBankManDialogEnded,
         )
 

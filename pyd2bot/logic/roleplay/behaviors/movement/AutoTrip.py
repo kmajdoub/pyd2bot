@@ -113,6 +113,10 @@ class AutoTrip(AbstractBehavior):
         if error:
             currentIndex = self.currentEdgeIndex()
             if currentIndex is None:
+                if Kernel().fightContextFrame:
+                    Logger().error(f"Player is in Fight!")
+                    return self.finish(self.PLAYER_IN_FIGHT_ERROR, "Player is in Fight")
+    
                 KernelEventsManager().send(KernelEvent.ClientRestart, "restart cause couldn't find the player current index in the current path!")
                 return
     

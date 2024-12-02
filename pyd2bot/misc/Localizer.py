@@ -67,117 +67,54 @@ class Localizer:
     @classmethod
     def findClosestBank(
         cls,
-        startMapId: float = None,
-        maxCost: float = float("inf"),
-        excludeMaps: list[float] = None,
-        dstMapId: float = None
+        excludeMaps: list[float] = None
     ) -> tuple[list["Edge"], "BankInfos"]:
-        """
-        Find path to closest bank location.
-        Handles account restrictions for basic/subscriber areas.
-        
-        Args:
-            startMapId: Starting map ID
-            maxCost: Maximum path cost to consider (default: infinite)
-            excludeMaps: List of map IDs to exclude from search
-            dstMapId: Optional target map ID to calculate costs against
-            
-        Returns:
-            Tuple of (path edges list, bank info) or (None, None) if no path found.
-            Path can be empty list if already at destination.
-        """
-        possible_start_vertices = None
         if not excludeMaps:
             excludeMaps = []
 
-        Logger().debug(f"Searching for closest bank from map {startMapId}")
-        
-        if not startMapId:
-            possible_start_vertices = [PlayedCharacterManager().currVertex]
-
-        # Get destination map position if specified (for cost calculations)
-        if dstMapId:
-            dst_map_pos = MapPosition.getMapPositionById(dstMapId)
-
-        # Get all possible starting vertices
-        if not possible_start_vertices:
-            possible_start_vertices = WorldGraph().getVertices(startMapId).values()
-        
-        if not possible_start_vertices:
-            Logger().warning(f"Could not find any vertex for map {startMapId}")
-            return None, None
-
-        Logger().debug(f"Found {len(possible_start_vertices)} vertices for map {startMapId}")
-
         is_basic_account = PlayerManager().isBasicAccount()
 
-        for startVertex in possible_start_vertices:
-            # Dictionary to map vertices to their corresponding banks
-            vertex_bank_map = {}
-            candidates = []
-            
-            # Iterate through all bank locations from the JSON file
-            for bank_name, bank_info in cls.BANKS.items():
-                bank_map_id = bank_info["npcMapId"]
-                
-                # Skip excluded maps
-                if bank_map_id in excludeMaps:
-                    continue
-                
-                # Check account restrictions for the bank map
-                if is_basic_account:
-                    bank_subarea = SubArea.getSubAreaByMapId(bank_map_id)
-                    if bank_subarea and not bank_subarea.basicAccountAllowed:
-                        Logger().debug(f"Skipping subscriber-only bank in {bank_name} (basic account)")
-                        continue
-                
-                # If we have a destination map, calculate cost based on manhattan distance
-                if dstMapId:
-                    current_map_pos = MapPosition.getMapPositionById(bank_map_id)
-                    cost = 10 * int(math.sqrt(
-                        (dst_map_pos.posX - current_map_pos.posX) ** 2 + 
-                        (dst_map_pos.posY - current_map_pos.posY) ** 2
-                    ))
-                    if cost <= min(PlayedCharacterManager().characteristics.kamas, maxCost):
-                        bank_vertices = WorldGraph().getVertices(bank_map_id).values()
-                        # Filter vertices based on account type
-                        for vertex in bank_vertices:
-                            if is_basic_account:
-                                dst_subarea = SubArea.getSubAreaByMapId(vertex.mapId)
-                                if dst_subarea and not dst_subarea.basicAccountAllowed:
-                                    continue
-                            candidates.append(vertex)
-                            vertex_bank_map[vertex] = bank_info
-                else:
-                    bank_vertices = WorldGraph().getVertices(bank_map_id).values()
-                    # Filter vertices based on account type
-                    for vertex in bank_vertices:
-                        if is_basic_account:
-                            dst_subarea = SubArea.getSubAreaByMapId(vertex.mapId)
-                            if dst_subarea and not dst_subarea.basicAccountAllowed:
-                                continue
-                        candidates.append(vertex)
-                        vertex_bank_map[vertex] = bank_info
+        startVertex = PlayedCharacterManager().currVertex
 
-            if not candidates:
-                Logger().warning("Could not find any accessible bank locations")
+        # Dictionary to map vertices to their corresponding banks
+        vertex_bank_map = {}
+        candidates = []
+        
+        # Iterate through all bank locations from the JSON file
+        for bank_name, bank_info in cls.BANKS.items():
+            bank_map_id = bank_info["npcMapId"]
+            
+            # Skip excluded maps
+            if bank_map_id in excludeMaps:
                 continue
-
-            Logger().debug(f"Found {len(candidates)} accessible bank locations")
             
-            # Find path to closest candidate ensuring path doesn't go through subscriber areas for basic accounts
-            path = cls.findPathToClosestVertexCandidate(startVertex, candidates)
-            if path is not None:  # Path found (could be empty if at destination)
-                if not path:  # Empty path means we're at destination
-                    # Find which bank this vertex belongs to
-                    matching_bank_info = vertex_bank_map.get(startVertex)
-                else:
-                    # Get the destination vertex from the path
-                    dest_vertex = path[-1].dst
-                    matching_bank_info = vertex_bank_map.get(dest_vertex)
-                    
-                if matching_bank_info:
-                    return path, BankInfos(**matching_bank_info)
+            # Check account restrictions for the bank map
+            if is_basic_account:
+                bank_subarea = SubArea.getSubAreaByMapId(bank_map_id)
+                if bank_subarea and not bank_subarea.basicAccountAllowed:
+                    Logger().debug(f"Skipping subscriber-only bank in {bank_name} (basic account)")
+                    continue
+        
+            bank_vertices = WorldGraph().getVertices(bank_map_id).values()
+
+            for vertex in bank_vertices:
+                candidates.append(vertex)
+                vertex_bank_map[vertex] = bank_info
+
+        if not candidates:
+            Logger().warning("Could not find any accessible bank from current position")
+            return None, None
+        
+        path = cls.findPathToClosestVertexCandidate(startVertex, candidates)
+        if path is not None:
+            if not path:
+                matching_bank_info = vertex_bank_map.get(startVertex)
+            else:
+                dest_vertex = path[-1].dst
+                matching_bank_info = vertex_bank_map.get(dest_vertex)
+                
+            if matching_bank_info:
+                return path, BankInfos(**matching_bank_info)
 
         return None, None
 

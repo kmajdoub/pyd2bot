@@ -1,6 +1,7 @@
 import math
 import random
 from typing import List
+from pyd2bot.farmPaths.CyclicFarmPath import CyclicFarmPath
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
 from pyd2bot.logic.roleplay.behaviors.farm.ResourceFarm import ResourceFarm
 from pyd2bot.farmPaths.AbstractFarmPath import AbstractFarmPath
@@ -36,6 +37,29 @@ class MultiplePathsResourceFarm(AbstractBehavior):
         For a grid, random walk coverage time is O(n log²n) where n is number of vertices.
         Returns timeout in seconds.
         """
+            # For cyclic paths, calculation is simpler since the path is deterministic
+        if isinstance(path, CyclicFarmPath):
+            n = len(path.mapIds)  # number of maps in cycle
+            
+            # Simple calculation for cyclic path:
+            # - Each map takes VERTEX_TIME seconds for resource gathering
+            # - Add some time for movement between maps (5 seconds per map)
+            # - Multiply by number of covers
+            # - Add BASE_TIMEOUT as buffer
+            movement_time_per_map = 5  # seconds to move between maps
+            time_per_cycle = n * (self.VERTEX_TIME + movement_time_per_map)
+            total_timeout = self.BASE_TIMEOUT + (time_per_cycle * self.num_of_covers)
+            
+            timeout = min(max(self.MIN_TIMEOUT, total_timeout), self.MAX_TIMEOUT)
+            
+            Logger().debug(f"""Timeout calculation for cyclic path {path.name}:
+                Maps in cycle: {n}
+                Time per cycle: {time_per_cycle:.1f}s
+                Number of covers: {self.num_of_covers}
+                Total timeout: {timeout:.1f}s ({timeout/60:.1f}min)""")
+                
+            return timeout
+
         n = path.get_vertices_count()
         m = path.get_edge_count()
         

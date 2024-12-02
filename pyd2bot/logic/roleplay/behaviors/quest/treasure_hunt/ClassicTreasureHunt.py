@@ -11,8 +11,8 @@ from pyd2bot.logic.roleplay.behaviors.movement.AutoTrip import AutoTrip
 from pyd2bot.logic.roleplay.behaviors.inventory.UseItemsByType import UseItemsByType
 from pyd2bot.logic.roleplay.behaviors.quest.treasure_hunt.SolveTreasureHuntStep import SolveTreasureHuntStep
 from pyd2bot.logic.roleplay.behaviors.quest.treasure_hunt.TreasureHuntPoiDatabase import TreasureHuntPoiDatabase
-from pydofus2.com.ClientStatusEnum import ClientStatusEnum
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
+from pydofus2.com.ankamagames.berilia.managers.KernelEventsManager import KernelEventsManager
 from pydofus2.com.ankamagames.dofus.internalDatacenter.DataEnum import DataEnum
 from pydofus2.com.ankamagames.dofus.internalDatacenter.items.ItemWrapper import ItemWrapper
 from pydofus2.com.ankamagames.dofus.internalDatacenter.quests.TreasureHuntStepWrapper import TreasureHuntStepWrapper
@@ -328,14 +328,10 @@ class ClassicTreasureHunt(AbstractBehavior):
     def _on_start_map_reached(self, code, error):
         if error:
             if code == AutoTrip.NO_PATH_FOUND:
-                if self.use_rappel_potion(
-                    lambda *_: self.autoTrip(
-                        self.startMapId,
-                        callback=self._on_start_map_reached
-                    )
-                ):
-                    return
-                Logger().error("Bot is stuck and has no rappel potion!")
+                Logger().warning("No path found to treasure hunt step map!, bot is stuck!")
+                KernelEventsManager().send(KernelEvent.ClientShutdown, "Bot is stuck because it cant reach treasure hunt step mapId!")
+                return
+    
             if code == CollectAllMapResources.errors.FULL_PODS:
                 Logger().warning(
                     f"Inventory is almost full => will trigger retrieve sell and update items workflow ..."

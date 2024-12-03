@@ -25,7 +25,7 @@ class GoToMarket(AbstractBehavior):
         self._logger = Logger()
         self.marketplace_gfx_id = marketplace_gfx_id
         self.hdv_vertex = None
-        self.path_to_hdv = None
+        self.path_to_market = None
         if exclude_market_at_maps is None:
             exclude_market_at_maps = []
         self.exclude_market_at_maps = exclude_market_at_maps
@@ -33,22 +33,34 @@ class GoToMarket(AbstractBehavior):
 
     def run(self) -> bool:
         """Start travel to marketplace"""
-        if not self._validate_marketplace_access():
-            return False
+        self._search_path_to_market()
+        
+    def _on_market_search_result(self, code, error, path):
+        if path is None or error:
+            return self.finish(self.ERROR_HDV_NOT_FOUND, f"No accessible marketplace found, search ended with result error[{code}] {error}")
 
+        self.path_to_market = path
+
+        if len(path) == 0:
+            self.hdv_vertex = PlayedCharacterManager().currVertex
+
+        else:
+            self.hdv_vertex = path[-1].dst
+
+        Logger().debug(f"Found market {len(path)} maps away at vertex {self.hdv_vertex}")
+        
         if (
             self.hdv_vertex != PlayedCharacterManager().currVertex
             or PlayedCharacterManager().currVertex.mapId in self.exclude_market_at_maps
         ):
             self.autoTrip(
-                path=self.path_to_hdv,
+                path=self.path_to_market,
                 callback=self._on_market_map_reached,
             )
         else:
             self._on_market_map_reached(None, None)
-        return True
 
-    def _validate_marketplace_access(self) -> bool:
+    def _search_path_to_market(self) -> bool:
         """
         Validate marketplace accessibility and setup paths
         Returns: bool indicating if access is valid
@@ -80,22 +92,11 @@ class GoToMarket(AbstractBehavior):
                         Logger().debug(f"Exclude market at mapId {hint.mapId} because it is in area {map_sub_area.area.name}")
                         self.exclude_market_at_maps.append(int(hint.mapId))
 
-        self.path_to_hdv = Localizer.findClosestHintMapByGfx(
-            self.marketplace_gfx_id, 
+        Localizer.findClosestHintMapByGfxAsync(
+            self.marketplace_gfx_id,
+            callback=self._on_market_search_result,
             excludeMaps=self.exclude_market_at_maps
         )
-
-        if self.path_to_hdv is None:
-            return self.finish(self.ERROR_HDV_NOT_FOUND, "No accessible marketplace found")
-
-        if len(self.path_to_hdv) == 0:
-            self.hdv_vertex = PlayedCharacterManager().currVertex
-        else:
-            self.hdv_vertex = self.path_to_hdv[-1].dst
-
-        Logger().debug(f"Found market {len(self.path_to_hdv)} maps away at vertex {self.hdv_vertex}")
-
-        return True
 
     def _on_market_map_reached(self, code: int, error: str) -> None:
         if not error:

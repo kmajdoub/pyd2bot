@@ -1,7 +1,7 @@
 
 from pyd2bot.data.enums import ServerNotificationEnum
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
-from pyd2bot.misc.Localizer import Localizer
+from pyd2bot.misc.Localizer import BankInfos, Localizer
 from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import \
     PlayedCharacterManager
@@ -14,18 +14,29 @@ class OpenBank(AbstractBehavior):
     STORAGE_OPEN_TIMED_OUT = 9874521
     WRONG_EXCHANGE_TYPE = 556988
     INSUFFICIENT_KAMAS = 3258253
+    ERROR_BANK_NOT_FOUND = 32582543
     
-    def __init__(self):
+    def __init__(self, return_to_start=None):
         super().__init__()
-        self.return_to_start = None
-        self.callback = None
-    
-    def run(self, bankInfos=None, path_to_bank=None) -> bool:
+        self.return_to_start = return_to_start
+
+    def _on_search_nearest_bank_storage(self, code, error, path, infos: BankInfos):
+        if path is None or error:
+            return self.finish(self.ERROR_BANK_NOT_FOUND, f"No accessible bank storage found, search ended with result error[{code}] {error}")
+        
+        self.infos = infos
+        self.path_to_bank = path
+        self._on_bank_infos()
+        
+    def run(self, bankInfos: BankInfos=None, path_to_bank=None) -> bool:
         if bankInfos is None:
-            self.path_to_bank, self.infos = Localizer.findClosestBank()
-        else:
-            self.infos = bankInfos
-            self.path_to_bank = path_to_bank
+            return Localizer.findClosestBankAsync(callback=self._on_search_nearest_bank_storage)
+        
+        self.infos = bankInfos
+        self.path_to_bank = path_to_bank
+        self._on_bank_infos()
+
+    def _on_bank_infos(self):
         Logger().debug("Bank infos: %s", self.infos.__dict__)
         self._startMapId = PlayedCharacterManager().currentMap.mapId
         self._startRpZone = PlayedCharacterManager().currentZoneRp

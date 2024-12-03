@@ -58,6 +58,7 @@ class SolveTreasureHuntStep(AbstractBehavior):
         self.guessed_answers = []
         self.current_map_destination = None
         self._is_digging = False
+        self._excluded_map_ids = set()
 
     @property
     def currentMapId(self):
@@ -84,44 +85,45 @@ class SolveTreasureHuntStep(AbstractBehavior):
 
     def _try_solve_direction_to_poi(self):
         Logger().debug(f"Current step : {self.current_step}")
-        excluded_map_ids = set()  # Keep track of unreachable maps
 
-        while True:  # Keep trying until we either find a path or exhaust all possibilities
-            next_map_id = self._get_next_hint_map(excluded_map_ids)
-            if not next_map_id:
-                if self.guess_mode:
-                    Logger().error(
-                        f"Unable to find any reachable map for poi {self.current_step.poiLabel} in guess mode!"
-                    )
-                    return self._dig_treasure()
-                else:
-                    # If normal mode failed, try guess mode
-                    Logger().warning("No more maps to try in normal mode, switching to guess mode")
-                    self.guess_mode = True
-                    excluded_map_ids.clear()  # Clear exclusions for guess mode
-                    continue
+        next_map_id = self._get_next_hint_map(self._excluded_map_ids)
+        if not next_map_id:
+            if self.guess_mode:
+                Logger().error(
+                    f"Unable to find any reachable map for poi {self.current_step.poiLabel} in guess mode!"
+                )
+                return self._dig_treasure()
+            else:
+                # If normal mode failed, try guess mode
+                Logger().warning("No more maps to try in normal mode, switching to guess mode")
+                self.guess_mode = True
+                self._excluded_map_ids.clear()
+                return Kernel().defer(self._try_solve_direction_to_poi)
 
-            dst_vertex, _ = Localizer.findDestVertex(
-                PlayedCharacterManager().currVertex,
-                next_map_id
-            )
+        def on_result(code, error, dst_vertex, dst_path):
+            if error:
+                Logger().debug(f"Failed to find path to next hint map with error [{code}]: {error}")
 
             if not dst_vertex:
                 Logger().warning(f"Map {next_map_id} is unreachable from current position, excluding it")
-                excluded_map_ids.add(next_map_id)
-                continue
+                self._excluded_map_ids.add(next_map_id)
+                return Kernel().defer(self._try_solve_direction_to_poi)
 
             # If we get here, we found a reachable map
             Logger().debug(f"Next hint map is {next_map_id}, will travel to it.")
             self.current_map_destination = next_map_id
 
             self.autoTrip(
-                dst_vertex.mapId,
-                dst_vertex.zoneId,
+                path=dst_path,
                 farm_resources_on_way=self.farm_resources,
-                callback=self._on_next_hint_map_reached,
+                callback=self._on_next_hint_map_reached
             )
-            return
+
+        Localizer.findDestVertexAsync(
+            PlayedCharacterManager().currVertex,
+            next_map_id,
+            on_result
+        )
 
     def _try_solve(self):
         if self.current_step is None:
@@ -202,7 +204,7 @@ class SolveTreasureHuntStep(AbstractBehavior):
             return self.finish(code, err)
 
         Logger().info("Selling complete, resuming travel to hint map...")
-        self._travel_to_current_target_hint_map()
+        self._try_solve_direction_to_poi()
 
     def _on_resurrection_over(self, code, err):
         if err:
@@ -210,31 +212,11 @@ class SolveTreasureHuntStep(AbstractBehavior):
 
         Logger().info("Resurrection complete, resuming travel to hint map...")
 
-        self._travel_to_current_target_hint_map()
-    
-    def _travel_to_current_target_hint_map(self):
-        dst_vertex, _ = Localizer.findDestVertex(
-            PlayedCharacterManager().currVertex, self.current_map_destination
-        )
-        if not dst_vertex:
-            Logger().warning("Can't reach hint map from current position, will trigger auto travel to hint map before")
-            
-        self.autoTrip(
-            dst_vertex.mapId,
-            dst_vertex.zoneId,
-            farm_resources_on_way=self.farm_resources,
-            callback=self._on_next_hint_map_reached,
-        )
+        self._try_solve_direction_to_poi()
 
     def _on_next_hint_map_reached(self, code, error):
         if error:
             Logger().error(error)
-            if code == AutoTrip.NO_PATH_FOUND:
-                if self.use_rappel_potion(
-                    lambda *_: self._travel_to_current_target_hint_map()
-                ):
-                    return
-                Logger().error("Bot is stuck and has no rappel potion!")
 
             if code in [FindHintNpc.UNABLE_TO_FIND_HINT, AutoTrip.NO_PATH_FOUND]:
                 return self._dig_treasure()
@@ -252,7 +234,7 @@ class SolveTreasureHuntStep(AbstractBehavior):
 
             if code == CollectAllMapResources.errors.MAP_CHANGED:
                 Logger().warning(f"Map changed during resource collection, retrying travel to hint map...")
-                return self._travel_to_current_target_hint_map()
+                return self._try_solve_direction_to_poi()
 
             if code == CollectAllMapResources.errors.PLAYER_DEAD:
                 Logger().warning(f"Player died while farming resources, will resurrect and retry...")

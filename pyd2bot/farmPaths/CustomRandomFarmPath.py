@@ -50,7 +50,7 @@ class CustomRandomFarmPath(AbstractFarmPath):
     def outgoingEdges(self, vertex=None, onlyNonRecentVisited=False) -> Iterator[Edge]:
         if vertex is None:
             vertex = self.currentVertex
-        outgoingEdges = WorldGraph().getOutgoingEdgesFromVertex(vertex)
+        outgoingEdges = WorldGraph().getOutgoingEdgesFromVertex(vertex, False, False)
         ret = []
         for edge in outgoingEdges:
             if edge.dst.mapId in self.mapIds:
@@ -74,6 +74,3 @@ class CustomRandomFarmPath(AbstractFarmPath):
             raise NoTransitionFound()
         edge = random.choice(outgoingEdges)
         return edge
-    
-    
-    

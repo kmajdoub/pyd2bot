@@ -13,7 +13,7 @@ class MultiplePathsResourceFarm(AbstractBehavior):
 
     # Constants for timeout calculation
     BASE_TIMEOUT = 5 * 60       # 5 minutes base timeout
-    MAX_TIMEOUT = 60 * 60       # 60 minutes maximum timeout
+    MAX_TIMEOUT = 60 * 40      # 40 minutes maximum timeout
     VERTEX_TIME = 10            # 10 seconds per vertex for resource interaction
     MIN_TIMEOUT = 5 * 60        # 10 minutes minimum timeout
 

@@ -23,16 +23,13 @@ class AstarPathFinder(AbstractBehavior):
             Logger().warning("Called path finder before player was added to the scene!")
             return self.once_map_rendered(self.run)
         
-        Logger().info(f"Start searching path from {src} to destMapId {self.dst_map_id}, linkedZone {self.linked_zone}")
-        
         if self.linked_zone is None and PlayedCharacterManager().currentMap.mapId == self.dst_map_id:
             return self.finish(0, None, [])
             
         if self.linked_zone is None:
             vertices = list(WorldGraph().getVertices(self.dst_map_id).values())
         else:
-            vertex = WorldGraph().getVertex(self.dst_map_id, self.linked_zone)
-            vertices = [vertex] if vertex else []
+            vertices = WorldGraph().getVertex(self.dst_map_id, self.linked_zone)
 
         if not vertices:
             return self.finish(self.NO_PATH_FOUND, "No valid destination vertices found", None)
@@ -40,11 +37,13 @@ class AstarPathFinder(AbstractBehavior):
         self.vertices = vertices
         self._start_time = perf_counter()
         src = PlayedCharacterManager().currVertex
-        AStar().search_async(src, self.vertices, self._on_path_found_callback)
+        AStar().search_async(src, self.vertices, callback=self._on_path_found_callback)
 
     def _on_path_found_callback(self, code, exc, path):
         search_time = perf_counter() - self._start_time
         Logger().info(f"Result found in {search_time}s")
+        if exc is not None:
+            raise exc
 
         if code == 0:
             self.finish(0, None, path)

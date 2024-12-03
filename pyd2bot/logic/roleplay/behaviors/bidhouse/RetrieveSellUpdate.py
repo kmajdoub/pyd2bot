@@ -6,8 +6,8 @@ from pydofus2.com.ankamagames.dofus.logic.common.managers.PlayerManager import P
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.InventoryManager import InventoryManager
 from pydofus2.com.ankamagames.dofus.logic.game.common.managers.PlayedCharacterManager import PlayedCharacterManager
 from pydofus2.com.ankamagames.dofus.types.enums.ItemCategoryEnum import ItemCategoryEnum
-from pydofus2.com.ankamagames.jerakine.benchmark.BenchmarkTimer import BenchmarkTimer
 from pydofus2.com.ankamagames.jerakine.logger.Logger import Logger
+from pydofus2.com.ankamagames.dofus.internalDatacenter.DataEnum import DataEnum
 
 
 class RetrieveSellUpdate(AbstractBehavior):
@@ -26,6 +26,8 @@ class RetrieveSellUpdate(AbstractBehavior):
         self.has_remaining = False
         self._finish_code: Optional[int] = None
         self._finish_error: Optional[str] = None
+        if items_gid_to_keep is None:
+            items_gid_to_keep = [ DataEnum.RAPPEL_POTION_GUID ]
         self.items_gid_to_keep = items_gid_to_keep
         self.return_to_start = return_to_start
 

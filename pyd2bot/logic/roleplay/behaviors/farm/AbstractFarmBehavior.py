@@ -160,35 +160,30 @@ class AbstractFarmBehavior(AbstractBehavior):
         if not self.running.is_set():
             return
 
-        if isinstance(self.path, CyclicFarmPath):
-            vertex = self.path.getNextVertex()
-            self._moving_to_next_step = True
-            self.autoTrip(vertex.mapId, vertex.zoneId, farm_resources_on_way=True, callback=self.onNextVertexReached)
-        else:
-            try:
-                self._currEdge = self.path.getNextEdge(self.forbiddenEdges, onlyNonRecent=True)
-            except NoTransitionFound:
-                Logger().error(f"No next vertex found in path, player is stuck!")
-                if PlayedCharacterManager().currVertex in self.path:
-                    self.finish(self.PLAYER_STUCK, "Player is stuck in farm path without next vertex!")
-                else:
-                    self._on_out_of_path()
-                return None
-    
-            Logger().debug("Will move to next vertex in farm path")
+        try:
+            self._currEdge = self.path.getNextEdge(self.forbiddenEdges, onlyNonRecent=True)
+        except NoTransitionFound:
+            Logger().error(f"No next vertex found in path, player is stuck!")
+            if PlayedCharacterManager().currVertex in self.path:
+                self.finish(self.PLAYER_STUCK, "Player is stuck in farm path without next vertex!")
+            else:
+                self._on_out_of_path()
+            return None
 
-            if ChangeMap().isRunning():
-                Logger().warning("Farmer found change map behavior already running!")
-                self._moving_to_next_step = False
-                ChangeMap().stop(True)
+        Logger().debug("Will move to next vertex in farm path")
 
-            self._moving_to_next_step = True
-            self.changeMap(
-                edge=self._currEdge,
-                dstMapId=self._currEdge.dst.mapId,
-                callback=self.onNextVertexReached,
-            )
-            return self._currEdge
+        if ChangeMap().isRunning():
+            Logger().warning("Farmer found change map behavior already running!")
+            self._moving_to_next_step = False
+            ChangeMap().stop(True)
+
+        self._moving_to_next_step = True
+        self.changeMap(
+            edge=self._currEdge,
+            dstMapId=self._currEdge.dst.mapId,
+            callback=self.onNextVertexReached,
+        )
+        return self._currEdge
 
     def _on_out_of_path(self):
         Logger().warning(f"Bot is out of farm path, searching path to previous vertex...")
@@ -220,7 +215,8 @@ class AbstractFarmBehavior(AbstractBehavior):
     def _on_riding_mount(self, code, err):
         if err:
             Logger().error(f"Error[{code}] while riding mount: {err}")
-            self._deactivate_riding = True
+
+        self._deactivate_riding = True
         self.main()
 
     def _on_resurrection(self, code, error):
@@ -297,19 +293,19 @@ class AbstractFarmBehavior(AbstractBehavior):
 
         if not self._skip_check_solo_mod and self._check_solo_mod():
             return True
-        
-        if not PlayedCharacterManager().isPetsMounting and PutPetsMount.has_items():
-            Logger().debug("player has available non equipped pet mount")
-            PutPetsMount().start(callback=lambda *_: self.main())
-            return True
 
         if PlayedCharacterManager().is_dead():
             Logger().warning(f"Player is dead.")
             return self.auto_resurrect(callback=self._on_resurrection)
 
-        if not self._deactivate_riding and PlayedCharacterApi.canRideMount():
-            Logger().info(f"Mounting {PlayedCharacterManager().mount.name} ...")
-            return self.toggle_ride_mount(wanted_ride_state=True, callback=self._on_riding_mount)
+        if not self._deactivate_riding and not PlayedCharacterManager().isPetsMounting:
+            if PutPetsMount.has_items():
+                Logger().debug("Player has available non equipped pet mount")
+                return self.put_pet_mount(callback=self._on_riding_mount)
+        
+            if PlayedCharacterApi.canRideMount():
+                Logger().info(f"Mounting {PlayedCharacterManager().mount.name} ...")
+                return self.toggle_ride_mount(wanted_ride_state=True, callback=self._on_riding_mount)
 
         if (self.firstIter and self.visit_bank_at_start) or PlayedCharacterManager().isPodsFull():
             was_first_iter = self.firstIter

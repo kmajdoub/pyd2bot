@@ -98,10 +98,10 @@ class ResourceFarm(AbstractFarmBehavior):
         It will select the next resource to farm and move to it.
         '''
         available_resources = self.getAvailableResources()
-        if not isinstance(self.path, CyclicFarmPath):
+        if not isinstance(self.path, CyclicFarmPath): # for cyclic paths dead end means bot is stuck so we wont even check it
             possibleOutgoingEdges = [e for e in self.path.outgoingEdges() if e not in self.deadEnds]
             if len(available_resources) == 0 and len(possibleOutgoingEdges) == 1:
-                Logger().warning("Farmer found dead end")
+                Logger().warning("Farmer found a dead end")
                 self.deadEnds.add(self._currEdge)
                 self._move_to_next_step()
                 return
@@ -162,6 +162,7 @@ class ResourceFarm(AbstractFarmBehavior):
         if not Kernel().interactiveFrame:
             Logger().error("No interactive frame found")
             return None
+
         collectables = Kernel().interactiveFrame.collectables.values()
 
          # Track resources for current vertex

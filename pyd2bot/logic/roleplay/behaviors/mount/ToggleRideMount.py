@@ -56,6 +56,7 @@ class ToggleRideMount(AbstractBehavior):
         energy_left_ration = self.mount.energy / self.mount.energyMax
         if energy_left_ration < 0.05:
             return self.finish(self.NO_ENERGY_LEFT, "Mount has no energy left to ride")
+        self.on(KernelEvent.ServerTextInfo, self.onServerTextInfo)
         if wanted_ride_state is not None:
             if wanted_ride_state and PlayedCharacterApi.isRiding():
                 return self.finish(self.ALREADY_RIDING, "Already riding mount")

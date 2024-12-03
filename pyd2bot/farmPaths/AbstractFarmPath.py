@@ -106,7 +106,6 @@ class AbstractFarmPath:
         transitions = edge.transitions
         valid = False
         for transition in transitions:
-            
             if transition.criterion:
                 if (
                     "&" not in transition.criterion

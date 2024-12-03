@@ -1,4 +1,6 @@
+from pyd2bot.data.enums import ServerNotificationEnum
 from pyd2bot.logic.roleplay.behaviors.AbstractBehavior import AbstractBehavior
+from pydofus2.com.ankamagames.berilia.managers.KernelEvent import KernelEvent
 from pydofus2.com.ankamagames.dofus.internalDatacenter.DataEnum import DataEnum
 from pydofus2.com.ankamagames.dofus.internalDatacenter.items.ItemWrapper import ItemWrapper
 from pydofus2.com.ankamagames.dofus.kernel.net.ConnectionsHandler import ConnectionsHandler
@@ -20,8 +22,13 @@ class PutPetsMount(AbstractBehavior):
         if not pet_mounts_available_in_inventory:
             Logger().debug('Has no pet mounts in inventory')
             return self.finish(0)
+        self.on(KernelEvent.ServerTextInfo, self.onServerTextInfo)
         self.sendPetsMountPut(pet_mounts_available_in_inventory[0])
         BenchmarkTimer(2, lambda: self.finish(0)).start()
+
+    def onServerTextInfo(self, event, msgId, msgType, textId, text, params):
+        if textId == ServerNotificationEnum.STATUS_DOES_NOT_ALLOW_ACTION:  # Mount has no energy left
+            self.finish(textId, text)
 
     @classmethod
     def has_items(cls):
